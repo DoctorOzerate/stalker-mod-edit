@@ -82,6 +82,16 @@ export function gameFilesFromDialogues(groups, cfg, encoding, languages, project
   return data;
 }
 
+// === Резолв text_id → перевод (#5) ===
+export function resolveTextId(languages, textId) {
+  const langs = (languages || []).slice();
+  for (let i = 0; i < langs.length; i++) {
+    const e = (langs[i].entries || []).find(function (x) { return x.id === textId && String(x.text || '').trim(); });
+    if (e) return { locale: langs[i].locale, text: e.text };
+  }
+  return null;
+}
+
 // === Проверка text_id: дубликаты, пустые, без перевода (#77) ===
 export function findTextIdIssues(languages, dialogues) {
   const issues = [];

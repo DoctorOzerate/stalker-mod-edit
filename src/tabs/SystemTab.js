@@ -142,7 +142,7 @@ export function renderSystemTab(ctx) {
           )
         ),
         React.createElement('div', { className: 'rounded-xl border ' + ui.card },
-          React.createElement('div', { className: 'p-3 border-b border-inherit text-xs font-bold' }, 'Ресурсы (squad_descr · spawn_sections · info_portions · encyclopedia · secrets)'),
+          React.createElement('div', { className: 'p-3 border-b border-inherit text-xs font-bold' }, 'Ресурсы (actor · monsters · squad_descr · spawn_sections · info · encyclopedia · secrets)'),
           React.createElement('div', { className: 'p-3 grid gap-3' },
             (project.squads && project.squads.length > 0) ? React.createElement('div', { className: 'grid gap-1' },
               React.createElement('div', { className: 'text-[10px] uppercase font-bold ' + ui.muted }, 'Отряды · squad_descr (' + project.squads.length + ')'),
@@ -154,6 +154,16 @@ export function renderSystemTab(ctx) {
               React.createElement('div', { className: 'text-[10px] uppercase font-bold ' + ui.muted }, 'Спавн-секции · spawn_sections (' + project.spawnSections.length + ')'),
               React.createElement('div', { className: 'grid gap-0.5 max-h-40 overflow-auto' },
                 project.spawnSections.map(function (s) { return React.createElement('div', { key: s.id, className: 'text-[11px] font-mono ' + ui.muted, title: 'base: ' + s.base + ' · profile: ' + s.character_profile + ' · community: ' + s.community + ' · rank: ' + s.spec_rank }, s.id + (s.base ? ' :' + s.base : '') + (s.community ? ' · ' + s.community : '')); })
+              )
+            ) : null,
+            (project.actor) ? React.createElement('div', { className: 'grid gap-1' },
+              React.createElement('div', { className: 'text-[10px] uppercase font-bold ' + ui.muted }, 'Актор · actor.ltx'),
+              React.createElement('div', { className: 'text-[11px] font-mono ' + ui.muted }, 'class: ' + (project.actor.class || '—') + ' · max_item_mass: ' + (project.actor.max_item_mass || '—') + ' · jump_speed: ' + (project.actor.jump_speed || '—') + ' · money: ' + (project.actor.money || '—') + ' · script: ' + (project.actor.script_binding || '—'))
+            ) : null,
+            (project.monsters && project.monsters.length > 0) ? React.createElement('div', { className: 'grid gap-1' },
+              React.createElement('div', { className: 'text-[10px] uppercase font-bold ' + ui.muted }, 'Монстры (' + project.monsters.length + ')'),
+              React.createElement('div', { className: 'grid gap-0.5 max-h-40 overflow-auto' },
+                project.monsters.map(function (m) { return React.createElement('div', { key: m.id, className: 'text-[11px] font-mono ' + ui.muted, title: 'class: ' + m.class + ' · visual: ' + m.visual + ' · script: ' + m.script_binding }, m.id + (m.base ? ' :' + m.base : '') + ' · ' + m.class + (m.script_binding ? ' · ' + m.script_binding : '')); })
               )
             ) : null,
             (project.infoPortions && project.infoPortions.length > 0) ? React.createElement('div', { className: 'grid gap-1' },
@@ -174,7 +184,7 @@ export function renderSystemTab(ctx) {
                 project.secrets.treasures.map(function (t) { return React.createElement('div', { key: t.id, className: 'text-[11px] font-mono ' + ui.muted, title: t.items.map(function (i) { return i.item + '=' + i.value; }).join(', ') }, t.id + ' · предметов: ' + t.items.length); })
               )
             ) : null,
-            (!project.squads || !project.squads.length) && (!project.spawnSections || !project.spawnSections.length) && (!project.infoPortions || !project.infoPortions.length) && (!project.encyclopedia || !project.encyclopedia.length) && (!project.secrets || !project.secrets.treasures || !project.secrets.treasures.length) ? React.createElement('div', { className: 'text-xs ' + ui.muted }, 'Нет просканированных ресурсов этого типа. Просканируйте gamedata.') : null
+            (!project.actor) && (!project.monsters || !project.monsters.length) && (!project.squads || !project.squads.length) && (!project.spawnSections || !project.spawnSections.length) && (!project.infoPortions || !project.infoPortions.length) && (!project.encyclopedia || !project.encyclopedia.length) && (!project.secrets || !project.secrets.treasures || !project.secrets.treasures.length) ? React.createElement('div', { className: 'text-xs ' + ui.muted }, 'Нет просканированных ресурсов этого типа. Просканируйте gamedata.') : null
           )
         )
       )

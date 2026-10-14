@@ -367,6 +367,38 @@ export function parseSquadDescr(text) {
 // === Общие поля предметов (#28): добавляются к каждому профилю ===
 export const ITEM_COMMON_FIELDS = ['$spawn', '$prefetch', '$npc', 'visual', 'cform', 'cost', 'inv_name', 'inv_name_short', 'description', 'inv_weight', 'inv_grid_width', 'inv_grid_height', 'inv_grid_x', 'inv_grid_y'];
 
+// === Монстры monsters.ltx / M_*.ltx (#25) ===
+export function parseMonsters(text) {
+  const parsed = parseLtx(text);
+  return parsed.sections.filter(function (s) {
+    const cls = s.entries.find(function (e) { return e.key === 'class'; });
+    return cls && /^SM_/.test(String(cls.value).trim());
+  }).map(function (s) {
+    const get = function (key) { const e = s.entries.find(function (x) { return x.key === key; }); return e ? e.value : ''; };
+    return { id: s.name, base: (s.parents || [])[0] || '', class: get('class'), visual: get('visual'), icon: get('icon'), script_binding: get('script_binding'), health: get('MaxHealthValue') };
+  });
+}
+
+// === Актор actor.ltx (#26) ===
+export function parseActor(text) {
+  const parsed = parseLtx(text);
+  const sec = parsed.sections.find(function (s) { return s.name.toLowerCase() === 'actor'; });
+  if (!sec) return null;
+  const get = function (key) { const e = sec.entries.find(function (x) { return x.key === key; }); return e ? e.value : ''; };
+  return {
+    max_item_mass: get('max_item_mass'),
+    jump_speed: get('jump_speed'),
+    run_coef: get('run_coef'),
+    sprint_koef: get('sprint_koef'),
+    money: get('money'),
+    rank: get('rank'),
+    visual: get('visual'),
+    class: get('class'),
+    script_binding: get('script_binding'),
+    entries: sec.entries.map(function (e) { return { key: e.key, value: e.value }; })
+  };
+}
+
 // === Спавн-секции spawn_sections.ltx (#14) ===
 export function parseSpawnSections(text) {
   const parsed = parseLtx(text);

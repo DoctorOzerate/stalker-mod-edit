@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { dialogueToXml, dialogsLtx, validateTextIds, gameFilesFromDialogues, findTextIdIssues } from '../src/lib/dialogs.js';
+import { dialogueToXml, dialogsLtx, validateTextIds, gameFilesFromDialogues, findTextIdIssues, resolveTextId } from '../src/lib/dialogs.js';
 
 function makeDialog(id, data) {
   return {
@@ -58,4 +58,11 @@ test('findTextIdIssues reports duplicates, empty, missing', () => {
   assert.ok(issues.some((i) => i.msg.indexOf('Дубликат') !== -1));
   assert.ok(issues.some((i) => i.msg.indexOf('Пустой') !== -1));
   assert.ok(issues.some((i) => i.msg.indexOf('missing') !== -1));
+});
+
+test('resolveTextId finds translation across locales', () => {
+  const languages = [{ locale: 'eng', entries: [{ id: 'a', text: '' }] }, { locale: 'rus', entries: [{ id: 'a', text: 'Привет' }] }];
+  assert.equal(resolveTextId(languages, 'a').text, 'Привет');
+  assert.equal(resolveTextId(languages, 'a').locale, 'rus');
+  assert.equal(resolveTextId(languages, 'nope'), null);
 });

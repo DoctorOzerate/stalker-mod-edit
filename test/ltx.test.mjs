@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, itemFieldProfile, ITEM_FIELD_PROFILES, classifyItem, COMMUNITY_ICONS, parseGameRelations, parseRatingScales, parseSquadDescr, parseSecrets, parseSpawnSections } from '../src/lib/ltx.js';
+import { validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, itemFieldProfile, ITEM_FIELD_PROFILES, classifyItem, COMMUNITY_ICONS, parseGameRelations, parseRatingScales, parseSquadDescr, parseSecrets, parseSpawnSections, parseMonsters, parseActor } from '../src/lib/ltx.js';
 
 test('validateLtxRefs flags missing ammo_class but not known parent', () => {
   const text = '[wpn_ak74]:wpn_base\nammo_class = ammo_9x18_fmj, ammo_missing\n';
@@ -126,4 +126,21 @@ test('parseSpawnSections reads spawn sections', () => {
   assert.equal(r[0].base, 'stalker');
   assert.equal(r[0].character_profile, 'zat_b14_stalker_1');
   assert.equal(r[0].spec_rank, 'regular');
+});
+
+test('parseMonsters reads SM_ class sections', () => {
+  const text = '[m_bloodsucker_e]:monster_base\nclass = SM_BLOOD\nvisual = monsters\\krovosos\\krovosos\nscript_binding = bind_monster.bind\n[some_item]\nclass = II_FOOD\n';
+  const r = parseMonsters(text);
+  assert.equal(r.length, 1);
+  assert.equal(r[0].id, 'm_bloodsucker_e');
+  assert.equal(r[0].class, 'SM_BLOOD');
+  assert.equal(r[0].script_binding, 'bind_monster.bind');
+});
+
+test('parseActor reads actor section', () => {
+  const text = '[actor]:common_ph\nclass = S_ACTOR\nmax_item_mass = 35\njump_speed = 6.\nmoney = 15000\n';
+  const r = parseActor(text);
+  assert.equal(r.class, 'S_ACTOR');
+  assert.equal(r.max_item_mass, '35');
+  assert.equal(r.money, '15000');
 });

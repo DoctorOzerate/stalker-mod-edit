@@ -4,9 +4,9 @@ import { normalizePath as coreNormalizePath, cp1251Encode, decodeGameBytes } fro
 import { QUEST_CATEGORIES, QUEST_TEMPLATES, normalizeQuestObjectives, parseGameTasksXml, parseTaskManagerLtx, questsToXml, validateQuests, computeQuestChains, taskManagerLtx } from './lib/quests.js';
 import { tokenizeLua, tokenizeLuaLines, countLuaBrackets, formatLua, luaFunctionBlocks, luaCheck, luaUndeclaredGlobals, LUA_API, LUA_SNIPPETS, LUA_ENGINE_GLOBALS, luaCallGraph, luaUnused, luaCompletions } from './lib/lua.js';
 import { decodeDDS, pixelsToDataURL, encodeDds } from './lib/dds.js';
-import { splitLines, parseLtx, resolveIncludes, updateLtxLine, removeSection, addSection, addFieldToSection, removeFieldByLine, isValidGridValue, isValidGridWH, iconCoords, ATLAS_PRESETS, isFileLoaded, findIncludeSuggestion, itemFileCategory, isItemFile, mergedItemEntries, includeTreeRows, includeGraphSvg, ITEM_CATEGORIES, COMMUNITY_ICONS, classifyItem, validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, ITEM_FIELD_PROFILES, itemFieldProfile, parseGameRelations, parseRatingScales, parseSquadDescr, parseSecrets, parseSpawnSections } from './lib/ltx.js';
+import { splitLines, parseLtx, resolveIncludes, updateLtxLine, removeSection, addSection, addFieldToSection, removeFieldByLine, isValidGridValue, isValidGridWH, iconCoords, ATLAS_PRESETS, isFileLoaded, findIncludeSuggestion, itemFileCategory, isItemFile, mergedItemEntries, includeTreeRows, includeGraphSvg, ITEM_CATEGORIES, COMMUNITY_ICONS, classifyItem, validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, ITEM_FIELD_PROFILES, itemFieldProfile, parseGameRelations, parseRatingScales, parseSquadDescr, parseSecrets, parseSpawnSections, parseMonsters, parseActor } from './lib/ltx.js';
 import { NODE_TYPES, PALETTE_HIDDEN, META_KEYS, FALLBACK_NODE, safeNode, flattenDialogues, validateGraph, layoutDialogue, nodeLabel, roleColor, dialogueStats, suggestTextId, validateMetadataSyntax, dialogueGroup, DIALOGUE_GROUPS, graphToSvg } from './lib/graph.js';
-import { gameFilesFromDialogues, validateTextIds, dialogueToXml, findTextIdIssues } from './lib/dialogs.js';
+import { gameFilesFromDialogues, validateTextIds, dialogueToXml, findTextIdIssues, resolveTextId } from './lib/dialogs.js';
 import { analyzeSpawn } from './lib/spawn.js';
 import { xmlAttr, xmlTag, parseCharactersXml, parseGeneralCharactersXml, parseCharacterDescGeneral, characterDescGeneralToXml, LOCALE_NAMES, detectLocale, mergeLanguages, parseStringTableXml, parseDialogueXml, parseInfoPortions, parseEncyclopedia } from './lib/xml.js';
 import { createHistory } from './lib/history.js';
@@ -1048,6 +1048,8 @@ export default function App() {
     let foundSquads = [];
     let foundSecrets = null;
     let foundSpawnSections = [];
+    let foundMonsters = [];
+    let foundActor = null;
     let sysText = null, itemsText = null;
     const skipped = [];
     const importEncoding = (project.settings && project.settings.importEncoding) || 'auto';
@@ -1190,6 +1192,10 @@ export default function App() {
     if (foundSecrets) next.secrets = foundSecrets;
     Object.keys(ltxFiles).forEach(function (p) { if (p.toLowerCase().indexOf('spawn_sections') !== -1 && p.toLowerCase().endsWith('.ltx')) foundSpawnSections = foundSpawnSections.concat(parseSpawnSections(ltxFiles[p])); });
     if (foundSpawnSections.length) next.spawnSections = foundSpawnSections;
+    Object.keys(ltxFiles).forEach(function (p) { if (p.toLowerCase().endsWith('actor.ltx') && !foundActor) foundActor = parseActor(ltxFiles[p]); });
+    if (foundActor) next.actor = foundActor;
+    Object.keys(ltxFiles).forEach(function (p) { const lower = p.toLowerCase(); if ((lower.endsWith('monsters.ltx') || (lower.indexOf('/m_') !== -1 || lower.indexOf('\\m_') !== -1)) && lower.endsWith('.ltx')) foundMonsters = foundMonsters.concat(parseMonsters(ltxFiles[p])); });
+    if (foundMonsters.length) next.monsters = foundMonsters;
     if (foundInfoPortions.length) next.infoPortions = foundInfoPortions;
     if (foundEncyclopedia.length) next.encyclopedia = foundEncyclopedia;
 
@@ -1898,11 +1904,11 @@ export default function App() {
     parseGameTasksXml, questsToXml, validateQuests, computeQuestChains, taskManagerLtx, includeTreeRows,
     includeGraphSvg, isFileLoaded, findIncludeSuggestion, tokenizeLua, tokenizeLuaLines, countLuaBrackets, formatLua,
     luaFunctionBlocks, luaCheck, luaUndeclaredGlobals, LUA_API, LUA_SNIPPETS, LUA_ENGINE_GLOBALS, luaCallGraph, luaUnused, luaCompletions, classifyItem, itemFileCategory, extractCharacterXml, normalizeQuestObjectives,
-    validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, gameFilesFromDialogues, validateTextIds, dialogueToXml, findTextIdIssues,
+    validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, gameFilesFromDialogues, validateTextIds, dialogueToXml, findTextIdIssues, resolveTextId,
     mergedItemEntries, isValidGridValue, isValidGridWH, download, downloadBytes, downloadDataUrl, textBytes,
     escapeXml, csvCell, splitLines, updateLtxLine, addSection, removeSection, addFieldToSection, removeFieldByLine, ITEM_FIELD_PROFILES, itemFieldProfile,
     parseStringTableXml, parseGeneralCharactersXml, parseCharacterDescGeneral, characterDescGeneralToXml, analyzeSpawn,
-    parseInfoPortions, parseEncyclopedia, parseSquadDescr, parseRatingScales, parseSecrets, parseSpawnSections
+    parseInfoPortions, parseEncyclopedia, parseSquadDescr, parseRatingScales, parseSecrets, parseSpawnSections, parseMonsters, parseActor
   };
 
   return React.createElement('div', { className: 'h-screen w-screen overflow-hidden flex flex-col ' + ui.app, style: { '--accent': accentColors[0], '--accent-hover': accentColors[1] } },
