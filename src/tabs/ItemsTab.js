@@ -67,16 +67,8 @@ export function renderItemsTab(ctx) {
               const inheritedCount = merged.filter(function (e) { return e.inherited; }).length;
               const gx = selSection.entries.find(function (e) { return e.key === 'inv_grid_x'; });
               const gy = selSection.entries.find(function (e) { return e.key === 'inv_grid_y'; });
-              const gw = selSection.entries.find(function (e) { return e.key === 'inv_grid_width'; });
-              const gh = selSection.entries.find(function (e) { return e.key === 'inv_grid_height'; });
               const gxOk = gx ? isValidGridValue(gx.value) : true;
               const gyOk = gy ? isValidGridValue(gy.value) : true;
-              const gwOk = gw ? isValidGridWH(gw.value) : true;
-              const ghOk = gh ? isValidGridWH(gh.value) : true;
-              const previewIcon = atlasTex && gxOk && gyOk && gx && gy;
-              const cellSize = project.atlas.cellSize || 50;
-              const gwVal = (gw && gwOk) ? +gw.value : 1;
-              const ghVal = (gh && ghOk) ? +gh.value : 1;
               return React.createElement(React.Fragment, null,
                 (selSection.parents && selSection.parents.length
                   ? React.createElement('div', { className: 'grid gap-1' },

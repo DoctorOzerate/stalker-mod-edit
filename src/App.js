@@ -1184,7 +1184,14 @@ export default function App() {
     if (sysText != null) next.systemLtx = sysText;
     if (itemsText != null) next.itemsLtx = itemsText;
     if (foundScripts.length) next.scripts = foundScripts;
-    if (newTextures.length) next.textures = newTextures;
+    if (newTextures.length) {
+      newTextures.sort(function (a, b) {
+        const ai = String(a.name || '').toLowerCase().indexOf('ui_icon_equipment') !== -1 ? 0 : 1;
+        const bi = String(b.name || '').toLowerCase().indexOf('ui_icon_equipment') !== -1 ? 0 : 1;
+        return ai - bi;
+      });
+      next.textures = newTextures;
+    }
     if (foundDialogues.length) next.dialogues = foundDialogues.flatMap(function (group) {
       return group.dialogues.map(function (d) { return Object.assign({}, d, { sourcePath: group.path, sourceFile: group.file }); });
     });
