@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DOMParser } from '@xmldom/xmldom';
-import { questsToXml, parseGameTasksXml, parseTaskManagerLtx, questChainSvg, taskManagerLtx } from '../src/lib/quests.js';
+import { questsToXml, parseGameTasksXml, parseTaskManagerLtx, questChainSvg, taskManagerLtx, parseCondlistEntry, condlistEntryToStr } from '../src/lib/quests.js';
 
 test('questsToXml exports reward tag', () => {
   const xml = questsToXml([{ id: 'q1', format: 'game_tasks', title: 't', text: 'x', reward: 'money:5000' }], 'utf-8');
@@ -62,5 +62,15 @@ test('taskManagerLtx round-trips full fields', () => {
   assert.ok(out.indexOf('storyline = true') !== -1);
   assert.ok(out.indexOf('condlist_0 = {+tbt_task_1_complete} complete') !== -1);
   assert.ok(out.indexOf('target = tbt_snork') !== -1);
+});
+
+test('parseCondlistEntry and condlistEntryToStr round-trip', () => {
+  const p = parseCondlistEntry('{+tbt_task_1_complete} complete');
+  assert.equal(p.cond, '{+tbt_task_1_complete}');
+  assert.equal(p.action, 'complete');
+  assert.equal(condlistEntryToStr(p.cond, p.action), '{+tbt_task_1_complete} complete');
+  const p2 = parseCondlistEntry('complete');
+  assert.equal(p2.cond, '');
+  assert.equal(p2.action, 'complete');
 });
 

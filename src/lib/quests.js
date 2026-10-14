@@ -258,6 +258,7 @@ export function questChainSvg(chains, quests) {
     const a = pos[e.a], b = pos[e.b];
     const x1 = a.x + nodeW, y1 = a.y + nodeH / 2, x2 = b.x, y2 = b.y + nodeH / 2, mx = (x1 + x2) / 2;
     L.push('<path d="M ' + x1 + ' ' + y1 + ' C ' + mx + ' ' + y1 + ', ' + mx + ' ' + y2 + ', ' + x2 + ' ' + y2 + '" fill="none" stroke="#71717a" stroke-width="2"/>');
+
     L.push('<polygon points="' + x2 + ',' + y2 + ' ' + (x2 - 8) + ',' + (y2 - 5) + ' ' + (x2 - 8) + ',' + (y2 + 5) + '" fill="#71717a"/>');
   });
   ids.forEach(function (id) {
@@ -268,5 +269,17 @@ export function questChainSvg(chains, quests) {
   });
   L.push('</svg>');
   return L.join('\n');
+}
+
+
+// === Разбор/сборка записи condlist (#59) ===
+export function parseCondlistEntry(str) {
+  const s = String(str == null ? '' : str);
+  const m = s.match(/^\s*(\{[^}]*\})\s*(.*)$/);
+  if (m) return { cond: m[1].trim(), action: m[2].trim() };
+  return { cond: '', action: s.trim() };
+}
+export function condlistEntryToStr(cond, action) {
+  return ((cond || '').trim() + ' ' + (action || '').trim()).trim();
 }
 
