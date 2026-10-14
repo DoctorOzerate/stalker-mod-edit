@@ -116,7 +116,23 @@ export function renderCharactersTab(ctx) {
               React.createElement('div', { className: 'rounded-xl border p-3 grid gap-1 ' + ui.card },
                 React.createElement('div', { className: 'text-[10px] uppercase tracking-widest font-bold ' + ui.muted }, 'Иконка и визуал'),
                 React.createElement('div', { className: 'flex items-center gap-2' },
-                  React.createElement('span', { className: 'w-10 h-10 grid place-items-center rounded border text-xl ' + (dark ? 'border-zinc-700 bg-zinc-800' : 'border-slate-300 bg-slate-100') }, '👤'),
+                  (function () {
+                    const entry = project.textureMap && project.textureMap[c.icon];
+                    if (entry) {
+                      const want = String(entry.file || '').toLowerCase().replace(/\\/g, '/');
+                      const tex = (project.textures || []).find(function (t) { const n = String(t.name || '').toLowerCase().replace(/\.dds$/i, '').replace(/\\/g, '/'); return n === want || n.endsWith('/' + want) || want.endsWith('/' + n); });
+                      if (tex && tex.dataURL && entry.width) {
+                        const scale = 66 / entry.width;
+                        const pw = 66, ph = Math.max(1, Math.round(entry.height * scale));
+                        return React.createElement('div', {
+                          className: 'rounded border shrink-0 ' + (dark ? 'border-zinc-700' : 'border-slate-300'),
+                          style: { width: pw, height: ph, backgroundImage: 'url(' + tex.dataURL + ')', backgroundSize: (tex.width * scale) + 'px ' + (tex.height * scale) + 'px', backgroundPosition: '-' + (entry.x * scale) + 'px -' + (entry.y * scale) + 'px', imageRendering: 'pixelated' },
+                          title: c.icon + ' · ' + entry.width + '×' + entry.height
+                        });
+                      }
+                    }
+                    return React.createElement('span', { className: 'w-10 h-10 grid place-items-center rounded border text-xl ' + (dark ? 'border-zinc-700 bg-zinc-800' : 'border-slate-300 bg-slate-100') }, '👤');
+                  })(),
                   React.createElement('div', { className: 'grid gap-0.5 text-xs font-mono ' + ui.muted },
                     React.createElement('div', {}, 'icon: ' + (c.icon || '—')),
                     React.createElement('div', {}, 'visual: ' + (c.visual || '—'))

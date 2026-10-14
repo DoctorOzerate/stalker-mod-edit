@@ -8,7 +8,7 @@ import { splitLines, parseLtx, resolveIncludes, updateLtxLine, removeSection, ad
 import { NODE_TYPES, PALETTE_HIDDEN, META_KEYS, FALLBACK_NODE, safeNode, flattenDialogues, validateGraph, layoutDialogue, nodeLabel, roleColor, dialogueStats, suggestTextId, validateMetadataSyntax, dialogueGroup, DIALOGUE_GROUPS, graphToSvg } from './lib/graph.js';
 import { gameFilesFromDialogues, validateTextIds, dialogueToXml, findTextIdIssues, resolveTextId } from './lib/dialogs.js';
 import { analyzeSpawn } from './lib/spawn.js';
-import { xmlAttr, xmlTag, parseCharactersXml, parseGeneralCharactersXml, parseCharacterDescGeneral, characterDescGeneralToXml, LOCALE_NAMES, detectLocale, mergeLanguages, parseStringTableXml, parseDialogueXml, parseInfoPortions, parseEncyclopedia, parseNpcProfile } from './lib/xml.js';
+import { xmlAttr, xmlTag, parseCharactersXml, parseGeneralCharactersXml, parseCharacterDescGeneral, characterDescGeneralToXml, LOCALE_NAMES, detectLocale, mergeLanguages, parseStringTableXml, parseDialogueXml, parseInfoPortions, parseEncyclopedia, parseNpcProfile, parseTextureDescriptor } from './lib/xml.js';
 import { createHistory } from './lib/history.js';
 import { tr } from './lib/i18n.js';
 import { loadPlugins, savePlugins, runPluginExporter } from './lib/plugins.js';
@@ -1053,6 +1053,7 @@ export default function App() {
     let foundSurgeManager = null;
     let foundNpcProfiles = [];
     let foundTrade = null;
+    let foundTextureDescriptors = [];
     let sysText = null, itemsText = null;
     const skipped = [];
     const importEncoding = (project.settings && project.settings.importEncoding) || 'auto';
@@ -1064,7 +1065,7 @@ export default function App() {
       const file = fileMap[path];
       const lower = path.toLowerCase();
       try {
-        if (lower.endsWith('.dds') && lower.indexOf('ui_icon_equipment') !== -1) {
+        if (lower.endsWith('.dds') && (lower.indexOf('ui_icon_equipment') !== -1 || lower.indexOf('ui_npc') !== -1 || lower.indexOf('ui_actor') !== -1)) {
           try {
             const buf = await file.arrayBuffer();
             const dec = decodeDDS(buf);
@@ -1125,6 +1126,8 @@ export default function App() {
           if (encyclopedia.length) foundEncyclopedia = foundEncyclopedia.concat(encyclopedia);
           const npcProfile = parseNpcProfile(text);
           if (npcProfile.length) foundNpcProfiles = foundNpcProfiles.concat(npcProfile);
+          const texDesc = parseTextureDescriptor(text);
+          if (texDesc && texDesc.textures.length) foundTextureDescriptors.push(texDesc);
           continue;
         }
       } catch (err) {
@@ -1206,6 +1209,11 @@ export default function App() {
     Object.keys(ltxFiles).forEach(function (p) { if (p.toLowerCase().indexOf('trade_') !== -1 && p.toLowerCase().endsWith('.ltx')) { const t = parseTrade(ltxFiles[p]); if (t.traders.length || t.supplies.length) foundTrade = { traders: (foundTrade ? foundTrade.traders : []).concat(t.traders), supplies: (foundTrade ? foundTrade.supplies : []).concat(t.supplies) }; } });
     if (foundTrade) next.trade = foundTrade;
     if (foundNpcProfiles.length) next.npcProfiles = foundNpcProfiles;
+    if (foundTextureDescriptors.length) {
+      const textureMap = {};
+      foundTextureDescriptors.forEach(function (td) { td.textures.forEach(function (t) { textureMap[t.id] = { file: td.file, x: t.x, y: t.y, width: t.width, height: t.height }; }); });
+      next.textureMap = textureMap;
+    }
     if (foundInfoPortions.length) next.infoPortions = foundInfoPortions;
     if (foundEncyclopedia.length) next.encyclopedia = foundEncyclopedia;
 
@@ -1966,7 +1974,7 @@ export default function App() {
     mergedItemEntries, isValidGridValue, isValidGridWH, download, downloadBytes, downloadDataUrl, textBytes,
     escapeXml, csvCell, splitLines, updateLtxLine, addSection, removeSection, addFieldToSection, removeFieldByLine, ITEM_FIELD_PROFILES, itemFieldProfile,
     parseStringTableXml, parseGeneralCharactersXml, parseCharacterDescGeneral, characterDescGeneralToXml, analyzeSpawn,
-    parseInfoPortions, parseEncyclopedia, parseSquadDescr, parseRatingScales, parseSecrets, parseSpawnSections, parseMonsters, parseActor, parseSurgeManager, parseNpcProfile, parseTrade
+    parseInfoPortions, parseEncyclopedia, parseSquadDescr, parseRatingScales, parseSecrets, parseSpawnSections, parseMonsters, parseActor, parseSurgeManager, parseNpcProfile, parseTrade, parseTextureDescriptor
   };
 
   return React.createElement('div', { className: 'h-screen w-screen overflow-hidden flex flex-col ' + ui.app, style: { '--accent': accentColors[0], '--accent-hover': accentColors[1] } },

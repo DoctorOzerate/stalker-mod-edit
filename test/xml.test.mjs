@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DOMParser } from '@xmldom/xmldom';
-import { parseCharacterDescGeneral, characterDescGeneralToXml, parseStringTableXml, parseInfoPortions, parseEncyclopedia, parseNpcProfile } from '../src/lib/xml.js';
+import { parseCharacterDescGeneral, characterDescGeneralToXml, parseStringTableXml, parseInfoPortions, parseEncyclopedia, parseNpcProfile, parseTextureDescriptor } from '../src/lib/xml.js';
 
 test('parseCharacterDescGeneral reads communities and relations', () => {
   globalThis.DOMParser = DOMParser;
@@ -63,4 +63,15 @@ test('parseNpcProfile reads characters', () => {
   assert.equal(r[0].class, 'Trader');
   assert.equal(r[0].specific_character, 'escape_trader');
   assert.equal(r[1].specific_character, '');
+});
+
+test('parseTextureDescriptor reads file and texture coords', () => {
+  globalThis.DOMParser = DOMParser;
+  const xml = '<w><file name="ui\\ui_npc_unique"><texture id="ui_npc_u_actor" x="0" y="0" width="165" height="108"/><texture id="ui_npc_u_bandit_1" x="165" y="108" width="165" height="108"/></file></w>';
+  const r = parseTextureDescriptor(xml);
+  assert.equal(r.file, 'ui\\ui_npc_unique');
+  assert.equal(r.textures.length, 2);
+  assert.equal(r.textures[0].id, 'ui_npc_u_actor');
+  assert.equal(r.textures[0].width, 165);
+  assert.equal(r.textures[1].x, 165);
 });

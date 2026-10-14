@@ -187,3 +187,17 @@ export function parseNpcProfile(text) {
   }).filter(function (x) { return x.id; });
 }
 
+
+// === Дескриптор текстур ui_*.xml (#18) ===
+export function parseTextureDescriptor(text) {
+  const d = new DOMParser().parseFromString(String(text), 'application/xml');
+  if (d.getElementsByTagName('parsererror').length) return null;
+  const fileEl = d.getElementsByTagName('file')[0];
+  if (!fileEl) return null;
+  const file = fileEl.getAttribute('name') || '';
+  const textures = Array.from(d.getElementsByTagName('texture')).map(function (t) {
+    return { id: t.getAttribute('id') || '', x: +(t.getAttribute('x') || 0), y: +(t.getAttribute('y') || 0), width: +(t.getAttribute('width') || 0), height: +(t.getAttribute('height') || 0) };
+  }).filter(function (t) { return t.id; });
+  return { file: file, textures: textures };
+}
+
