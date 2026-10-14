@@ -85,6 +85,34 @@ export function renderItemsTab(ctx) {
                     )
                   : React.createElement('div', { className: 'text-xs ' + ui.muted }, 'Нет родителей')),
                 (function () {
+                  if (!atlasTex) return null;
+                  const cs = project.atlas.cellSize || 50;
+                  const chh = project.atlas.cellHeight || cs;
+                  const cols = Math.max(1, Math.floor(atlasTex.width / cs));
+                  const rows = Math.max(1, Math.floor(atlasTex.height / chh));
+                  const curX = (gx && gxOk) ? +gx.value : -1;
+                  const curY = (gy && gyOk) ? +gy.value : -1;
+                  const cell = 16;
+                  return React.createElement('div', { className: 'rounded-xl border p-3 grid gap-2 ' + ui.card },
+                    React.createElement('div', { className: 'text-[10px] uppercase tracking-widest font-bold ' + ui.muted }, 'Иконка в атласе · клик задаёт inv_grid_x/y (' + cols + '×' + rows + ')'),
+                    React.createElement('div', { className: 'grid gap-px', style: { gridTemplateColumns: 'repeat(' + cols + ', ' + cell + 'px)', width: cols * cell } },
+                      Array.from({ length: cols * rows }).map(function (_, i) {
+                        const x = i % cols, y = Math.floor(i / cols);
+                        const active = x === curX && y === curY;
+                        return React.createElement('button', {
+                          key: i,
+                          type: 'button',
+                          onClick: function () { setItemGrid(x, y); },
+                          className: 'border ' + (active ? 'border-green-400 outline outline-1 outline-green-400' : (dark ? 'border-zinc-800' : 'border-slate-300')),
+                          style: { width: cell, height: cell, backgroundImage: 'url(' + atlasTex.dataURL + ')', backgroundSize: (cols * cell) + 'px ' + (rows * cell) + 'px', backgroundPosition: '-' + (x * cell) + 'px -' + (y * cell) + 'px', imageRendering: 'pixelated' },
+                          title: 'Ячейка ' + x + '×' + y + (active ? ' (текущая)' : '')
+                        });
+                      })
+                    ),
+                    React.createElement('div', { className: 'text-[11px] font-mono ' + ui.muted }, 'inv_grid_x=' + curX + ' · inv_grid_y=' + curY)
+                  );
+                })(),
+                (function () {
                   const brokenParents = (selSection.parents || []).filter(function (p) { return !itemsByName[p.toLowerCase()]; });
                   if (!brokenParents.length) return null;
                   return React.createElement('div', { className: 'text-xs text-red-400' }, '⚠ Битые родители (не найдены): ' + brokenParents.join(', '));
