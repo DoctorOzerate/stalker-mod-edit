@@ -206,3 +206,52 @@ export function computeQuestChains(quests) {
   roots.forEach(function (r) { walk(r, []); });
   return chains;
 }
+
+// === Визуальный граф цепочек квестов (#64) ===
+export function questChainSvg(chains, quests) {
+  const list = chains || [];
+  const byId = {};
+  (quests || []).forEach(function (q) { byId[q.id] = q; });
+  if (!list.length) return '';
+  const nodeW = 170, nodeH = 54, gapX = 70, gapY = 46, pad = 30;
+  const pos = {};
+  list.forEach(function (chain, ci) {
+    chain.forEach(function (id, depth) {
+      if (pos[id]) return;
+      pos[id] = { x: pad + depth * (nodeW + gapX), y: pad + ci * (nodeH + gapY) };
+    });
+  });
+  const seen = {};
+  const edges = [];
+  list.forEach(function (chain) {
+    for (let i = 1; i < chain.length; i++) {
+      const a = chain[i - 1], b = chain[i], key = a + '>' + b;
+      if (!seen[key] && pos[a] && pos[b]) { seen[key] = 1; edges.push({ a: a, b: b }); }
+    }
+  });
+  const ids = Object.keys(pos);
+  if (!ids.length) return '';
+  const minX = Math.min.apply(null, ids.map(function (id) { return pos[id].x; })) - pad;
+  const maxX = Math.max.apply(null, ids.map(function (id) { return pos[id].x + nodeW; })) + pad;
+  const minY = Math.min.apply(null, ids.map(function (id) { return pos[id].y; })) - pad;
+  const maxY = Math.max.apply(null, ids.map(function (id) { return pos[id].y + nodeH; })) + pad;
+  const w = maxX - minX, h = maxY - minY;
+  const L = [];
+  L.push('<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '" viewBox="' + minX + ' ' + minY + ' ' + w + ' ' + h + '">');
+  L.push('<rect x="' + minX + '" y="' + minY + '" width="' + w + '" height="' + h + '" fill="#18181b"/>');
+  edges.forEach(function (e) {
+    const a = pos[e.a], b = pos[e.b];
+    const x1 = a.x + nodeW, y1 = a.y + nodeH / 2, x2 = b.x, y2 = b.y + nodeH / 2, mx = (x1 + x2) / 2;
+    L.push('<path d="M ' + x1 + ' ' + y1 + ' C ' + mx + ' ' + y1 + ', ' + mx + ' ' + y2 + ', ' + x2 + ' ' + y2 + '" fill="none" stroke="#71717a" stroke-width="2"/>');
+    L.push('<polygon points="' + x2 + ',' + y2 + ' ' + (x2 - 8) + ',' + (y2 - 5) + ' ' + (x2 - 8) + ',' + (y2 + 5) + '" fill="#71717a"/>');
+  });
+  ids.forEach(function (id) {
+    const p = pos[id], q = byId[id];
+    L.push('<rect x="' + p.x + '" y="' + p.y + '" width="' + nodeW + '" height="' + nodeH + '" rx="8" fill="#1f2937" stroke="#3f3f46"/>');
+    L.push('<text x="' + (p.x + 12) + '" y="' + (p.y + 20) + '" fill="#fff" font-size="12" font-weight="bold">' + escapeXml(String(id).slice(0, 28)) + '</text>');
+    if (q && q.category) L.push('<text x="' + (p.x + 12) + '" y="' + (p.y + 38) + '" fill="#a1a1aa" font-size="10">' + escapeXml(q.category) + '</text>');
+  });
+  L.push('</svg>');
+  return L.join('\n');
+}
+

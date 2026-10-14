@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { zipSync, strToU8 } from 'fflate';
 import { normalizePath as coreNormalizePath, cp1251Encode, decodeGameBytes } from './lib/core.js';
-import { QUEST_CATEGORIES, QUEST_TEMPLATES, normalizeQuestObjectives, parseGameTasksXml, parseTaskManagerLtx, questsToXml, validateQuests, computeQuestChains, taskManagerLtx } from './lib/quests.js';
+import { QUEST_CATEGORIES, QUEST_TEMPLATES, normalizeQuestObjectives, parseGameTasksXml, parseTaskManagerLtx, questsToXml, validateQuests, computeQuestChains, taskManagerLtx, questChainSvg } from './lib/quests.js';
 import { tokenizeLua, tokenizeLuaLines, countLuaBrackets, formatLua, luaFunctionBlocks, luaCheck, luaUndeclaredGlobals, LUA_API, LUA_SNIPPETS, LUA_ENGINE_GLOBALS, luaCallGraph, luaUnused, luaCompletions, validateScriptBindings } from './lib/lua.js';
 import { decodeDDS, pixelsToDataURL, encodeDds } from './lib/dds.js';
 import { splitLines, parseLtx, resolveIncludes, updateLtxLine, removeSection, addSection, addFieldToSection, removeFieldByLine, isValidGridValue, isValidGridWH, iconCoords, ATLAS_PRESETS, isFileLoaded, findIncludeSuggestion, itemFileCategory, isItemFile, mergedItemEntries, includeTreeRows, includeGraphSvg, ITEM_CATEGORIES, COMMUNITY_ICONS, classifyItem, validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, ITEM_FIELD_PROFILES, itemFieldProfile, parseGameRelations, parseRatingScales, parseSquadDescr, parseSecrets, parseSpawnSections, parseMonsters, parseActor, parseSurgeManager } from './lib/ltx.js';
@@ -1956,7 +1956,7 @@ export default function App() {
     // модульные константы и утилиты
     NODE_TYPES, FALLBACK_NODE, SERIES, ITEM_CATEGORIES, COMMUNITY_ICONS, QUEST_CATEGORIES, QUEST_TEMPLATES,
     ATLAS_PRESETS, NL, Q, BS, META_KEYS, PALETTE_HIDDEN, AtlasViewer, nodeLabel, roleColor, dialogueStats, suggestTextId, validateMetadataSyntax, dialogueGroup, parseLtx,
-    parseGameTasksXml, questsToXml, validateQuests, computeQuestChains, taskManagerLtx, includeTreeRows,
+    parseGameTasksXml, questsToXml, validateQuests, computeQuestChains, taskManagerLtx, questChainSvg, includeTreeRows,
     includeGraphSvg, isFileLoaded, findIncludeSuggestion, tokenizeLua, tokenizeLuaLines, countLuaBrackets, formatLua,
     luaFunctionBlocks, luaCheck, luaUndeclaredGlobals, LUA_API, LUA_SNIPPETS, LUA_ENGINE_GLOBALS, luaCallGraph, luaUnused, luaCompletions, validateScriptBindings, classifyItem, itemFileCategory, extractCharacterXml, normalizeQuestObjectives,
     validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, gameFilesFromDialogues, validateTextIds, dialogueToXml, findTextIdIssues, resolveTextId,

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DOMParser } from '@xmldom/xmldom';
-import { questsToXml, parseGameTasksXml, parseTaskManagerLtx } from '../src/lib/quests.js';
+import { questsToXml, parseGameTasksXml, parseTaskManagerLtx, questChainSvg } from '../src/lib/quests.js';
 
 test('questsToXml exports reward tag', () => {
   const xml = questsToXml([{ id: 'q1', format: 'game_tasks', title: 't', text: 'x', reward: 'money:5000' }], 'utf-8');
@@ -40,3 +40,12 @@ test('parseTaskManagerLtx reads CoP LTX tasks', () => {
   assert.equal(q[0].objectives[0].text, 'test_target');
   assert.equal(q[0].condlist[0], '{+x} complete');
 });
+
+test('questChainSvg renders nodes and edges', () => {
+  const quests = [{ id: 'a', category: 'Сюжет' }, { id: 'b', category: 'Сюжет' }, { id: 'c', category: 'Побочный' }];
+  const svg = questChainSvg([['a', 'b'], ['a', 'c']], quests);
+  assert.ok(svg.indexOf('<svg') !== -1);
+  assert.ok(svg.indexOf('>a</text>') !== -1);
+  assert.ok(svg.indexOf('<path') !== -1);
+});
+
