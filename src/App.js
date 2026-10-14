@@ -1890,6 +1890,12 @@ export default function App() {
           React.createElement('button', { className: btn, onClick: function () { setWelcomeOpen(false); } }, t('continue') + ' →')
         ),
 
+        React.createElement('div', { className: 'flex flex-wrap gap-2 justify-center' },
+          ['💬 Диалоги', '🧍 Персонажи', '🎒 Предметы', '🖼 Иконки', '📜 Скрипты', '🎯 Квесты', '🌐 Локализация', '🧾 system.ltx'].map(function (f) {
+            return React.createElement('span', { key: f, className: 'text-[11px] px-2.5 py-1 rounded-full font-medium ' + (dark ? 'bg-zinc-800 text-zinc-300' : 'bg-slate-200 text-slate-600') }, f);
+          })
+        ),
+
         React.createElement('section', { className: 'rounded-2xl border p-5 grid gap-4 ' + ui.panel },
           React.createElement('h2', { className: 'font-bold' }, 'Новый проект'),
           React.createElement('div', { className: 'grid md:grid-cols-3 gap-3' },
@@ -1917,10 +1923,12 @@ export default function App() {
             ? React.createElement('p', { className: 'text-xs ' + ui.muted }, 'Сохранённых проектов нет. Создайте новый или импортируйте существующий.')
             : projects.map(function (p) {
                 const s = SERIES.find(function (x) { return x.value === (p.data && p.data.series); }) || SERIES[0];
+                const d = p.data || {};
+                const cnt = (d.dialogues || []).length + (d.characters || []).length + ((d.quests || []).length) + (d.scripts || []).length;
                 return React.createElement('div', { key: p.name + '_' + p.updatedAt, className: 'flex items-center justify-between gap-3 rounded-xl border px-4 py-3 ' + ui.card },
                   React.createElement('button', { className: 'text-left flex-1 min-w-0', onClick: function () { openProjectItem(p); } },
                     React.createElement('div', { className: 'text-sm font-semibold truncate' }, p.name),
-                    React.createElement('div', { className: 'text-[11px] ' + ui.muted }, s.label + ' · ' + new Date(p.updatedAt).toLocaleString())
+                    React.createElement('div', { className: 'text-[11px] ' + ui.muted }, s.label + ' · ' + new Date(p.updatedAt).toLocaleString() + (cnt ? ' · ' + cnt + ' записей' : ''))
                   ),
                   React.createElement('div', { className: 'flex gap-2 shrink-0' },
                     React.createElement('button', { className: btn, onClick: function () { openProjectItem(p); } }, 'Открыть'),
@@ -2355,7 +2363,7 @@ export default function App() {
       ),
       React.createElement('div', { className: 'text-center text-[11px] bg-zinc-900/90 text-white py-1 px-3 shadow' }, 'Подгрузка gamedata: ' + loadProgress.done + ' / ' + loadProgress.total)
     ),
-    toast && React.createElement('div', { className: 'fixed bottom-5 left-1/2 -translate-x-1/2 bg-zinc-900 text-white text-xs px-4 py-2 rounded-xl shadow-2xl z-50 flex items-center gap-3' }, React.createElement('span', {}, toast), toastAction && React.createElement('button', { className: 'font-bold underline', onClick: function () { setToast(''); setToastAction(null); toastAction.action(); } }, toastAction.label)),
+    toast && React.createElement('div', { className: 'fixed bottom-5 left-1/2 -translate-x-1/2 max-w-[85vw] bg-zinc-900 text-white text-xs px-4 py-2.5 rounded-xl shadow-2xl z-50 flex items-center gap-3 border-l-4', style: { borderLeftColor: 'var(--accent)' } }, React.createElement('span', { className: 'break-words' }, toast), toastAction && React.createElement('button', { className: 'font-bold underline shrink-0', onClick: function () { setToast(''); setToastAction(null); toastAction.action(); } }, toastAction.label)),
     React.createElement('style', {}, '.accent{background-color:var(--accent)!important}.accent:hover{background-color:var(--accent-hover)!important}*{box-sizing:border-box}body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}button{-webkit-tap-highlight-color:transparent}input:focus,select:focus,textarea:focus{border-color:var(--accent)}:focus-visible{outline:2px solid var(--accent);outline-offset:1px}button,input,select,textarea{transition:border-color .15s ease,background-color .15s ease,color .15s ease}::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:99px}::-webkit-scrollbar-thumb:hover{background:#64748b}::-webkit-scrollbar-track{background:transparent}.line-clamp-3{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}')
   );
 }
