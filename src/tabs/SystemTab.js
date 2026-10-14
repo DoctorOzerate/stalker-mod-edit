@@ -186,6 +186,12 @@ export function renderSystemTab(ctx) {
               React.createElement('div', { className: 'text-[10px] uppercase font-bold ' + ui.muted }, 'Выбросы · surge_manager (' + (project.surgeManager.list || []).length + ' точек)'),
               React.createElement('div', { className: 'text-[11px] font-mono ' + ui.muted + ' break-all' }, Object.keys(project.surgeManager.settings || {}).map(function (k) { return k + '=' + project.surgeManager.settings[k]; }).join(' · '))
             ) : null,
+            (project.trade && (project.trade.traders.length > 0 || project.trade.supplies.length > 0)) ? React.createElement('div', { className: 'grid gap-1' },
+              React.createElement('div', { className: 'text-[10px] uppercase font-bold ' + ui.muted }, 'Торговля · trade (' + project.trade.traders.length + ' торговцев · ' + project.trade.supplies.length + ' списков)'),
+              React.createElement('div', { className: 'grid gap-0.5 max-h-40 overflow-auto' },
+                project.trade.traders.map(function (t) { return React.createElement('div', { key: t.id, className: 'text-[11px] font-mono ' + ui.muted, title: 'buy: ' + t.buy_condition + ' · sell: ' + t.sell_condition }, t.id + ' · buy: ' + (t.buy_condition || '—') + ' · sell: ' + (t.sell_condition || '—')); })
+              )
+            ) : null,
             (project.infoPortions && project.infoPortions.length > 0) ? React.createElement('div', { className: 'grid gap-1' },
               React.createElement('div', { className: 'text-[10px] uppercase font-bold ' + ui.muted }, 'Info-порции (' + project.infoPortions.length + ')'),
               React.createElement('div', { className: 'grid gap-0.5 max-h-40 overflow-auto' },

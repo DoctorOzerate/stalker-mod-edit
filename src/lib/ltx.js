@@ -380,6 +380,21 @@ export function parseSurgeManager(text) {
   return { settings: settings, list: list };
 }
 
+// === Торговля trade_*.ltx (#38) ===
+export function parseTrade(text) {
+  const parsed = parseLtx(text);
+  const traders = [];
+  const supplies = [];
+  parsed.sections.forEach(function (s) {
+    const get = function (key) { const e = s.entries.find(function (x) { return x.key === key; }); return e ? e.value : ''; };
+    const isTrader = get('buy_condition') || get('sell_condition') || get('buy_supplies');
+    if (isTrader) traders.push({ id: s.name, buy_condition: get('buy_condition'), sell_condition: get('sell_condition'), buy_supplies: get('buy_supplies') });
+    else if (s.entries.length) supplies.push({ id: s.name, items: s.entries.map(function (e) { return { item: e.key, value: e.value }; }) });
+  });
+  return { traders: traders, supplies: supplies };
+}
+
+
 // === Монстры monsters.ltx / M_*.ltx (#25) ===
 export function parseMonsters(text) {
   const parsed = parseLtx(text);
@@ -500,9 +515,9 @@ export function replaceFieldValues(text, key, from, to) {
 // === Профили полей по категориям предметов (#15-20) ===
 
 export const ITEM_FIELD_PROFILES = {
-  'Оружие': ['ammo_class', 'ammo_mag_size', 'ammo_limit', 'ammo_elapsed', 'fire_modes', 'fire_distance', 'bullet_speed', 'rpm', 'rpm_empty_click', 'hit_power', 'hit_impulse', 'hit_type', 'fire_dispersion_base', 'grenade_class', 'launch_speed', 'scope_status', 'scope_name', 'scope_zoom_factor', 'silencer_status', 'silencer_name', 'grenade_launcher_status', 'grenade_launcher_name', 'zoom_enabled', 'weapon_class', 'slot', 'animation_slot', 'hand_dependence', 'single_handed', 'hud', 'position', 'orientation', 'snd_shoot', 'snd_empty', 'snd_reload', 'snd_draw', 'snd_holster', 'fire_point', 'shell_point', 'flame_particles', 'smoke_particles', 'misfire_probability', 'condition_shot_dec', 'use_aim_bullet', 'time_to_aim', 'kill_msg_x', 'kill_msg_y', 'kill_msg_width', 'kill_msg_height', 'cost', 'inv_weight'],
+  'Оружие': ['ammo_class', 'ammo_mag_size', 'ammo_limit', 'ammo_elapsed', 'fire_modes', 'fire_distance', 'bullet_speed', 'rpm', 'rpm_empty_click', 'hit_power', 'hit_impulse', 'hit_type', 'fire_dispersion_base', 'grenade_class', 'launch_speed', 'scope_status', 'scope_name', 'scope_zoom_factor', 'silencer_status', 'silencer_name', 'grenade_launcher_status', 'grenade_launcher_name', 'zoom_enabled', 'weapon_class', 'slot', 'animation_slot', 'hand_dependence', 'single_handed', 'upgrades', 'installed_upgrades', 'upgrade_scheme', 'hud', 'position', 'orientation', 'snd_shoot', 'snd_empty', 'snd_reload', 'snd_draw', 'snd_holster', 'fire_point', 'shell_point', 'flame_particles', 'smoke_particles', 'misfire_probability', 'condition_shot_dec', 'use_aim_bullet', 'time_to_aim', 'kill_msg_x', 'kill_msg_y', 'kill_msg_width', 'kill_msg_height', 'cost', 'inv_weight'],
   'Боеприпасы': ['k_dist', 'k_disp', 'k_impulse', 'k_pierce', 'k_ap', 'k_hit', 'k_air_resistance', 'k_bullet_speed', 'k_cam_dispersion', 'impair', 'buck_shot', 'tracers', 'box_size', 'inv_weight'],
-  'Броня': ['burn_protection', 'strike_protection', 'shock_protection', 'wound_protection', 'radiation_protection', 'telepatic_protection', 'chemical_burn_protection', 'explosion_protection', 'fire_wound_protection', 'additional_inventory_weight', 'additional_inventory_weight2', 'ef_equipment_type', 'bones_koeff_protection', 'immunities_sect', 'actor_visual', 'full_icon_name', 'slot', 'power_loss', 'night_vision_sect', 'artefact_count', 'speed_coef', 'cost', 'inv_weight'],
+  'Броня': ['burn_protection', 'strike_protection', 'shock_protection', 'wound_protection', 'radiation_protection', 'telepatic_protection', 'chemical_burn_protection', 'explosion_protection', 'fire_wound_protection', 'additional_inventory_weight', 'additional_inventory_weight2', 'ef_equipment_type', 'bones_koeff_protection', 'immunities_sect', 'actor_visual', 'full_icon_name', 'slot', 'power_loss', 'night_vision_sect', 'artefact_count', 'speed_coef', 'upgrades', 'upgrade_scheme', 'cost', 'inv_weight'],
   'Артефакты': ['health_restore_speed', 'radiation_restore_speed', 'satiety_restore_speed', 'power_restore_speed', 'bleeding_restore_speed', 'additional_inventory_weight', 'hit_absorbation', 'cost'],
   'Юзабельные': ['eat_health', 'eat_power', 'eat_satiety', 'eat_radiation', 'eat_alcohol', 'eat_max_power', 'eat_portions_num', 'cost', 'inv_weight'],
   'Квестовое': ['quest_item', 'story_id', 'can_trade', 'cost', 'inv_weight'],

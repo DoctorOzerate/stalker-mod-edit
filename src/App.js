@@ -4,7 +4,7 @@ import { normalizePath as coreNormalizePath, cp1251Encode, decodeGameBytes } fro
 import { QUEST_CATEGORIES, QUEST_TEMPLATES, normalizeQuestObjectives, parseGameTasksXml, parseTaskManagerLtx, questsToXml, validateQuests, computeQuestChains, taskManagerLtx, questChainSvg } from './lib/quests.js';
 import { tokenizeLua, tokenizeLuaLines, countLuaBrackets, formatLua, luaFunctionBlocks, luaCheck, luaUndeclaredGlobals, LUA_API, LUA_SNIPPETS, LUA_ENGINE_GLOBALS, luaCallGraph, luaUnused, luaCompletions, validateScriptBindings } from './lib/lua.js';
 import { decodeDDS, pixelsToDataURL, encodeDds } from './lib/dds.js';
-import { splitLines, parseLtx, resolveIncludes, updateLtxLine, removeSection, addSection, addFieldToSection, removeFieldByLine, isValidGridValue, isValidGridWH, iconCoords, ATLAS_PRESETS, isFileLoaded, findIncludeSuggestion, itemFileCategory, isItemFile, mergedItemEntries, includeTreeRows, includeGraphSvg, ITEM_CATEGORIES, COMMUNITY_ICONS, classifyItem, validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, ITEM_FIELD_PROFILES, itemFieldProfile, parseGameRelations, parseRatingScales, parseSquadDescr, parseSecrets, parseSpawnSections, parseMonsters, parseActor, parseSurgeManager } from './lib/ltx.js';
+import { splitLines, parseLtx, resolveIncludes, updateLtxLine, removeSection, addSection, addFieldToSection, removeFieldByLine, isValidGridValue, isValidGridWH, iconCoords, ATLAS_PRESETS, isFileLoaded, findIncludeSuggestion, itemFileCategory, isItemFile, mergedItemEntries, includeTreeRows, includeGraphSvg, ITEM_CATEGORIES, COMMUNITY_ICONS, classifyItem, validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, ITEM_FIELD_PROFILES, itemFieldProfile, parseGameRelations, parseRatingScales, parseSquadDescr, parseSecrets, parseSpawnSections, parseMonsters, parseActor, parseSurgeManager, parseTrade } from './lib/ltx.js';
 import { NODE_TYPES, PALETTE_HIDDEN, META_KEYS, FALLBACK_NODE, safeNode, flattenDialogues, validateGraph, layoutDialogue, nodeLabel, roleColor, dialogueStats, suggestTextId, validateMetadataSyntax, dialogueGroup, DIALOGUE_GROUPS, graphToSvg } from './lib/graph.js';
 import { gameFilesFromDialogues, validateTextIds, dialogueToXml, findTextIdIssues, resolveTextId } from './lib/dialogs.js';
 import { analyzeSpawn } from './lib/spawn.js';
@@ -1052,6 +1052,7 @@ export default function App() {
     let foundActor = null;
     let foundSurgeManager = null;
     let foundNpcProfiles = [];
+    let foundTrade = null;
     let sysText = null, itemsText = null;
     const skipped = [];
     const importEncoding = (project.settings && project.settings.importEncoding) || 'auto';
@@ -1202,6 +1203,8 @@ export default function App() {
     if (foundMonsters.length) next.monsters = foundMonsters;
     Object.keys(ltxFiles).forEach(function (p) { if (p.toLowerCase().endsWith('surge_manager.ltx') && !foundSurgeManager) foundSurgeManager = parseSurgeManager(ltxFiles[p]); });
     if (foundSurgeManager) next.surgeManager = foundSurgeManager;
+    Object.keys(ltxFiles).forEach(function (p) { if (p.toLowerCase().indexOf('trade_') !== -1 && p.toLowerCase().endsWith('.ltx')) { const t = parseTrade(ltxFiles[p]); if (t.traders.length || t.supplies.length) foundTrade = { traders: (foundTrade ? foundTrade.traders : []).concat(t.traders), supplies: (foundTrade ? foundTrade.supplies : []).concat(t.supplies) }; } });
+    if (foundTrade) next.trade = foundTrade;
     if (foundNpcProfiles.length) next.npcProfiles = foundNpcProfiles;
     if (foundInfoPortions.length) next.infoPortions = foundInfoPortions;
     if (foundEncyclopedia.length) next.encyclopedia = foundEncyclopedia;
@@ -1963,7 +1966,7 @@ export default function App() {
     mergedItemEntries, isValidGridValue, isValidGridWH, download, downloadBytes, downloadDataUrl, textBytes,
     escapeXml, csvCell, splitLines, updateLtxLine, addSection, removeSection, addFieldToSection, removeFieldByLine, ITEM_FIELD_PROFILES, itemFieldProfile,
     parseStringTableXml, parseGeneralCharactersXml, parseCharacterDescGeneral, characterDescGeneralToXml, analyzeSpawn,
-    parseInfoPortions, parseEncyclopedia, parseSquadDescr, parseRatingScales, parseSecrets, parseSpawnSections, parseMonsters, parseActor, parseSurgeManager, parseNpcProfile
+    parseInfoPortions, parseEncyclopedia, parseSquadDescr, parseRatingScales, parseSecrets, parseSpawnSections, parseMonsters, parseActor, parseSurgeManager, parseNpcProfile, parseTrade
   };
 
   return React.createElement('div', { className: 'h-screen w-screen overflow-hidden flex flex-col ' + ui.app, style: { '--accent': accentColors[0], '--accent-hover': accentColors[1] } },

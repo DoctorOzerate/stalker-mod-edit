@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, itemFieldProfile, ITEM_FIELD_PROFILES, classifyItem, COMMUNITY_ICONS, parseGameRelations, parseRatingScales, parseSquadDescr, parseSecrets, parseSpawnSections, parseMonsters, parseActor, parseSurgeManager } from '../src/lib/ltx.js';
+import { validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, itemFieldProfile, ITEM_FIELD_PROFILES, classifyItem, COMMUNITY_ICONS, parseGameRelations, parseRatingScales, parseSquadDescr, parseSecrets, parseSpawnSections, parseMonsters, parseActor, parseSurgeManager, parseTrade } from '../src/lib/ltx.js';
 
 test('validateLtxRefs flags missing ammo_class but not known parent', () => {
   const text = '[wpn_ak74]:wpn_base\nammo_class = ammo_9x18_fmj, ammo_missing\n';
@@ -41,6 +41,7 @@ test('itemFieldProfile maps category to fields', () => {
   assert.ok(itemFieldProfile({ name: 'wpn_ak74' }).indexOf('hit_power') !== -1);
   assert.ok(itemFieldProfile({ name: 'wpn_ak74' }).indexOf('snd_shoot') !== -1);
   assert.ok(itemFieldProfile({ name: 'wpn_ak74' }).indexOf('animation_slot') !== -1);
+  assert.ok(itemFieldProfile({ name: 'wpn_ak74' }).indexOf('upgrade_scheme') !== -1);
   assert.ok(itemFieldProfile({ name: 'ammo_9x18_fmj' }).indexOf('k_dist') !== -1);
   assert.ok(itemFieldProfile({ name: 'novice_outfit' }).indexOf('burn_protection') !== -1);
   assert.ok(itemFieldProfile({ name: 'novice_outfit' }).indexOf('actor_visual') !== -1);
@@ -155,4 +156,13 @@ test('parseSurgeManager reads settings and list', () => {
   const r = parseSurgeManager(text);
   assert.equal(r.settings.condlist.indexOf('pri_a16') !== -1, true);
   assert.deepEqual(r.list, ['zat_surge_hide_a2', 'zat_surge_hide_b42']);
+});
+
+test('parseTrade reads traders and supplies', () => {
+  const text = '[trader]\nbuy_condition = barman_generic_buy\nsell_condition = barman_start_sell\n[barman_generic_buy]\naf_medusa = 1, 0.3\nammo_9x18_fmj = 0.9, 0.1\n';
+  const r = parseTrade(text);
+  assert.equal(r.traders.length, 1);
+  assert.equal(r.traders[0].buy_condition, 'barman_generic_buy');
+  assert.equal(r.supplies.length, 1);
+  assert.equal(r.supplies[0].items[0].item, 'af_medusa');
 });
