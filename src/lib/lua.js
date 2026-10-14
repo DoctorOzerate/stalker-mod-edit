@@ -252,3 +252,26 @@ export function luaUndeclaredGlobals(code) {
   return issues;
 }
 
+
+// === Проверка привязок script_binding (#56) ===
+export function validateScriptBindings(ltxText, scripts) {
+  const issues = [];
+  const scriptMap = {};
+  (scripts || []).forEach(function (s) {
+    const base = String(s.name || '').toLowerCase().replace(/\.script$/, '');
+    scriptMap[base] = String(s.text || '');
+  });
+  const re = /script_binding\s*=\s*([A-Za-z_][\w.]*)/g;
+  let m;
+  while ((m = re.exec(String(ltxText || ''))) !== null) {
+    const b = m[1];
+    const dot = b.indexOf('.');
+    const file = (dot >= 0 ? b.slice(0, dot) : b).toLowerCase();
+    const fn = dot >= 0 ? b.slice(dot + 1) : '';
+    const body = scriptMap[file];
+    if (body == null) issues.push({ code: 'binding_no_file', binding: b, msg: 'script_binding: файл не найден — ' + file + '.script (' + b + ')' });
+    else if (fn && !new RegExp('function\\s+' + fn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b').test(body)) issues.push({ code: 'binding_no_fn', binding: b, msg: 'script_binding: функция не найдена — ' + b });
+  }
+  return issues;
+}
+

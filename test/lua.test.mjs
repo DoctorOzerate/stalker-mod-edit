@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { luaCheck, luaUndeclaredGlobals, LUA_SNIPPETS, LUA_API, luaCompletions, luaCallGraph, luaUnused } from '../src/lib/lua.js';
+import { luaCheck, luaUndeclaredGlobals, LUA_SNIPPETS, LUA_API, luaCompletions, luaCallGraph, luaUnused, validateScriptBindings } from '../src/lib/lua.js';
 
 test('luaCheck detects unclosed block and extra end', () => {
   assert.equal(luaCheck('function f()\n').length, 1);
@@ -35,3 +35,12 @@ test('luaCallGraph builds call edges', () => {
 test('luaUnused finds uncalled functions', () => {
   assert.deepEqual(luaUnused('function a()\nend\nfunction b()\n  a()\nend\n'), ['b']);
 });
+
+test('validateScriptBindings finds missing bindings', () => {
+  const ltx = '[actor]\nscript_binding = bind_stalker.actor_init\n[monster]\nscript_binding = bind_monster.bind\n';
+  const scripts = [{ name: 'bind_monster.script', text: 'function bind() end' }];
+  const issues = validateScriptBindings(ltx, scripts);
+  assert.ok(issues.some((i) => i.binding === 'bind_stalker.actor_init'));
+  assert.ok(!issues.some((i) => i.binding === 'bind_monster.bind'));
+});
+
