@@ -39,8 +39,11 @@ test('replaceFieldValues mass-replaces value substring', () => {
 test('itemFieldProfile maps category to fields', () => {
   assert.ok(itemFieldProfile({ name: 'wpn_ak74' }).indexOf('ammo_class') !== -1);
   assert.ok(itemFieldProfile({ name: 'wpn_ak74' }).indexOf('hit_power') !== -1);
+  assert.ok(itemFieldProfile({ name: 'wpn_ak74' }).indexOf('snd_shoot') !== -1);
+  assert.ok(itemFieldProfile({ name: 'wpn_ak74' }).indexOf('animation_slot') !== -1);
   assert.ok(itemFieldProfile({ name: 'ammo_9x18_fmj' }).indexOf('k_dist') !== -1);
   assert.ok(itemFieldProfile({ name: 'novice_outfit' }).indexOf('burn_protection') !== -1);
+  assert.ok(itemFieldProfile({ name: 'novice_outfit' }).indexOf('actor_visual') !== -1);
   assert.ok(itemFieldProfile({ name: 'trade_barman' }).indexOf('buy_condition') !== -1);
   assert.equal(itemFieldProfile({ name: 'misc_item' }).indexOf('ammo_class'), -1); // только общие поля
   assert.ok(Object.keys(ITEM_FIELD_PROFILES).length >= 6);
