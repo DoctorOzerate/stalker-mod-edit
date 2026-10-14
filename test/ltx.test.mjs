@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, itemFieldProfile, ITEM_FIELD_PROFILES, classifyItem, COMMUNITY_ICONS, parseGameRelations, parseRatingScales, parseSquadDescr, parseSecrets, parseSpawnSections, parseMonsters, parseActor } from '../src/lib/ltx.js';
+import { validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, itemFieldProfile, ITEM_FIELD_PROFILES, classifyItem, COMMUNITY_ICONS, parseGameRelations, parseRatingScales, parseSquadDescr, parseSecrets, parseSpawnSections, parseMonsters, parseActor, parseSurgeManager } from '../src/lib/ltx.js';
 
 test('validateLtxRefs flags missing ammo_class but not known parent', () => {
   const text = '[wpn_ak74]:wpn_base\nammo_class = ammo_9x18_fmj, ammo_missing\n';
@@ -143,4 +143,11 @@ test('parseActor reads actor section', () => {
   assert.equal(r.class, 'S_ACTOR');
   assert.equal(r.max_item_mass, '35');
   assert.equal(r.money, '15000');
+});
+
+test('parseSurgeManager reads settings and list', () => {
+  const text = '[settings]\ncondlist = {-pri_a16} false, true\nsurvive = {+actor_marked} true, false\n[list]\nzat_surge_hide_a2\nzat_surge_hide_b42\n';
+  const r = parseSurgeManager(text);
+  assert.equal(r.settings.condlist.indexOf('pri_a16') !== -1, true);
+  assert.deepEqual(r.list, ['zat_surge_hide_a2', 'zat_surge_hide_b42']);
 });

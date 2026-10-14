@@ -175,3 +175,15 @@ export function parseEncyclopedia(text) {
   }).filter(function (x) { return x.id; });
 }
 
+// === npc_profile.xml (#17) ===
+export function parseNpcProfile(text) {
+  const d = new DOMParser().parseFromString(String(text), 'application/xml');
+  if (d.getElementsByTagName('parsererror').length) return [];
+  const root = d.documentElement;
+  if (!root) return [];
+  const childText = function (el, tag) { const c = Array.from(el.childNodes).find(function (x) { return x.nodeType === 1 && x.tagName === tag; }); return c ? (c.textContent || '').trim() : ''; };
+  return Array.from(root.getElementsByTagName('character')).map(function (c) {
+    return { id: c.getAttribute('id') || '', class: childText(c, 'class'), specific_character: childText(c, 'specific_character') };
+  }).filter(function (x) { return x.id; });
+}
+

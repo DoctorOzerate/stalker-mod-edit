@@ -4,11 +4,11 @@ import { normalizePath as coreNormalizePath, cp1251Encode, decodeGameBytes } fro
 import { QUEST_CATEGORIES, QUEST_TEMPLATES, normalizeQuestObjectives, parseGameTasksXml, parseTaskManagerLtx, questsToXml, validateQuests, computeQuestChains, taskManagerLtx } from './lib/quests.js';
 import { tokenizeLua, tokenizeLuaLines, countLuaBrackets, formatLua, luaFunctionBlocks, luaCheck, luaUndeclaredGlobals, LUA_API, LUA_SNIPPETS, LUA_ENGINE_GLOBALS, luaCallGraph, luaUnused, luaCompletions } from './lib/lua.js';
 import { decodeDDS, pixelsToDataURL, encodeDds } from './lib/dds.js';
-import { splitLines, parseLtx, resolveIncludes, updateLtxLine, removeSection, addSection, addFieldToSection, removeFieldByLine, isValidGridValue, isValidGridWH, iconCoords, ATLAS_PRESETS, isFileLoaded, findIncludeSuggestion, itemFileCategory, isItemFile, mergedItemEntries, includeTreeRows, includeGraphSvg, ITEM_CATEGORIES, COMMUNITY_ICONS, classifyItem, validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, ITEM_FIELD_PROFILES, itemFieldProfile, parseGameRelations, parseRatingScales, parseSquadDescr, parseSecrets, parseSpawnSections, parseMonsters, parseActor } from './lib/ltx.js';
+import { splitLines, parseLtx, resolveIncludes, updateLtxLine, removeSection, addSection, addFieldToSection, removeFieldByLine, isValidGridValue, isValidGridWH, iconCoords, ATLAS_PRESETS, isFileLoaded, findIncludeSuggestion, itemFileCategory, isItemFile, mergedItemEntries, includeTreeRows, includeGraphSvg, ITEM_CATEGORIES, COMMUNITY_ICONS, classifyItem, validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, ITEM_FIELD_PROFILES, itemFieldProfile, parseGameRelations, parseRatingScales, parseSquadDescr, parseSecrets, parseSpawnSections, parseMonsters, parseActor, parseSurgeManager } from './lib/ltx.js';
 import { NODE_TYPES, PALETTE_HIDDEN, META_KEYS, FALLBACK_NODE, safeNode, flattenDialogues, validateGraph, layoutDialogue, nodeLabel, roleColor, dialogueStats, suggestTextId, validateMetadataSyntax, dialogueGroup, DIALOGUE_GROUPS, graphToSvg } from './lib/graph.js';
 import { gameFilesFromDialogues, validateTextIds, dialogueToXml, findTextIdIssues, resolveTextId } from './lib/dialogs.js';
 import { analyzeSpawn } from './lib/spawn.js';
-import { xmlAttr, xmlTag, parseCharactersXml, parseGeneralCharactersXml, parseCharacterDescGeneral, characterDescGeneralToXml, LOCALE_NAMES, detectLocale, mergeLanguages, parseStringTableXml, parseDialogueXml, parseInfoPortions, parseEncyclopedia } from './lib/xml.js';
+import { xmlAttr, xmlTag, parseCharactersXml, parseGeneralCharactersXml, parseCharacterDescGeneral, characterDescGeneralToXml, LOCALE_NAMES, detectLocale, mergeLanguages, parseStringTableXml, parseDialogueXml, parseInfoPortions, parseEncyclopedia, parseNpcProfile } from './lib/xml.js';
 import { createHistory } from './lib/history.js';
 import { tr } from './lib/i18n.js';
 import { loadPlugins, savePlugins, runPluginExporter } from './lib/plugins.js';
@@ -1050,6 +1050,8 @@ export default function App() {
     let foundSpawnSections = [];
     let foundMonsters = [];
     let foundActor = null;
+    let foundSurgeManager = null;
+    let foundNpcProfiles = [];
     let sysText = null, itemsText = null;
     const skipped = [];
     const importEncoding = (project.settings && project.settings.importEncoding) || 'auto';
@@ -1120,6 +1122,8 @@ export default function App() {
           if (infoPortions.length) foundInfoPortions = foundInfoPortions.concat(infoPortions);
           const encyclopedia = parseEncyclopedia(text);
           if (encyclopedia.length) foundEncyclopedia = foundEncyclopedia.concat(encyclopedia);
+          const npcProfile = parseNpcProfile(text);
+          if (npcProfile.length) foundNpcProfiles = foundNpcProfiles.concat(npcProfile);
           continue;
         }
       } catch (err) {
@@ -1196,6 +1200,9 @@ export default function App() {
     if (foundActor) next.actor = foundActor;
     Object.keys(ltxFiles).forEach(function (p) { const lower = p.toLowerCase(); if ((lower.endsWith('monsters.ltx') || (lower.indexOf('/m_') !== -1 || lower.indexOf('\\m_') !== -1)) && lower.endsWith('.ltx')) foundMonsters = foundMonsters.concat(parseMonsters(ltxFiles[p])); });
     if (foundMonsters.length) next.monsters = foundMonsters;
+    Object.keys(ltxFiles).forEach(function (p) { if (p.toLowerCase().endsWith('surge_manager.ltx') && !foundSurgeManager) foundSurgeManager = parseSurgeManager(ltxFiles[p]); });
+    if (foundSurgeManager) next.surgeManager = foundSurgeManager;
+    if (foundNpcProfiles.length) next.npcProfiles = foundNpcProfiles;
     if (foundInfoPortions.length) next.infoPortions = foundInfoPortions;
     if (foundEncyclopedia.length) next.encyclopedia = foundEncyclopedia;
 
@@ -1908,7 +1915,7 @@ export default function App() {
     mergedItemEntries, isValidGridValue, isValidGridWH, download, downloadBytes, downloadDataUrl, textBytes,
     escapeXml, csvCell, splitLines, updateLtxLine, addSection, removeSection, addFieldToSection, removeFieldByLine, ITEM_FIELD_PROFILES, itemFieldProfile,
     parseStringTableXml, parseGeneralCharactersXml, parseCharacterDescGeneral, characterDescGeneralToXml, analyzeSpawn,
-    parseInfoPortions, parseEncyclopedia, parseSquadDescr, parseRatingScales, parseSecrets, parseSpawnSections, parseMonsters, parseActor
+    parseInfoPortions, parseEncyclopedia, parseSquadDescr, parseRatingScales, parseSecrets, parseSpawnSections, parseMonsters, parseActor, parseSurgeManager, parseNpcProfile
   };
 
   return React.createElement('div', { className: 'h-screen w-screen overflow-hidden flex flex-col ' + ui.app, style: { '--accent': accentColors[0], '--accent-hover': accentColors[1] } },

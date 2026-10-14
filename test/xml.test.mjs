@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DOMParser } from '@xmldom/xmldom';
-import { parseCharacterDescGeneral, characterDescGeneralToXml, parseStringTableXml, parseInfoPortions, parseEncyclopedia } from '../src/lib/xml.js';
+import { parseCharacterDescGeneral, characterDescGeneralToXml, parseStringTableXml, parseInfoPortions, parseEncyclopedia, parseNpcProfile } from '../src/lib/xml.js';
 
 test('parseCharacterDescGeneral reads communities and relations', () => {
   globalThis.DOMParser = DOMParser;
@@ -53,4 +53,14 @@ test('parseEncyclopedia reads articles', () => {
   assert.equal(r.length, 1);
   assert.equal(r[0].name, 'Bread');
   assert.equal(r[0].ltx, 'bread');
+});
+
+test('parseNpcProfile reads characters', () => {
+  globalThis.DOMParser = DOMParser;
+  const xml = '<xml><character id="escape_trader"><class>Trader</class><specific_character>escape_trader</specific_character></character><character id="default"><class>Stalker_general</class></character></xml>';
+  const r = parseNpcProfile(xml);
+  assert.equal(r.length, 2);
+  assert.equal(r[0].class, 'Trader');
+  assert.equal(r[0].specific_character, 'escape_trader');
+  assert.equal(r[1].specific_character, '');
 });

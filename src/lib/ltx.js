@@ -365,7 +365,20 @@ export function parseSquadDescr(text) {
 }
 
 // === Общие поля предметов (#28): добавляются к каждому профилю ===
-export const ITEM_COMMON_FIELDS = ['$spawn', '$prefetch', '$npc', 'visual', 'cform', 'cost', 'inv_name', 'inv_name_short', 'description', 'inv_weight', 'inv_grid_width', 'inv_grid_height', 'inv_grid_x', 'inv_grid_y'];
+export const ITEM_COMMON_FIELDS = ['$spawn', '$prefetch', '$npc', 'visual', 'cform', 'cost', 'inv_name', 'inv_name_short', 'description', 'inv_weight', 'inv_grid_width', 'inv_grid_height', 'inv_grid_x', 'inv_grid_y', 'death_items'];
+
+// === Выбросы surge_manager.ltx (#80) ===
+export function parseSurgeManager(text) {
+  const parsed = parseLtx(text);
+  const settings = {};
+  const list = [];
+  parsed.sections.forEach(function (sec) {
+    const n = sec.name.toLowerCase();
+    if (n === 'settings') sec.entries.forEach(function (e) { settings[e.key] = e.value; });
+    else if (n === 'list') (sec.rawLines || []).forEach(function (l) { const v = l.replace(/;.*$/, '').trim(); if (v && v.charAt(0) !== '[' && v.charAt(0) !== '#') list.push(v); });
+  });
+  return { settings: settings, list: list };
+}
 
 // === Монстры monsters.ltx / M_*.ltx (#25) ===
 export function parseMonsters(text) {
