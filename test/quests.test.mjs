@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DOMParser } from '@xmldom/xmldom';
-import { questsToXml, parseGameTasksXml, parseTaskManagerLtx, questChainSvg } from '../src/lib/quests.js';
+import { questsToXml, parseGameTasksXml, parseTaskManagerLtx, questChainSvg, taskManagerLtx } from '../src/lib/quests.js';
 
 test('questsToXml exports reward tag', () => {
   const xml = questsToXml([{ id: 'q1', format: 'game_tasks', title: 't', text: 'x', reward: 'money:5000' }], 'utf-8');
@@ -47,5 +47,20 @@ test('questChainSvg renders nodes and edges', () => {
   assert.ok(svg.indexOf('<svg') !== -1);
   assert.ok(svg.indexOf('>a</text>') !== -1);
   assert.ok(svg.indexOf('<path') !== -1);
+});
+
+test('taskManagerLtx round-trips full fields', () => {
+  const text = '[task_manager]\ntask = tbt_task_1\n[tbt_task_1]\nicon = ui_mt_image_attack_tower\nprior = 4\ntitle = tbt_task_1_name\ndescr = tbt_task_1_text\ntarget = tbt_snork\nreward_money = 10000\ncondlist_0 = {+tbt_task_1_complete} complete\nstoryline = true\n';
+  const parsed = parseTaskManagerLtx(text);
+  assert.equal(parsed.length, 1);
+  const q = parsed[0];
+  assert.equal(q.reward_money, '10000');
+  assert.equal(q.storyline, 'true');
+  assert.equal(q.condlist[0], '{+tbt_task_1_complete} complete');
+  const out = taskManagerLtx(parsed);
+  assert.ok(out.indexOf('reward_money = 10000') !== -1);
+  assert.ok(out.indexOf('storyline = true') !== -1);
+  assert.ok(out.indexOf('condlist_0 = {+tbt_task_1_complete} complete') !== -1);
+  assert.ok(out.indexOf('target = tbt_snork') !== -1);
 });
 

@@ -96,6 +96,11 @@ export function parseTaskManagerLtx(text) {
       requires: [],
       reward: reward,
       condlist: condlist,
+      type: get('type'),
+      storyline: get('storyline'),
+      reward_money: get('reward_money'),
+      reward_item: get('reward_item'),
+      reward_treasure: get('reward_treasure'),
       format: 'task_manager'
     };
   }).filter(function (q) { return q.id; });
@@ -160,8 +165,18 @@ export function taskManagerLtx(quests) {
   list.forEach(function (q) {
     L.push('');
     L.push('[' + q.id + ']');
-    L.push('type = single');
+    L.push('type = ' + (q.type || 'single'));
+    if (q.icon) L.push('icon = ' + q.icon);
     if (q.prior) L.push('prior = ' + q.prior);
+    if (q.storyline) L.push('storyline = ' + q.storyline);
+    if (q.title) L.push('title = ' + q.title);
+    if (q.text) L.push('descr = ' + q.text);
+    const target = (q.objectives && q.objectives.length) ? (typeof q.objectives[0] === 'string' ? q.objectives[0] : (q.objectives[0] && q.objectives[0].text)) : '';
+    if (target) L.push('target = ' + target);
+    if (q.reward_money) L.push('reward_money = ' + q.reward_money);
+    if (q.reward_item) L.push('reward_item = ' + q.reward_item);
+    if (q.reward_treasure) L.push('reward_treasure = ' + q.reward_treasure);
+    (q.condlist || []).forEach(function (c, i) { L.push('condlist_' + i + ' = ' + c); });
   });
   return L.join(NL);
 }

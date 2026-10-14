@@ -132,6 +132,20 @@ export function renderQuestsTab(ctx) {
                 React.createElement('label', { className: 'grid gap-1 text-xs' }, 'Описание (text)', React.createElement('textarea', { rows: 3, className: field, value: q.text || '', onChange: function (e) { setQuestField(q.id, 'text', e.target.value); } }), qTrans(q.text) ? React.createElement('span', { className: 'text-[11px] ' + ui.muted }, '↳ ' + qTrans(q.text)) : null),
                 React.createElement('label', { className: 'grid gap-1 text-xs' }, 'Требует infoportion (через запятую)', React.createElement('input', { className: field, value: (q.requires || []).join(', '), onChange: function (e) { setQuestRequires(q.id, e.target.value); }, placeholder: 'esc_prev_complete' })),
                 React.createElement('label', { className: 'grid gap-1 text-xs' }, 'Награда (метаданные)', React.createElement('input', { className: field, value: q.reward || '', onChange: function (e) { setQuestField(q.id, 'reward', e.target.value); }, placeholder: 'напр. af_medusa, 1000 руб' })),
+                q.format === 'task_manager' && React.createElement(React.Fragment, null,
+                  React.createElement('div', { className: 'grid md:grid-cols-2 gap-3' },
+                    React.createElement('label', { className: 'grid gap-1 text-xs' }, 'Сюжетный (storyline)', React.createElement('select', { className: field, value: q.storyline || '', onChange: function (e) { setQuestField(q.id, 'storyline', e.target.value); } },
+                      React.createElement('option', { value: '' }, '—'),
+                      React.createElement('option', { value: 'true' }, 'true'),
+                      React.createElement('option', { value: 'false' }, 'false'))),
+                    React.createElement('label', { className: 'grid gap-1 text-xs' }, 'Награда деньгами (reward_money)', React.createElement('input', { className: field, value: q.reward_money || '', onChange: function (e) { setQuestField(q.id, 'reward_money', e.target.value); } }))
+                  ),
+                  React.createElement('div', { className: 'grid md:grid-cols-2 gap-3' },
+                    React.createElement('label', { className: 'grid gap-1 text-xs' }, 'Награда предметом (reward_item)', React.createElement('input', { className: field, value: q.reward_item || '', onChange: function (e) { setQuestField(q.id, 'reward_item', e.target.value); } })),
+                    React.createElement('label', { className: 'grid gap-1 text-xs' }, 'Награда тайником (reward_treasure)', React.createElement('input', { className: field, value: q.reward_treasure || '', onChange: function (e) { setQuestField(q.id, 'reward_treasure', e.target.value); } }))
+                  ),
+                  React.createElement('label', { className: 'grid gap-1 text-xs' }, 'Condlist (по строке на условие)', React.createElement('textarea', { rows: 4, className: field + ' font-mono text-[11px]', value: (q.condlist || []).join('\n'), onChange: function (e) { setQuestField(q.id, 'condlist', e.target.value.split(/\r?\n/)); }, placeholder: '{+info} complete' }))
+                ),
                 React.createElement('div', { className: 'grid gap-2' },
                   React.createElement('div', { className: 'flex items-center justify-between' },
                     React.createElement('b', { className: 'text-xs' }, 'Цели (objectives)'),
