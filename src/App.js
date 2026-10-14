@@ -2135,28 +2135,46 @@ export default function App() {
           ),
           React.createElement('button', { className: btn + ' text-lg', onClick: function () { setSettingsOpen(false); } }, '×')
         ),
-        React.createElement('div', { className: 'p-5 grid gap-4 overflow-y-auto flex-1 min-h-0' },
-          React.createElement('div', { className: 'grid md:grid-cols-2 gap-4' },
-            React.createElement('label', { className: 'grid gap-1 text-xs' }, 'Название проекта', React.createElement('input', { className: field, value: project.projectName, onChange: function (e) { patch({ projectName: e.target.value }); } })),
-            React.createElement('label', { className: 'grid gap-1 text-xs' }, 'ID диалога', React.createElement('input', { className: field, value: project.dialogueId || project.projectName, onChange: function (e) { patch({ dialogueId: e.target.value }); } })),
-            React.createElement('label', { className: 'grid gap-1 text-xs' }, 'Серия игры', React.createElement('select', { className: field, value: project.series, onChange: function (e) { patch({ series: e.target.value }); } }, SERIES.map(function (s) { return React.createElement('option', { key: s.value, value: s.value }, s.label); }))),
-            React.createElement('label', { className: 'grid gap-1 text-xs' }, 'Импорт: кодировка', React.createElement('select',{className:field,value:(project.settings||{}).importEncoding||'auto',onChange:function(e){patch({settings:Object.assign({},project.settings,{importEncoding:e.target.value})});}},React.createElement('option',{value:'auto'},'Авто'),React.createElement('option',{value:'windows-1251'},'Windows-1251'),React.createElement('option',{value:'utf-8'},'UTF-8'))),
-            React.createElement('label', { className: 'grid gap-1 text-xs md:col-span-2' }, 'Экспорт: кодировка', React.createElement('select',{className:field,value:(project.settings||{}).exportEncoding||'windows-1251',onChange:function(e){patch({settings:Object.assign({},project.settings,{exportEncoding:e.target.value})});}},React.createElement('option',{value:'windows-1251'},'Windows-1251'),React.createElement('option',{value:'utf-8'},'UTF-8')))
+        React.createElement('div', { className: 'p-5 grid gap-5 overflow-y-auto flex-1 min-h-0' },
+          React.createElement('div', { className: 'flex flex-wrap gap-1.5' },
+            [
+              ['💬', (project.dialogues || []).length], ['🧍', (project.characters || []).length], ['🎒', parsedItems.sections.length],
+              ['🎯', (project.quests || []).length], ['📜', (project.scripts || []).length], ['🌐', (project.languages || []).length],
+              ['🧾', Object.keys(project.ltxFiles || {}).length]
+            ].map(function (s) { return React.createElement('span', { key: s[0], className: 'text-[11px] px-2 py-1 rounded-lg font-semibold ' + (dark ? 'bg-zinc-800 text-zinc-200' : 'bg-slate-200 text-slate-700'), title: s[1] }, s[0] + ' ' + s[1]); })
           ),
-          React.createElement('label', { className: 'grid gap-1 text-xs' }, 'gamedata (редактируемая)',
-            React.createElement('div', { className: 'flex gap-2' },
-              React.createElement('input', { className: field + ' flex-1', value: project.gamedataPath || '', onChange: function (e) { patch({ gamedataPath: e.target.value }); }, placeholder: 'путь или имя папки' }),
-              React.createElement('button', { className: accentBtn, onClick: pickGamedataFolder }, 'Выбрать и сканировать')
+          React.createElement('section', { className: 'grid gap-3' },
+            React.createElement('h3', { className: 'text-[10px] uppercase tracking-widest font-bold ' + ui.muted }, 'Основное'),
+            React.createElement('div', { className: 'grid md:grid-cols-3 gap-3' },
+              React.createElement('label', { className: 'grid gap-1 text-xs' }, 'Название проекта', React.createElement('input', { className: field, value: project.projectName, onChange: function (e) { patch({ projectName: e.target.value }); } })),
+              React.createElement('label', { className: 'grid gap-1 text-xs' }, 'ID диалога', React.createElement('input', { className: field, value: project.dialogueId || project.projectName, onChange: function (e) { patch({ dialogueId: e.target.value }); } })),
+              React.createElement('label', { className: 'grid gap-1 text-xs' }, 'Серия игры', React.createElement('select', { className: field, value: project.series, onChange: function (e) { patch({ series: e.target.value }); } }, SERIES.map(function (s) { return React.createElement('option', { key: s.value, value: s.value }, s.label); })))
             )
           ),
-          React.createElement('label', { className: 'grid gap-1 text-xs' }, 'gamedata с ресурсами',
-            React.createElement('div', { className: 'flex gap-2' },
-              React.createElement('input', { className: field + ' flex-1', value: project.resourcesPath || '', onChange: function (e) { patch({ resourcesPath: e.target.value }); }, placeholder: 'опционально' }),
-              React.createElement('button', { className: btn, onClick: pickResourcesFolder }, 'Выбрать')
+          React.createElement('section', { className: 'grid gap-3' },
+            React.createElement('h3', { className: 'text-[10px] uppercase tracking-widest font-bold ' + ui.muted }, 'Кодировки'),
+            React.createElement('div', { className: 'grid md:grid-cols-2 gap-3' },
+              React.createElement('label', { className: 'grid gap-1 text-xs' }, 'Импорт (чтение gamedata)', React.createElement('select',{className:field,value:(project.settings||{}).importEncoding||'auto',onChange:function(e){patch({settings:Object.assign({},project.settings,{importEncoding:e.target.value})});}},React.createElement('option',{value:'auto'},'Авто'),React.createElement('option',{value:'windows-1251'},'Windows-1251'),React.createElement('option',{value:'utf-8'},'UTF-8'))),
+              React.createElement('label', { className: 'grid gap-1 text-xs' }, 'Экспорт (запись файлов)', React.createElement('select',{className:field,value:(project.settings||{}).exportEncoding||'windows-1251',onChange:function(e){patch({settings:Object.assign({},project.settings,{exportEncoding:e.target.value})});}},React.createElement('option',{value:'windows-1251'},'Windows-1251'),React.createElement('option',{value:'utf-8'},'UTF-8')))
             )
           ),
-          React.createElement('div', { className: 'grid gap-2 text-xs' },
-            React.createElement('div', { className: 'font-semibold' }, 'Экспорт диалогов (в какой XML)'),
+          React.createElement('section', { className: 'grid gap-3' },
+            React.createElement('h3', { className: 'text-[10px] uppercase tracking-widest font-bold ' + ui.muted }, 'Папки gamedata'),
+            React.createElement('label', { className: 'grid gap-1 text-xs' }, 'gamedata (редактируемая)',
+              React.createElement('div', { className: 'flex gap-2' },
+                React.createElement('input', { className: field + ' flex-1', value: project.gamedataPath || '', onChange: function (e) { patch({ gamedataPath: e.target.value }); }, placeholder: 'путь или имя папки' }),
+                React.createElement('button', { className: accentBtn, onClick: pickGamedataFolder }, 'Выбрать и сканировать')
+              )
+            ),
+            React.createElement('label', { className: 'grid gap-1 text-xs' }, 'gamedata с ресурсами',
+              React.createElement('div', { className: 'flex gap-2' },
+                React.createElement('input', { className: field + ' flex-1', value: project.resourcesPath || '', onChange: function (e) { patch({ resourcesPath: e.target.value }); }, placeholder: 'опционально' }),
+                React.createElement('button', { className: btn, onClick: pickResourcesFolder }, 'Выбрать')
+              )
+            )
+          ),
+          React.createElement('section', { className: 'grid gap-2' },
+            React.createElement('h3', { className: 'text-[10px] uppercase tracking-widest font-bold ' + ui.muted }, 'Экспорт диалогов (в какой XML)'),
             (function () {
               const list = [{ id: project.dialogueId || project.projectName, name: project.projectName }];
               (project.dialogues || []).forEach(function (d) { const id = d.id || d.name; if (!list.some(function (x) { return x.id === id; })) list.push({ id: id, name: d.name }); });
@@ -2192,18 +2210,23 @@ export default function App() {
           ),
           React.createElement('button', { className: btn + ' text-lg', onClick: function () { setProgramSettingsOpen(false); } }, '×')
         ),
-        React.createElement('div', { className: 'p-5 grid gap-4 overflow-y-auto flex-1 min-h-0' },
-          React.createElement('label', { className: 'grid gap-1 text-xs' }, t('theme'), React.createElement('select', { className: field, value: programSettings.theme, onChange: function (e) { setProgramSettings(Object.assign({}, programSettings, { theme: e.target.value })); } }, React.createElement('option', { value: 'dark' }, 'Тёмная'), React.createElement('option', { value: 'light' }, 'Светлая'), React.createElement('option', { value: 'auto' }, 'Авто (системная)'))),
-          React.createElement('label', { className: 'grid gap-1 text-xs' }, t('language'), React.createElement('select', { className: field, value: programSettings.locale || 'ru', onChange: function (e) { setProgramSettings(Object.assign({}, programSettings, { locale: e.target.value })); } }, React.createElement('option', { value: 'ru' }, 'Русский'), React.createElement('option', { value: 'en' }, 'English'))),
-          React.createElement('div', { className: 'grid gap-1 text-xs' },
-            React.createElement('span', {}, 'Акцентный цвет'),
-            React.createElement('div', { className: 'flex gap-2' },
-              Object.keys(ACCENT_PRESETS).map(function (k) {
-                return React.createElement('button', { key: k, type: 'button', title: k, onClick: function () { setProgramSettings(Object.assign({}, programSettings, { accent: k })); }, className: 'w-7 h-7 rounded-full border-2 ' + (programSettings.accent === k ? 'border-white ring-2 ring-white/40' : 'border-transparent'), style: { backgroundColor: ACCENT_PRESETS[k][0] } });
-              })
-            )
+        React.createElement('div', { className: 'p-5 grid gap-5 overflow-y-auto flex-1 min-h-0' },
+          React.createElement('section', { className: 'grid gap-3' },
+            React.createElement('h3', { className: 'text-[10px] uppercase tracking-widest font-bold ' + ui.muted }, 'Внешний вид'),
+            React.createElement('div', { className: 'grid md:grid-cols-2 gap-3' },
+              React.createElement('label', { className: 'grid gap-1 text-xs' }, t('theme'), React.createElement('select', { className: field, value: programSettings.theme, onChange: function (e) { setProgramSettings(Object.assign({}, programSettings, { theme: e.target.value })); } }, React.createElement('option', { value: 'dark' }, 'Тёмная'), React.createElement('option', { value: 'light' }, 'Светлая'), React.createElement('option', { value: 'auto' }, 'Авто (системная)'))),
+              React.createElement('label', { className: 'grid gap-1 text-xs' }, t('language'), React.createElement('select', { className: field, value: programSettings.locale || 'ru', onChange: function (e) { setProgramSettings(Object.assign({}, programSettings, { locale: e.target.value })); } }, React.createElement('option', { value: 'ru' }, 'Русский'), React.createElement('option', { value: 'en' }, 'English')))
+            ),
+            React.createElement('div', { className: 'grid gap-1 text-xs' },
+              React.createElement('span', {}, 'Акцентный цвет'),
+              React.createElement('div', { className: 'flex gap-2 items-center' },
+                Object.keys(ACCENT_PRESETS).map(function (k) {
+                  return React.createElement('button', { key: k, type: 'button', title: k, onClick: function () { setProgramSettings(Object.assign({}, programSettings, { accent: k })); }, className: 'w-7 h-7 rounded-full border-2 grid place-items-center ' + (programSettings.accent === k ? 'border-white ring-2 ring-white/40' : 'border-transparent hover:scale-110'), style: { backgroundColor: ACCENT_PRESETS[k][0] } }, programSettings.accent === k ? React.createElement('span', { className: 'text-white text-xs font-bold' }, '✓') : null);
+                })
+              )
+            ),
+            React.createElement('label', { className: 'grid gap-1 text-xs' }, 'Плотность интерфейса', React.createElement('select', { className: field, value: programSettings.density || 'normal', onChange: function (e) { setProgramSettings(Object.assign({}, programSettings, { density: e.target.value })); } }, React.createElement('option', { value: 'compact' }, 'Компактная'), React.createElement('option', { value: 'normal' }, 'Обычная'), React.createElement('option', { value: 'roomy' }, 'Просторная')))
           ),
-          React.createElement('label', { className: 'grid gap-1 text-xs' }, 'Плотность интерфейса', React.createElement('select', { className: field, value: programSettings.density || 'normal', onChange: function (e) { setProgramSettings(Object.assign({}, programSettings, { density: e.target.value })); } }, React.createElement('option', { value: 'compact' }, 'Компактная'), React.createElement('option', { value: 'normal' }, 'Обычная'), React.createElement('option', { value: 'roomy' }, 'Просторная'))),
           React.createElement('label', { className: 'grid gap-1 text-xs' }, 'Узлы диалогов', React.createElement('select', { className: field, value: programSettings.showNodeText === false ? 'id' : 'text', onChange: function (e) { setProgramSettings(Object.assign({}, programSettings, { showNodeText: e.target.value !== 'id' })); } }, React.createElement('option', { value: 'text' }, 'Показывать текст'), React.createElement('option', { value: 'id' }, 'Показывать id'))),
           React.createElement('label', { className: 'grid gap-1 text-xs' }, 'Автосохранение (сек, 0 — выкл)', React.createElement('input', { type: 'number', min: 0, className: field, value: programSettings.autosaveInterval || 0, onChange: function (e) { setProgramSettings(Object.assign({}, programSettings, { autosaveInterval: Math.max(0, +e.target.value || 0) })); } })),
           React.createElement('div', { className: 'grid gap-1 text-xs' },
