@@ -47,6 +47,8 @@ test('itemFieldProfile maps category to fields', () => {
   assert.ok(itemFieldProfile({ name: 'trade_barman' }).indexOf('buy_condition') !== -1);
   assert.equal(itemFieldProfile({ name: 'misc_item' }).indexOf('ammo_class'), -1); // только общие поля
   assert.ok(Object.keys(ITEM_FIELD_PROFILES).length >= 6);
+  assert.ok(itemFieldProfile({ name: 'bread', entries: [{ key: 'class', value: 'II_FOOD' }] }).indexOf('eat_satiety') !== -1);
+  assert.ok(itemFieldProfile({ name: 'jup_a9_conservation_info', entries: [{ key: 'quest_item', value: 'true' }] }).indexOf('quest_item') !== -1);
 });
 
 test('classifyItem uses class field and fallback', () => {

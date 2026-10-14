@@ -504,7 +504,9 @@ export const ITEM_FIELD_PROFILES = {
   'Боеприпасы': ['k_dist', 'k_disp', 'k_impulse', 'k_pierce', 'k_ap', 'k_hit', 'k_air_resistance', 'k_bullet_speed', 'k_cam_dispersion', 'impair', 'buck_shot', 'tracers', 'box_size', 'inv_weight'],
   'Броня': ['burn_protection', 'strike_protection', 'shock_protection', 'wound_protection', 'radiation_protection', 'telepatic_protection', 'chemical_burn_protection', 'explosion_protection', 'fire_wound_protection', 'additional_inventory_weight', 'additional_inventory_weight2', 'ef_equipment_type', 'bones_koeff_protection', 'immunities_sect', 'actor_visual', 'full_icon_name', 'slot', 'power_loss', 'night_vision_sect', 'artefact_count', 'speed_coef', 'cost', 'inv_weight'],
   'Артефакты': ['health_restore_speed', 'radiation_restore_speed', 'satiety_restore_speed', 'power_restore_speed', 'bleeding_restore_speed', 'additional_inventory_weight', 'hit_absorbation', 'cost'],
-  'Апгрейды': ['cost', 'hit_power', 'bullet_speed', 'rpm', 'hit_impulse', 'ammo_mag_size', 'ammo_limit', 'scheme_index', 'parent', 'condition'],
+  'Юзабельные': ['eat_health', 'eat_power', 'eat_satiety', 'eat_radiation', 'eat_alcohol', 'eat_max_power', 'eat_portions_num', 'cost', 'inv_weight'],
+  'Квестовое': ['quest_item', 'story_id', 'can_trade', 'cost', 'inv_weight'],
+  'Апгрейды': ['cost', 'hit_power', 'bullet_speed', 'rpm', 'hit_impulse', 'ammo_mag_size', 'ammo_limit', 'scheme_index', 'parent', 'condition', 'prerequisites', 'effects', 'icon', 'name'],
   'Детекторы': ['detect_actor', 'detect_artefacts', 'hud', 'af_sound', 'af_rank', 'cost'],
   'Торговля': ['buy_condition', 'sell_condition', 'buy_supplies', 'buy_price', 'sell_price']
 };
