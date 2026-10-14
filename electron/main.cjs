@@ -1,0 +1,5 @@
+const {app,BrowserWindow,ipcMain}=require('electron'); const path=require('path'); const fs=require('fs');
+function createWindow(){const w=new BrowserWindow({width:1440,height:900,webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true,preload:path.join(__dirname,'preload.cjs')}}); w.loadFile(path.join(__dirname,'../dist/index.html'));}
+ipcMain.handle('xray:save-project',(e,payload)=>{try{const base=app.isPackaged?path.dirname(app.getPath('exe')):app.getAppPath();const dir=path.join(base,'saves');fs.mkdirSync(dir,{recursive:true});const name=String((payload&&payload.name)||'project').replace(/[^\w\-]+/g,'_')||'project';const file=path.join(dir,name+'.project.json');fs.writeFileSync(file,JSON.stringify((payload&&payload.data)||{},null,2));return {ok:true,path:file};}catch(err){return {ok:false,error:String(err&&err.message||err)}}});
+app.whenReady().then(createWindow); app.on('window-all-closed',()=>{if(process.platform!=='darwin')app.quit()}); app.on('activate',()=>{if(BrowserWindow.getAllWindows().length===0)createWindow()});
+
