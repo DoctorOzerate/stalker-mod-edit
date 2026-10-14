@@ -23,6 +23,7 @@ export function parseCharactersXml(text,Parser=globalThis.DOMParser){
    bio:pick(x,'bio','bio'),
    icon:pick(x,'icon','icon'),
    visual:pick(x,'visual','visual'),
+   supplies:(function(){const s=children(x,'supplies')[0];return s?(s.textContent||'').trim():'';})(),
    start_dialog:children(x,'start_dialog').map(e=>e.textContent.trim()),
    actor_dialog:children(x,'actor_dialog').map(e=>e.textContent.trim()),
    source:'gamedata'

@@ -367,6 +367,25 @@ export function parseSquadDescr(text) {
 // === Общие поля предметов (#28): добавляются к каждому профилю ===
 export const ITEM_COMMON_FIELDS = ['$spawn', '$prefetch', '$npc', 'visual', 'cform', 'cost', 'inv_name', 'inv_name_short', 'description', 'inv_weight', 'inv_grid_width', 'inv_grid_height', 'inv_grid_x', 'inv_grid_y'];
 
+// === Спавн-секции spawn_sections.ltx (#14) ===
+export function parseSpawnSections(text) {
+  const parsed = parseLtx(text);
+  return parsed.sections.map(function (s) {
+    const get = function (key) { const e = s.entries.find(function (x) { return x.key === key; }); return e ? e.value : ''; };
+    return {
+      id: s.name,
+      base: (s.parents || [])[0] || '',
+      character_profile: get('character_profile'),
+      community: get('community'),
+      spec_rank: get('spec_rank'),
+      story_id: get('story_id'),
+      spawn: get('$spawn'),
+      npc: get('npc'),
+      logic: get('logic')
+    };
+  });
+}
+
 // === Тайники secrets.ltx (#79) ===
 export function parseSecrets(text) {
   const parsed = parseLtx(text);

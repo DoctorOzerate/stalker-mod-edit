@@ -48,11 +48,38 @@ export function renderCharactersTab(ctx) {
           (function () {
             const gr = project.gameRelations;
             if (!gr || !(gr.communities || []).length) return null;
+            const setRelation = function (row, col, value) {
+              const rel = (gr.relations && gr.relations[row]) || [];
+              const copy = rel.slice();
+              copy[col] = value;
+              const nextRel = Object.assign({}, gr.relations);
+              nextRel[row] = copy;
+              patch({ gameRelations: Object.assign({}, gr, { relations: nextRel }) });
+            };
             return React.createElement('div', { className: 'rounded-xl border p-4 grid gap-3 ' + ui.card },
               React.createElement('div', { className: 'text-[10px] uppercase tracking-widest font-bold ' + ui.muted }, 'Группировки · game_relations (' + gr.communities.length + ')'),
               React.createElement('div', { className: 'flex flex-wrap gap-1' },
                 gr.communities.map(function (c) { return React.createElement('span', { key: c, className: 'text-[11px] px-2 py-0.5 rounded ' + (dark ? 'bg-zinc-800' : 'bg-slate-200'), title: c }, (COMMUNITY_ICONS[c] || '•') + ' ' + c); })
               ),
+              (gr.relations && Object.keys(gr.relations).length > 0) ? React.createElement('div', { className: 'overflow-auto' },
+                React.createElement('div', { className: 'text-[10px] uppercase tracking-widest font-bold ' + ui.muted + ' mb-1' }, 'Матрица отношений (правка ячеек)'),
+                React.createElement('table', { className: 'border-collapse' },
+                  React.createElement('thead', {}, React.createElement('tr', {},
+                    React.createElement('th', { className: 'p-1' }, ''),
+                    gr.communities.map(function (c) { return React.createElement('th', { key: c, className: 'p-1 font-mono text-[10px] ' + ui.muted }, String(c).slice(0, 8)); })
+                  )),
+                  React.createElement('tbody', {}, gr.communities.map(function (row, ri) {
+                    return React.createElement('tr', { key: row },
+                      React.createElement('td', { className: 'p-1 font-mono text-[10px] whitespace-nowrap ' + ui.muted }, String(row).slice(0, 12)),
+                      gr.communities.map(function (col, ci) {
+                        const rel = (gr.relations && gr.relations[row]) || [];
+                        const val = rel[ci] !== undefined ? rel[ci] : '';
+                        return React.createElement('td', { key: col, className: 'p-0.5' }, React.createElement('input', { className: field + ' w-14 text-center font-mono text-[10px]', value: val, onChange: function (e) { setRelation(ri, ci, e.target.value); } }));
+                      })
+                    );
+                  }))
+                )
+              ) : null,
               gr.monsterCommunities && gr.monsterCommunities.length > 0 && React.createElement(React.Fragment, null,
                 React.createElement('div', { className: 'text-[10px] uppercase tracking-widest font-bold ' + ui.muted }, 'Монстры (' + gr.monsterCommunities.length + ')'),
                 React.createElement('div', { className: 'flex flex-wrap gap-1' },
@@ -83,6 +110,7 @@ export function renderCharactersTab(ctx) {
               React.createElement('label', { className: 'grid gap-1 text-xs' }, 'Репутация (reputation)', React.createElement('input', { className: field, value: c.reputation || '', onChange: function (e) { setC('reputation', e.target.value); }, list: 'dl_reps' }), (function () { const sc = project.gameRelations && project.gameRelations.scales && project.gameRelations.scales.reputation; if (!sc || !sc.length) return null; return React.createElement('div', { className: 'flex flex-wrap gap-1' }, React.createElement('datalist', { id: 'dl_reps' }, sc.map(function (s) { return React.createElement('option', { key: s.name, value: s.value, label: s.name }); })), sc.map(function (s) { return React.createElement('span', { key: s.name, className: 'text-[10px] font-mono px-1 rounded ' + (dark ? 'bg-zinc-800' : 'bg-slate-100'), title: 'Репутация ' + s.name }, s.value + ' ' + s.name); })); })()),
               React.createElement('label', { className: 'grid gap-1 text-xs' }, 'Ранг NPC (npc_rank)', React.createElement('input', { className: field, value: c.npc_rank || '', onChange: function (e) { setC('npc_rank', e.target.value); } })),
               React.createElement('label', { className: 'grid gap-1 text-xs' }, 'Био', React.createElement('textarea', { rows: 3, className: field, value: c.bio || '', onChange: function (e) { setC('bio', e.target.value); } })),
+              React.createElement('label', { className: 'grid gap-1 text-xs' }, 'Снаряжение (supplies)', React.createElement('textarea', { rows: 4, className: field + ' font-mono text-[11px]', value: c.supplies || '', onChange: function (e) { setC('supplies', e.target.value); }, placeholder: '[spawn]\nwpn_walther\nammo_9x19_fmj' })),
               React.createElement('label', { className: 'grid gap-1 text-xs' }, 'Иконка (icon)', React.createElement('input', { className: field, value: c.icon || '', onChange: function (e) { setC('icon', e.target.value); } })),
               React.createElement('label', { className: 'grid gap-1 text-xs' }, 'Визуал (visual)', React.createElement('input', { className: field, value: c.visual || '', onChange: function (e) { setC('visual', e.target.value); } })),
               React.createElement('div', { className: 'rounded-xl border p-3 grid gap-1 ' + ui.card },

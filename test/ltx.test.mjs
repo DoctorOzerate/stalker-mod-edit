@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, itemFieldProfile, ITEM_FIELD_PROFILES, classifyItem, COMMUNITY_ICONS, parseGameRelations, parseRatingScales, parseSquadDescr, parseSecrets } from '../src/lib/ltx.js';
+import { validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, itemFieldProfile, ITEM_FIELD_PROFILES, classifyItem, COMMUNITY_ICONS, parseGameRelations, parseRatingScales, parseSquadDescr, parseSecrets, parseSpawnSections } from '../src/lib/ltx.js';
 
 test('validateLtxRefs flags missing ammo_class but not known parent', () => {
   const text = '[wpn_ak74]:wpn_base\nammo_class = ammo_9x18_fmj, ammo_missing\n';
@@ -116,4 +116,14 @@ test('parseSecrets reads lists and treasures', () => {
   assert.deepEqual(r.lists, ['list_zaton', 'list_pripyat']);
   assert.equal(r.treasures.length, 1);
   assert.equal(r.treasures[0].items[0].item, 'medkit_army');
+});
+
+test('parseSpawnSections reads spawn sections', () => {
+  const text = '[zat_b14_stalker_1]:stalker\n$spawn = "respawn\\zat_b14_stalker_1"\ncharacter_profile = zat_b14_stalker_1\nspec_rank = regular\ncommunity = stalker\nstory_id = zat_b14_stalker_1\n';
+  const r = parseSpawnSections(text);
+  assert.equal(r.length, 1);
+  assert.equal(r[0].id, 'zat_b14_stalker_1');
+  assert.equal(r[0].base, 'stalker');
+  assert.equal(r[0].character_profile, 'zat_b14_stalker_1');
+  assert.equal(r[0].spec_rank, 'regular');
 });

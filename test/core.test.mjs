@@ -19,6 +19,14 @@ test('LTX inheritance', () => {
   assert.equal(p.sections[0].entries[0].value, '1');
 });
 
+test('parseCharactersXml captures supplies', () => {
+  globalThis.DOMParser = DOMParser;
+  const xml = '<xml><specific_character id="aes_Monolit_rpg"><name>N</name><community>monolith</community><supplies>[spawn] \nwpn_walther \nammo_9x19_fmj</supplies></specific_character></xml>';
+  const chars = parseCharactersXml(xml);
+  assert.equal(chars.length, 1);
+  assert.ok(chars[0].supplies.indexOf('wpn_walther') !== -1);
+});
+
 test('LTX include parsing', () => {
   const p = parseLtx('#include "a.ltx"\n#include "b.ltx"\n');
   assert.deepEqual(p.includes.map((x) => x.path), ['a.ltx', 'b.ltx']);
