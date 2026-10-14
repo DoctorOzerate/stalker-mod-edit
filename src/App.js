@@ -2007,18 +2007,25 @@ export default function App() {
         React.createElement('button', { className: btn, onClick: function () { setWelcomeOpen(true); } }, '🏠 ' + t('projects')),
         React.createElement('button', { className: btn, onClick: saveProject }, '💾 ' + t('save')),
         React.createElement('button', { className: btn, onClick: function () { setSettingsOpen(true); } }, '📁 ' + t('projectSettings')),
+        React.createElement('button', { className: btn, onClick: function () { setGlobalSearchOpen(true); } }, '🔍 ' + t('globalSearch')),
         React.createElement('button', { className: accentBtn, onClick: function () { setProgramSettingsOpen(true); } }, '⚙ ' + t('programSettings')),
         React.createElement('button', { className: btn, onClick: function () { setHelpOpen(true); } }, '❓ ' + t('help'))
       )
     ),
-    !canvasFull && React.createElement('nav', { className: 'h-11 px-4 flex items-center gap-1 border-b overflow-x-auto ' + ui.soft },
-      TABS.map(function (t) {
+    !canvasFull && React.createElement('nav', { className: 'h-11 px-3 flex items-center gap-1 border-b overflow-x-auto ' + ui.soft },
+      TABS.map(function (t, idx) {
         return React.createElement('button', {
           key: t[0], onClick: function () { setTab(t[0]); },
-          className: 'px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap ' + (tab === t[0] ? 'accent text-white' : ui.muted + ' ' + ui.hover)
-        }, t[1] + ' ' + t[2] + (tabCounts[t[0]] ? ' (' + tabCounts[t[0]] + ')' : ''));
+          title: t[2] + ' · Ctrl+' + (idx + 1),
+          className: 'px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 ' + (tab === t[0] ? 'accent text-white' : ui.muted + ' ' + ui.hover)
+        },
+          React.createElement('span', { className: 'text-[9px] font-mono opacity-50' }, idx + 1),
+          React.createElement('span', {}, t[1]),
+          React.createElement('span', {}, t[2]),
+          tabCounts[t[0]] ? React.createElement('span', { className: 'text-[10px] px-1 rounded-full ' + (tab === t[0] ? 'bg-white/20 text-white' : (dark ? 'bg-zinc-700/70 text-zinc-300' : 'bg-slate-200 text-slate-600')) }, tabCounts[t[0]]) : null
+        );
       }),
-      React.createElement('span', { className: 'ml-auto text-[11px] ' + ui.muted }, 'Нод: ' + nodes.length + ' · Связей: ' + edges.length)
+      tab === 'dialogues' && React.createElement('span', { className: 'ml-auto text-[11px] ' + ui.muted + ' whitespace-nowrap' }, 'Нод: ' + nodes.length + ' · Связей: ' + edges.length)
     ),
     React.createElement('input', { ref: importRef, type: 'file', accept: '.json', className: 'hidden', onChange: importProject }),
     React.createElement('input', { ref: gamedataRef, type: 'file', className: 'hidden', multiple: true, webkitdirectory: '', directory: '', onChange: scanGamedataFiles }),
@@ -2326,6 +2333,6 @@ export default function App() {
       React.createElement('div', { className: 'text-center text-[11px] bg-zinc-900/90 text-white py-1 px-3 shadow' }, 'Подгрузка gamedata: ' + loadProgress.done + ' / ' + loadProgress.total)
     ),
     toast && React.createElement('div', { className: 'fixed bottom-5 left-1/2 -translate-x-1/2 bg-zinc-900 text-white text-xs px-4 py-2 rounded-xl shadow-2xl z-50 flex items-center gap-3' }, React.createElement('span', {}, toast), toastAction && React.createElement('button', { className: 'font-bold underline', onClick: function () { setToast(''); setToastAction(null); toastAction.action(); } }, toastAction.label)),
-    React.createElement('style', {}, '.accent{background-color:var(--accent)!important}.accent:hover{background-color:var(--accent-hover)!important}*{box-sizing:border-box}::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:99px}.line-clamp-3{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}')
+    React.createElement('style', {}, '.accent{background-color:var(--accent)!important}.accent:hover{background-color:var(--accent-hover)!important}*{box-sizing:border-box}body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}button{-webkit-tap-highlight-color:transparent}input:focus,select:focus,textarea:focus{border-color:var(--accent)}:focus-visible{outline:2px solid var(--accent);outline-offset:1px}button,input,select,textarea{transition:border-color .15s ease,background-color .15s ease,color .15s ease}::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:99px}::-webkit-scrollbar-thumb:hover{background:#64748b}::-webkit-scrollbar-track{background:transparent}.line-clamp-3{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}')
   );
 }
