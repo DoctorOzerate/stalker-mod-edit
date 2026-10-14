@@ -534,3 +534,55 @@ export function itemFieldProfile(section) {
   else prof = ITEM_FIELD_PROFILES[classifyItem(section)] || [];
   return ITEM_COMMON_FIELDS.concat(prof);
 }
+
+// === Подсветка синтаксиса LTX (#2) ===
+export function highlightLtx(text) {
+  const esc = function (s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+  return String(text || '').split('\n').map(function (line) {
+    if (/^\s*;/.test(line)) return '<span style="color:#6b7280">' + esc(line) + '</span>';
+    const sec = line.match(/^(\s*)(\[[^\]]*\])(\s*)(.*)$/);
+    if (sec) return esc(sec[1]) + '<span style="color:#a78bfa;font-weight:bold">' + esc(sec[2]) + '</span>' + (sec[4] ? '<span style="color:#6b7280">' + esc(sec[3] + sec[4]) + '</span>' : '');
+    const inc = line.match(/^(\s*)(#include\s+"[^"]*")(\s*)(.*)$/);
+    if (inc) return esc(inc[1]) + '<span style="color:#2dd4bf">' + esc(inc[2]) + '</span>' + (inc[4] ? '<span style="color:#6b7280">' + esc(inc[3] + inc[4]) + '</span>' : '');
+    const kv = line.match(/^(\s*)([^=;]+?)(\s*=\s*)([^;]*)(;.*)?$/);
+    if (kv) return esc(kv[1]) + '<span style="color:#fbbf24">' + esc(kv[2]) + '</span>' + esc(kv[3]) + '<span style="color:#d1d5db">' + esc(kv[4]) + '</span>' + (kv[5] ? '<span style="color:#6b7280">' + esc(kv[5]) + '</span>' : '');
+    return esc(line);
+  }).join('\n');
+}
+
+// === Дерево наследования секций LTX (#3) ===
+export function ltxInheritanceTree(text) {
+  const sections = parseLtx(text).sections;
+  const children = {};
+  const roots = [];
+  sections.forEach(function (s) {
+    if (!s.name) return;
+    const parents = s.parents || [];
+    if (!parents.length) { if (roots.indexOf(s.name) === -1) roots.push(s.name); return; }
+    parents.forEach(function (p) { (children[p] = children[p] || []); if (children[p].indexOf(s.name) === -1) children[p].push(s.name); });
+  });
+  return { roots: roots, children: children };
+}
+
+// === Словарь описаний полей предметов (#5) ===
+export const FIELD_DESCRIPTIONS = {
+  cost: 'Цена', inv_weight: 'Вес в инвентаре', inv_name: 'Название в инвентаре (text_id)', inv_name_short: 'Короткое название',
+  description: 'Описание (text_id)', visual: 'Модель (OGF)', class: 'Класс предмета (для движка)', '$spawn': 'Секция спавна в редакторе уровней',
+  ammo_class: 'Используемые патроны (секции)', ammo_mag_size: 'Размер магазина', ammo_limit: 'Лимит патронов', ammo_elapsed: 'Патроны в магазине',
+  fire_modes: 'Режимы огня (1/0, -1 — авто)', fire_distance: 'Дальность стрельбы', bullet_speed: 'Начальная скорость пули', rpm: 'Скорострельность (выстр/мин)',
+  hit_power: 'Урон', hit_impulse: 'Импульс (отдача цели)', hit_type: 'Тип ранения', fire_dispersion_base: 'Базовое рассеивание',
+  grenade_class: 'Подствольные гранаты', slot: 'Слот инвентаря', animation_slot: 'Тип анимации', hud: 'Секция HUD', position: 'Позиция в руках',
+  orientation: 'Ориентация в руках', snd_shoot: 'Звук выстрела', snd_reload: 'Звук перезарядки', snd_draw: 'Звук доставания', snd_holster: 'Звук убирания',
+  misfire_probability: 'Вероятность осечки', condition_shot_dec: 'Износ за выстрел', use_aim_bullet: 'Баллистика по прицелу', time_to_aim: 'Время прицеливания',
+  burn_protection: 'Защита от ожогов', strike_protection: 'Защита от ударов', shock_protection: 'Защита от электричества', wound_protection: 'Защита от ран',
+  radiation_protection: 'Защита от радиации', telepatic_protection: 'Защита от пси-воздействия', chemical_burn_protection: 'Защита от хим. ожогов',
+  explosion_protection: 'Защита от взрывов', fire_wound_protection: 'Защита от огнестрела', immunities_sect: 'Секция иммунитетов',
+  actor_visual: 'Модель на игроке', full_icon_name: 'Полная иконка NPC', power_loss: 'Потеря энергии', night_vision_sect: 'ПНВ', artefact_count: 'Слотов под артефакты', speed_coef: 'Модификатор скорости',
+  eat_health: 'Восстановление здоровья', eat_power: 'Восстановление энергии', eat_satiety: 'Насыщение', eat_radiation: 'Вывод радиации', eat_alcohol: 'Опьянение', eat_max_power: 'Макс. энергия', eat_portions_num: 'Порций',
+  k_dist: 'Дистанция (боеприпас)', k_disp: 'Рассеивание (боеприпас)', k_impulse: 'Импульс (боеприпас)', k_pierce: 'Бронепробитие', k_ap: 'Пробитие брони', k_hit: 'Урон (боеприпас)', k_bullet_speed: 'Скорость пули',
+  inv_grid_x: 'X иконки в атласе', inv_grid_y: 'Y иконки в атласе', inv_grid_width: 'Ширина иконки (ячейки)', inv_grid_height: 'Высота иконки (ячейки)',
+  death_items: 'Предметы, выпадающие при смерти', scope_name: 'Секция прицела', silencer_name: 'Секция глушителя', grenade_launcher_name: 'Секция подствольника',
+  upgrades: 'Доступные апгрейды', installed_upgrades: 'Установленные апгрейды', upgrade_scheme: 'Схема апгрейдов', prerequisites: 'Требования апгрейда', effects: 'Эффекты апгрейда',
+  quest_item: 'Квестовый предмет', story_id: 'ID для скриптов', can_trade: 'Можно продавать', buy_condition: 'Условие покупки', sell_condition: 'Условие продажи', buy_supplies: 'Условие ассортимента'
+};
+

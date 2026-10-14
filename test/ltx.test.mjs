@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, itemFieldProfile, ITEM_FIELD_PROFILES, classifyItem, COMMUNITY_ICONS, parseGameRelations, parseRatingScales, parseSquadDescr, parseSecrets, parseSpawnSections, parseMonsters, parseActor, parseSurgeManager, parseTrade } from '../src/lib/ltx.js';
+import { validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, itemFieldProfile, ITEM_FIELD_PROFILES, classifyItem, COMMUNITY_ICONS, parseGameRelations, parseRatingScales, parseSquadDescr, parseSecrets, parseSpawnSections, parseMonsters, parseActor, parseSurgeManager, parseTrade, highlightLtx, ltxInheritanceTree, FIELD_DESCRIPTIONS } from '../src/lib/ltx.js';
 
 test('validateLtxRefs flags missing ammo_class but not known parent', () => {
   const text = '[wpn_ak74]:wpn_base\nammo_class = ammo_9x18_fmj, ammo_missing\n';
@@ -165,4 +165,24 @@ test('parseTrade reads traders and supplies', () => {
   assert.equal(r.traders[0].buy_condition, 'barman_generic_buy');
   assert.equal(r.supplies.length, 1);
   assert.equal(r.supplies[0].items[0].item, 'af_medusa');
+});
+
+test('highlightLtx colors sections, keys, comments', () => {
+  const html = highlightLtx('[wpn_ak74]:base\n; comment\ncost = 2000 ; price\n');
+  assert.ok(html.indexOf('#a78bfa') !== -1); // секция
+  assert.ok(html.indexOf('#fbbf24') !== -1); // ключ
+  assert.ok(html.indexOf('#6b7280') !== -1); // комментарий
+});
+
+test('ltxInheritanceTree builds parent->children graph', () => {
+  const tree = ltxInheritanceTree('[weapon_base]\n[wpn_ak74]:weapon_base\n[wpn_ak74u]:wpn_ak74\n');
+  assert.deepEqual(tree.roots, ['weapon_base']);
+  assert.ok(tree.children['weapon_base'].indexOf('wpn_ak74') !== -1);
+  assert.ok(tree.children['wpn_ak74'].indexOf('wpn_ak74u') !== -1);
+});
+
+test('FIELD_DESCRIPTIONS covers common fields', () => {
+  assert.equal(FIELD_DESCRIPTIONS.cost, 'Цена');
+  assert.equal(FIELD_DESCRIPTIONS.hit_power, 'Урон');
+  assert.equal(FIELD_DESCRIPTIONS.burn_protection, 'Защита от ожогов');
 });

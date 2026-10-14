@@ -4,7 +4,7 @@ import { normalizePath as coreNormalizePath, cp1251Encode, decodeGameBytes } fro
 import { QUEST_CATEGORIES, QUEST_TEMPLATES, normalizeQuestObjectives, parseGameTasksXml, parseTaskManagerLtx, questsToXml, validateQuests, computeQuestChains, taskManagerLtx, questChainSvg, parseCondlistEntry, condlistEntryToStr } from './lib/quests.js';
 import { tokenizeLua, tokenizeLuaLines, countLuaBrackets, formatLua, luaFunctionBlocks, luaCheck, luaUndeclaredGlobals, LUA_API, LUA_SNIPPETS, LUA_ENGINE_GLOBALS, luaCallGraph, luaUnused, luaCompletions, validateScriptBindings } from './lib/lua.js';
 import { decodeDDS, pixelsToDataURL, encodeDds } from './lib/dds.js';
-import { splitLines, parseLtx, resolveIncludes, updateLtxLine, removeSection, addSection, addFieldToSection, removeFieldByLine, isValidGridValue, isValidGridWH, iconCoords, ATLAS_PRESETS, isFileLoaded, findIncludeSuggestion, itemFileCategory, isItemFile, mergedItemEntries, includeTreeRows, includeGraphSvg, ITEM_CATEGORIES, COMMUNITY_ICONS, classifyItem, validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, ITEM_FIELD_PROFILES, itemFieldProfile, parseGameRelations, parseRatingScales, parseSquadDescr, parseSecrets, parseSpawnSections, parseMonsters, parseActor, parseSurgeManager, parseTrade } from './lib/ltx.js';
+import { splitLines, parseLtx, resolveIncludes, updateLtxLine, removeSection, addSection, addFieldToSection, removeFieldByLine, isValidGridValue, isValidGridWH, iconCoords, ATLAS_PRESETS, isFileLoaded, findIncludeSuggestion, itemFileCategory, isItemFile, mergedItemEntries, includeTreeRows, includeGraphSvg, ITEM_CATEGORIES, COMMUNITY_ICONS, classifyItem, validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, ITEM_FIELD_PROFILES, itemFieldProfile, parseGameRelations, parseRatingScales, parseSquadDescr, parseSecrets, parseSpawnSections, parseMonsters, parseActor, parseSurgeManager, parseTrade, highlightLtx, ltxInheritanceTree, FIELD_DESCRIPTIONS } from './lib/ltx.js';
 import { NODE_TYPES, PALETTE_HIDDEN, META_KEYS, FALLBACK_NODE, safeNode, flattenDialogues, validateGraph, layoutDialogue, nodeLabel, roleColor, dialogueStats, suggestTextId, validateMetadataSyntax, dialogueGroup, DIALOGUE_GROUPS, graphToSvg } from './lib/graph.js';
 import { gameFilesFromDialogues, validateTextIds, dialogueToXml, findTextIdIssues, resolveTextId } from './lib/dialogs.js';
 import { analyzeSpawn } from './lib/spawn.js';
@@ -537,6 +537,7 @@ export default function App() {
   marqueeRef.current = marquee;
   const nodesRef = useRef(null);
   const [scriptViewMode, setScriptViewMode] = useState(true);
+  const [ltxViewMode, setLtxViewMode] = useState(false);
   const [collapsedBlocks, setCollapsedBlocks] = useState({});
   const [paletteFilter, setPaletteFilter] = useState('');
   const [graphSearch, setGraphSearch] = useState('');
@@ -906,6 +907,7 @@ export default function App() {
       if (project.itemsLtx) data['gamedata/' + cfg + '/misc/items.ltx'] = bytes(project.itemsLtx);
       if (project.systemLtx) data['gamedata/' + cfg + '/system.ltx'] = bytes(project.systemLtx);
       (project.scripts || []).forEach(function (s) { if (s.name) data['gamedata/' + cfg + '/scripts/' + s.name] = bytes(s.text || ''); });
+      Object.keys(project.ltxFiles || {}).forEach(function (p) { data['gamedata/' + p] = bytes(project.ltxFiles[p]); });
       downloadBytes(zipSync(data), (project.projectName || 'project') + '_full.zip', 'application/zip');
       say('Полный пакет создан (' + Object.keys(data).length + ' файлов)');
     } catch (err) { say(err.message); }
@@ -1945,7 +1947,7 @@ export default function App() {
     itemsHist, duplicateCells, iconClipboard, pinColName, setPinColName, charXml, setCharXml,
     paletteCollapsed, setPaletteCollapsed, propsCollapsed, setPropsCollapsed, canvasFull, setCanvasFull,
     langTableMode, setLangTableMode, multiSelect, setMultiSelect, marquee, setMarquee,
-    scriptViewMode, setScriptViewMode, collapsedBlocks, paletteFilter, setPaletteFilter,
+    scriptViewMode, setScriptViewMode, ltxViewMode, setLtxViewMode, collapsedBlocks, paletteFilter, setPaletteFilter,
     graphSearch, setGraphSearch, colorByRole, setColorByRole, errors, selfResults, setSelfResults,
     pan, setPan, zoom, setZoom, connectFrom, setConnectFrom, selItem, setSelItem, itemCategory, setItemCategory,
     selCell, setSelCell, selSize, setSelSize, atlasZoom, setAtlasZoom, hoverCell, setHoverCell,
@@ -1979,7 +1981,7 @@ export default function App() {
     luaFunctionBlocks, luaCheck, luaUndeclaredGlobals, LUA_API, LUA_SNIPPETS, LUA_ENGINE_GLOBALS, luaCallGraph, luaUnused, luaCompletions, validateScriptBindings, classifyItem, itemFileCategory, extractCharacterXml, normalizeQuestObjectives,
     validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, gameFilesFromDialogues, validateTextIds, dialogueToXml, findTextIdIssues, resolveTextId,
     mergedItemEntries, isValidGridValue, isValidGridWH, download, downloadBytes, downloadDataUrl, textBytes,
-    escapeXml, csvCell, splitLines, updateLtxLine, addSection, removeSection, addFieldToSection, removeFieldByLine, ITEM_FIELD_PROFILES, itemFieldProfile,
+    escapeXml, csvCell, splitLines, updateLtxLine, addSection, removeSection, addFieldToSection, removeFieldByLine, ITEM_FIELD_PROFILES, itemFieldProfile, highlightLtx, ltxInheritanceTree, FIELD_DESCRIPTIONS,
     parseStringTableXml, parseGeneralCharactersXml, parseCharacterDescGeneral, characterDescGeneralToXml, analyzeSpawn,
     parseInfoPortions, parseEncyclopedia, parseSquadDescr, parseRatingScales, parseSecrets, parseSpawnSections, parseMonsters, parseActor, parseSurgeManager, parseNpcProfile, parseTrade, parseTextureDescriptor
   };
