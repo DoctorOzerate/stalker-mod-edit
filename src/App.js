@@ -1525,6 +1525,54 @@ export default function App() {
     };
     img.src = atlasTex.dataURL;
   };
+  // Отражение выделения по горизонтали/вертикали (#45)
+  const flipSelection = function (horizontal) {
+    if (!atlasTex) return;
+    const cw = project.atlas.cellSize || 50, ch = project.atlas.cellHeight || project.atlas.cellSize || 50;
+    const x = selCell.x * cw, y = selCell.y * ch, w = (selSize.w || 1) * cw, h = (selSize.h || 1) * ch;
+    const img = new Image();
+    img.onload = function () {
+      const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height;
+      const ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0);
+      const id = ctx.getImageData(x, y, w, h);
+      const data = id.data, copy = new Uint8ClampedArray(data);
+      for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) {
+        const sx = horizontal ? (w - 1 - xx) : xx;
+        const sy = horizontal ? yy : (h - 1 - yy);
+        const di = (yy * w + xx) * 4, si = (sy * w + sx) * 4;
+        data[di] = copy[si]; data[di + 1] = copy[si + 1]; data[di + 2] = copy[si + 2]; data[di + 3] = copy[si + 3];
+      }
+      ctx.putImageData(id, x, y);
+      patch({ textures: (project.textures || []).map(function (t, i) { return i === 0 ? Object.assign({}, t, { dataURL: cv.toDataURL('image/png'), width: cv.width, height: cv.height }) : t; }) });
+      say(horizontal ? 'Отражение по горизонтали' : 'Отражение по вертикали');
+    };
+    img.src = atlasTex.dataURL;
+  };
+  // Поворот выделения на 90° (#45)
+  const rotateSelection = function (clockwise) {
+    if (!atlasTex) return;
+    const cw = project.atlas.cellSize || 50, ch = project.atlas.cellHeight || project.atlas.cellSize || 50;
+    const w = (selSize.w || 1) * cw, h = (selSize.h || 1) * ch;
+    if (w !== h) { say('Поворот требует квадратное выделение (' + (selSize.w || 1) + '×' + (selSize.h || 1) + '). Сначала выделите квадратную область.'); return; }
+    const x = selCell.x * cw, y = selCell.y * ch, n = w;
+    const img = new Image();
+    img.onload = function () {
+      const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height;
+      const ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0);
+      const id = ctx.getImageData(x, y, n, n);
+      const data = id.data, copy = new Uint8ClampedArray(data);
+      for (let yy = 0; yy < n; yy++) for (let xx = 0; xx < n; xx++) {
+        const sx = clockwise ? (n - 1 - yy) : yy;
+        const sy = clockwise ? xx : (n - 1 - xx);
+        const di = (yy * n + xx) * 4, si = (sy * n + sx) * 4;
+        data[di] = copy[si]; data[di + 1] = copy[si + 1]; data[di + 2] = copy[si + 2]; data[di + 3] = copy[si + 3];
+      }
+      ctx.putImageData(id, x, y);
+      patch({ textures: (project.textures || []).map(function (t, i) { return i === 0 ? Object.assign({}, t, { dataURL: cv.toDataURL('image/png'), width: cv.width, height: cv.height }) : t; }) });
+      say(clockwise ? 'Поворот на 90° по часовой' : 'Поворот на 90° против часовой');
+    };
+    img.src = atlasTex.dataURL;
+  };
   const iconsKeyRef = useRef(null);
   iconsKeyRef.current = { pin: pinIcon, undo: undoHist, redo: redoHist };
   useEffect(function () {
@@ -1899,7 +1947,7 @@ export default function App() {
     loadDemo, centerView, autoLayout, loadDialogueIntoGraph, resetStorage, pickGamedataFolder, pickResourcesFolder,
     scanScripts, importStringTables, updateScript, insertSnippet, insertSnippetText, insertLuaAtCursor, formatCurrentScript, replaceAllInScripts, jumpToDefinition, toggleBlock,
     deleteScript, renameScript, loadDds, loadSpawn, loadCompareDds, removeCompare, pushHist, undoHist, redoHist, pinIcon,
-    unpinIcon, addPinCollection, findDuplicateIcons, exportDds, copyIcon, pasteIcon, newAtlas, cropAtlas, fillSelection, alphaSelection, exportSpritesheet,
+    unpinIcon, addPinCollection, findDuplicateIcons, exportDds, copyIcon, pasteIcon, newAtlas, cropAtlas, fillSelection, alphaSelection, flipSelection, rotateSelection, exportSpritesheet,
     autofillCharDialogs, exportItemsCsv, exportItemsLtx, setItemField, setItemGrid, setSysEntry, removeSysEntry,
     addSysEntry, addSysSection, updateLtxFile, deleteLtxFile, mutateItems, undoItems, redoItems, addItem, deleteItem, renameItemSection, replaceItemField, setQuestField,
     setQuestObjectiveField, setQuestRequires, addQuestObjective, removeQuestObjective, mutateQuests, undoQuests,
