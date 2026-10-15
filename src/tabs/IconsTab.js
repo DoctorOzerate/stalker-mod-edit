@@ -69,7 +69,7 @@ export function renderIconsTab(ctx) {
         ),
         React.createElement('button', { className: btn, onClick: findDuplicateIcons }, 'Найти дубликаты'),
         ((project.pinCollections || {})[pinColName] || []).length > 0 && React.createElement('div', { className: 'grid gap-1' },
-          React.createElement('div', { className: 'text-[10px] uppercase tracking-widest font-bold ' + ui.muted }, 'Закреплённые · ' + pinColName),
+          React.createElement('div', { className: 'text-[10px] uppercase tracking-widest font-bold ' + ui.muted }, 'Закреплённые · ' + pinColName + ' (' + ((project.pinCollections || {})[pinColName] || []).length + ')'),
           ((project.pinCollections || {})[pinColName] || []).map(function (p, i) {
             return React.createElement('div', { key: i, className: 'flex items-center justify-between text-xs rounded border px-2 py-1 ' + ui.card },
               React.createElement('button', { className: 'text-left', onClick: function () { setSelCell({ x: p.x, y: p.y }); setSelSize({ w: p.w, h: p.h }); } }, p.name + ' · ' + p.x + '×' + p.y + ' (' + p.w + '×' + p.h + ')'),

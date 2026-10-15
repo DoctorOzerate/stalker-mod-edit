@@ -11,6 +11,7 @@ export function renderCharactersTab(ctx) {
       React.createElement('aside', { className: 'w-72 border-r p-4 overflow-auto ' + ui.soft },
         React.createElement('button', { className: accentBtn + ' w-full', onClick: function () { const c = { id: 'char_' + Date.now().toString(36), name: 'Новый персонаж', community: 'stalker', rank: '0', bio: '', icon: '', visual: '', start_dialog: '' }; patch({ characters: project.characters.concat([c]) }); setSelChar(c.id); } }, '＋ Создать персонажа'),
         React.createElement('button', { className: btn + ' w-full mt-2', onClick: autofillCharDialogs }, 'Автосвязь с диалогами'),
+        React.createElement('div', { className: 'mt-2 text-[11px] ' + ui.muted }, 'Персонажей: ' + (project.characters || []).length),
         React.createElement('div', { className: 'mt-4 grid gap-2' },
           React.createElement('input', { value: charSearch, onChange: function (e) { setCharSearch(e.target.value); }, placeholder: 'Поиск персонажа...', className: field }),
           React.createElement('select', { className: field + ' mt-2', value: listSort, onChange: function (e) { setListSort(e.target.value); }, title: 'Сортировка списка' },

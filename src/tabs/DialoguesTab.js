@@ -59,7 +59,7 @@ export function renderDialoguesTab(ctx) {
           React.createElement('button', { className: btn, onClick: function () { const svg = graphToSvg(nodes, edges); if (!svg) { say('Нет нод для экспорта'); return; } download(svg, (project.dialogueId || project.projectName || 'dialogue') + '.svg', 'image/svg+xml', false); say('Граф экспортирован в SVG'); } }, 'Экспорт SVG'),
           React.createElement('button', { className: btn, onClick: loadDemo }, 'Seed-демограф')
         ),
-        React.createElement('div', { className: 'text-[10px] uppercase tracking-widest font-bold ' + ui.muted + ' mt-2' }, 'Загруженные диалоги'),
+        React.createElement('div', { className: 'text-[10px] uppercase tracking-widest font-bold ' + ui.muted + ' mt-2' }, 'Загруженные диалоги · ' + (project.dialogues || []).length),
         (function () {
           const groups = {};
           (project.dialogues || []).forEach(function (d) { const g = dialogueGroup(d.id || d.name); (groups[g] = groups[g] || []).push(d); });

@@ -10,6 +10,7 @@ export function renderQuestsTab(ctx) {
     React.createElement('div', { className: 'flex-1 flex min-h-0' },
       React.createElement('aside', { className: 'w-80 border-r p-4 overflow-auto ' + ui.soft },
         React.createElement('button', { className: accentBtn + ' w-full', onClick: addQuest }, '＋ Создать квест'),
+        React.createElement('div', { className: 'mt-2 text-[11px] ' + ui.muted }, 'Квестов: ' + (project.quests || []).length + ' (CoP: ' + (project.quests || []).filter(function (q) { return q.format === 'task_manager'; }).length + ')'),
         React.createElement('select', { className: field + ' w-full mt-2', value: '', onChange: function (e) { const t = QUEST_TEMPLATES.find(function (x) { return x.label === e.target.value; }); if (t) { addQuestFromTemplate(t); e.target.value = ''; } } },
           React.createElement('option', { value: '' }, 'Из шаблона…'),
           QUEST_TEMPLATES.map(function (t) { return React.createElement('option', { key: t.label, value: t.label }, t.label); })),

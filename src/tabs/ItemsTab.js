@@ -10,6 +10,7 @@ export function renderItemsTab(ctx) {
     React.createElement('div', { className: 'flex-1 flex min-h-0' },
       React.createElement('aside', { className: 'w-72 border-r p-4 overflow-auto ' + ui.soft },
         React.createElement('button', { className: accentBtn + ' w-full', onClick: addItem }, '＋ Создать предмет'),
+        React.createElement('div', { className: 'mt-2 text-[11px] ' + ui.muted }, 'Секций: ' + parsedItems.sections.length),
         React.createElement('div', { className: 'mt-2 flex flex-col gap-2' },
           React.createElement('button', { className: btn, onClick: exportItemsLtx }, 'Экспорт items.ltx'),
           React.createElement('button', { className: btn, onClick: exportItemsCsv }, 'Экспорт CSV')
@@ -41,7 +42,7 @@ export function renderItemsTab(ctx) {
               items.map(function (s) {
                 return React.createElement('button', { key: s.name, onClick: function () { setSelItem(s.name); }, onContextMenu: function (e) { openCtxMenu(e, [{ label: '✂ Удалить предмет', action: function () { deleteItem(s.name); } }]); }, className: 'text-left rounded-xl border p-3 w-full ' + ui.card + ' ' + ui.hover },
                   React.createElement('b', { className: 'text-xs' }, s.name),
-                  React.createElement('div', { className: 'text-[11px] ' + ui.muted }, s.entries.length + ' полей')
+                  React.createElement('div', { className: 'text-[11px] ' + ui.muted }, s.entries.length + ' полей' + (s.parents && s.parents.length ? ' · :' + s.parents.join(',') : '')),
                 );
               })
             );

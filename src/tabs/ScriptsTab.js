@@ -11,6 +11,7 @@ export function renderScriptsTab(ctx) {
       React.createElement('aside', { className: 'w-72 border-r p-4 overflow-auto ' + ui.soft },
         React.createElement('button', { className: accentBtn + ' w-full', onClick: function () { scriptRef.current.click(); } }, 'Сканировать скрипты'),
         React.createElement('button', { className: btn + ' w-full mt-2', onClick: function () { patch({ scripts: (project.scripts || []).concat([{ name: 'new.script', path: 'new.script', text: '-- Lua script' + NL + 'function init()' + NL + 'end' }]) }); say('Файл создан'); } }, '＋ Создать файл'),
+        React.createElement('div', { className: 'mt-2 text-[11px] ' + ui.muted }, 'Файлов: ' + (project.scripts || []).length),
         React.createElement('input', { className: field + ' mt-2', value: scriptSearch, onChange: function (e) { setScriptSearch(e.target.value); }, placeholder: 'Поиск по скриптам...' }),
         React.createElement('select', { className: field + ' mt-2', value: listSort, onChange: function (e) { setListSort(e.target.value); }, title: 'Сортировка списка' },
           React.createElement('option', { value: 'name' }, 'Сортировка: по имени'),

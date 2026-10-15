@@ -63,6 +63,7 @@ export function renderLanguagesTab(ctx) {
             React.createElement('div', { className: 'flex items-center gap-2' },
               React.createElement('input', { className: field + ' w-20', value: lang.locale, onChange: function (e) { setLang('locale', e.target.value); }, title: 'Локаль' }),
               React.createElement('input', { className: field, value: lang.name, onChange: function (e) { setLang('name', e.target.value); } }),
+              React.createElement('span', { className: 'text-[10px] px-1.5 py-0.5 rounded ' + (dark ? 'bg-zinc-800 text-zinc-300' : 'bg-slate-200 text-slate-600') }, (lang.entries || []).length + ' строк'),
               React.createElement('button', { className: 'text-red-500 text-xs', onClick: function () { patch({ languages: project.languages.filter(function (_, i) { return i !== li; }) }); } }, 'Удалить')
             ),
             lang.entries.map(function (en, ei) {

@@ -68,7 +68,7 @@ export function renderSystemTab(ctx) {
           React.createElement('textarea', { readOnly: true, rows: 12, className: field + ' font-mono text-xs', value: includePreview.text })
         ),
         React.createElement('div', { className: 'rounded-xl border ' + ui.card },
-          React.createElement('div', { className: 'p-3 border-b border-inherit text-xs font-bold flex items-center justify-between' }, React.createElement('span', {}, 'Секции в подключённых файлах'), React.createElement('input', { value: sectionSearch, onChange: function (e) { setSectionSearch(e.target.value); }, placeholder: 'Поиск секции…', className: field + ' w-40', list: 'dl_ltx_sections' }), React.createElement('datalist', { id: 'dl_ltx_sections' }, Object.keys(ltxSectionsMap).sort().map(function (n) { return React.createElement('option', { key: n, value: n }); }))),
+          React.createElement('div', { className: 'p-3 border-b border-inherit text-xs font-bold flex items-center justify-between' }, React.createElement('span', {}, 'Секции в подключённых файлах (' + Object.keys(ltxSectionsMap).length + ')'), React.createElement('input', { value: sectionSearch, onChange: function (e) { setSectionSearch(e.target.value); }, placeholder: 'Поиск секции…', className: field + ' w-40', list: 'dl_ltx_sections' }), React.createElement('datalist', { id: 'dl_ltx_sections' }, Object.keys(ltxSectionsMap).sort().map(function (n) { return React.createElement('option', { key: n, value: n }); }))),
           React.createElement('div', { className: 'p-3 grid gap-1 max-h-48 overflow-auto' },
             (function () {
               const arr = Object.keys(ltxSectionsMap).sort().filter(function (n) { return !sectionSearch || n.toLowerCase().indexOf(sectionSearch.toLowerCase()) !== -1; });
@@ -120,7 +120,7 @@ export function renderSystemTab(ctx) {
           )
         ),
         React.createElement('div', { className: 'rounded-xl border ' + ui.card },
-          React.createElement('div', { className: 'p-3 border-b border-inherit text-xs font-bold' }, 'Файлы LTX (gamedata)'),
+          React.createElement('div', { className: 'p-3 border-b border-inherit text-xs font-bold' }, 'Файлы LTX (gamedata) · ' + Object.keys(project.ltxFiles || {}).length),
           React.createElement('div', { className: 'p-3 grid gap-2' },
             React.createElement('div', { className: 'flex flex-wrap gap-1' },
               Object.keys(project.ltxFiles || {}).sort().map(function (p) {
