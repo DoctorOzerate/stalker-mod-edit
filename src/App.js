@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { zipSync, strToU8 } from 'fflate';
-import { normalizePath as coreNormalizePath, cp1251Encode, decodeGameBytes } from './lib/core.js';
+import { normalizePath as coreNormalizePath, cp1251Encode, decodeGameBytes, validateCharacter } from './lib/core.js';
 import { QUEST_CATEGORIES, QUEST_TEMPLATES, normalizeQuestObjectives, parseGameTasksXml, parseTaskManagerLtx, questsToXml, validateQuests, computeQuestChains, taskManagerLtx, questChainSvg, parseCondlistEntry, condlistEntryToStr } from './lib/quests.js';
-import { tokenizeLua, tokenizeLuaLines, countLuaBrackets, formatLua, luaFunctionBlocks, luaCheck, luaUndeclaredGlobals, LUA_API, LUA_SNIPPETS, LUA_ENGINE_GLOBALS, luaCallGraph, luaUnused, luaCompletions, validateScriptBindings } from './lib/lua.js';
+import { tokenizeLua, tokenizeLuaLines, countLuaBrackets, formatLua, luaFunctionBlocks, luaCheck, luaUndeclaredGlobals, LUA_API, LUA_SNIPPETS, LUA_ENGINE_GLOBALS, luaCallGraph, luaUnused, luaCompletions, validateScriptBindings, countLuaFunctions, luaDuplicateFunctions } from './lib/lua.js';
 import { decodeDDS, pixelsToDataURL, encodeDds } from './lib/dds.js';
 import { splitLines, parseLtx, resolveIncludes, updateLtxLine, removeSection, addSection, addFieldToSection, removeFieldByLine, isValidGridValue, isValidGridWH, iconCoords, ATLAS_PRESETS, isFileLoaded, findIncludeSuggestion, itemFileCategory, isItemFile, mergedItemEntries, includeTreeRows, includeGraphSvg, ITEM_CATEGORIES, COMMUNITY_ICONS, classifyItem, validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, ITEM_FIELD_PROFILES, itemFieldProfile, parseGameRelations, parseRatingScales, parseSquadDescr, parseSecrets, parseSpawnSections, parseMonsters, parseActor, parseSurgeManager, parseTrade, highlightLtx, ltxInheritanceTree, FIELD_DESCRIPTIONS } from './lib/ltx.js';
 import { NODE_TYPES, PALETTE_HIDDEN, META_KEYS, FALLBACK_NODE, safeNode, flattenDialogues, validateGraph, layoutDialogue, nodeLabel, roleColor, dialogueStats, suggestTextId, validateMetadataSyntax, dialogueGroup, DIALOGUE_GROUPS, graphToSvg } from './lib/graph.js';
-import { gameFilesFromDialogues, validateTextIds, dialogueToXml, findTextIdIssues, resolveTextId } from './lib/dialogs.js';
+import { gameFilesFromDialogues, validateTextIds, dialogueToXml, findTextIdIssues, resolveTextId, textIdCoverage } from './lib/dialogs.js';
 import { analyzeSpawn } from './lib/spawn.js';
 import { xmlAttr, xmlTag, parseCharactersXml, parseGeneralCharactersXml, parseCharacterDescGeneral, characterDescGeneralToXml, LOCALE_NAMES, detectLocale, mergeLanguages, parseStringTableXml, parseDialogueXml, parseInfoPortions, parseEncyclopedia, parseNpcProfile, parseTextureDescriptor } from './lib/xml.js';
 import { createHistory } from './lib/history.js';
@@ -1986,8 +1986,8 @@ export default function App() {
     ATLAS_PRESETS, NL, Q, BS, META_KEYS, PALETTE_HIDDEN, AtlasViewer, nodeLabel, roleColor, dialogueStats, suggestTextId, validateMetadataSyntax, dialogueGroup, parseLtx,
     parseGameTasksXml, questsToXml, validateQuests, computeQuestChains, taskManagerLtx, questChainSvg, parseCondlistEntry, condlistEntryToStr, includeTreeRows,
     includeGraphSvg, isFileLoaded, findIncludeSuggestion, tokenizeLua, tokenizeLuaLines, countLuaBrackets, formatLua,
-    luaFunctionBlocks, luaCheck, luaUndeclaredGlobals, LUA_API, LUA_SNIPPETS, LUA_ENGINE_GLOBALS, luaCallGraph, luaUnused, luaCompletions, validateScriptBindings, classifyItem, itemFileCategory, extractCharacterXml, normalizeQuestObjectives,
-    validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, gameFilesFromDialogues, validateTextIds, dialogueToXml, findTextIdIssues, resolveTextId,
+    luaFunctionBlocks, luaCheck, luaUndeclaredGlobals, LUA_API, LUA_SNIPPETS, LUA_ENGINE_GLOBALS, luaCallGraph, luaUnused, luaCompletions, validateScriptBindings, countLuaFunctions, luaDuplicateFunctions, classifyItem, itemFileCategory, extractCharacterXml, normalizeQuestObjectives,
+    validateLtxRefs, findDuplicateSections, findInheritanceCycles, renameSection, replaceFieldValues, gameFilesFromDialogues, validateTextIds, dialogueToXml, findTextIdIssues, resolveTextId, textIdCoverage, validateCharacter,
     mergedItemEntries, isValidGridValue, isValidGridWH, download, downloadBytes, downloadDataUrl, textBytes,
     escapeXml, csvCell, splitLines, updateLtxLine, addSection, removeSection, addFieldToSection, removeFieldByLine, ITEM_FIELD_PROFILES, itemFieldProfile, highlightLtx, ltxInheritanceTree, FIELD_DESCRIPTIONS,
     parseStringTableXml, parseGeneralCharactersXml, parseCharacterDescGeneral, characterDescGeneralToXml, analyzeSpawn,
@@ -2128,6 +2128,7 @@ export default function App() {
             React.createElement('div', { className: 'text-[10px] uppercase tracking-widest font-bold ' + ui.muted }, 'Проект'),
             React.createElement('div', { className: 'text-sm' }, 'Серия: ' + (SERIES.find(function (s) { return s.value === project.series; }) || SERIES[0]).label),
             React.createElement('div', { className: 'text-sm' }, 'Кодировка экспорта: ' + ((project.settings && project.settings.exportEncoding) || 'windows-1251')),
+            React.createElement('div', { className: 'text-sm' }, 'Цепочек квестов: ' + computeQuestChains(project.quests || []).length + ' · Покрытие переводов: ' + textIdCoverage(project.dialogues || [], project.languages || []).pct + '%'),
             React.createElement('div', { className: 'text-sm ' + (dirty ? 'text-amber-400' : ui.muted) }, dirty ? '● Есть несохранённые изменения' : 'Изменения сохранены')
           )
         )
@@ -2337,7 +2338,7 @@ export default function App() {
         React.createElement('div', { className: 'max-h-[60vh] overflow-auto p-3 grid gap-1' },
           (function () {
             const q = globalSearchQuery.trim().toLowerCase();
-            if (!q) return React.createElement('div', { className: 'text-xs ' + ui.muted + ' py-6 text-center' }, 'Начните вводить — поиск по диалогам, персонажам, предметам, скриптам, квестам и нодам.');
+            if (!q) return React.createElement('div', { className: 'text-xs ' + ui.muted + ' py-6 text-center' }, 'Начните вводить — поиск по диалогам, персонажам, предметам, скриптам, квестам и нодам. (Ctrl+K)');
             const out = [];
             (project.dialogues || []).forEach(function (d) { if ((d.name + ' ' + d.id).toLowerCase().indexOf(q) !== -1) out.push({ type: 'Диалог', label: d.name || d.id, sub: d.id, action: function () { loadDialogueIntoGraph(d); setTab('dialogues'); setGlobalSearchOpen(false); } }); });
             (project.characters || []).forEach(function (c) { if ([c.name, c.id, c.community, c.start_dialog, c.actor_dialog].join(' ').toLowerCase().indexOf(q) !== -1) out.push({ type: 'Персонаж', label: c.name || c.id, sub: c.community, action: function () { setSelChar(c.id); setTab('characters'); setGlobalSearchOpen(false); } }); });

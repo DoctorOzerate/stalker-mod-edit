@@ -133,6 +133,7 @@ export function renderSystemTab(ctx) {
                 React.createElement('div', { className: 'flex gap-2' },
                   React.createElement('button', { className: btn, onClick: function () { setLtxViewMode(!ltxViewMode); } }, ltxViewMode ? '✎ Редактировать' : '👁 Просмотр'),
                   React.createElement('button', { className: btn, onClick: function () { download((project.ltxFiles || {})[selLtxPath] || '', selLtxPath.split('/').pop() || 'file.ltx', 'text/plain', false); } }, 'Скачать'),
+                  React.createElement('button', { className: btn, onClick: function () { if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText((project.ltxFiles || {})[selLtxPath] || ''); say('Скопировано в буфер'); } } }, 'Копировать'),
                   React.createElement('button', { className: 'text-red-400', onClick: function () { deleteLtxFile(selLtxPath); } }, '✕')
                 )
               ),

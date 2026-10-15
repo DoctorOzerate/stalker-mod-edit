@@ -55,3 +55,14 @@ export function validateGraph(nodes,edges){const m=new Map(),out=new Map(),issue
 export function migrateProject(p){if(!p||typeof p!=='object'||Array.isArray(p))throw Error('Проект должен быть объектом');const q={version:4,projectName:'new_dialogue',series:'soc',nodes:[],edges:[],characters:[],languages:[],scripts:[],dialogues:[],ltxFiles:{},textures:[],itemCategories:{},settings:{importEncoding:'auto',exportEncoding:'windows-1251'},...p};for(const k of ['nodes','edges','characters','languages','scripts','dialogues','textures'])if(!Array.isArray(q[k]))q[k]=[];q.settings={importEncoding:'auto',exportEncoding:'windows-1251',...(q.settings||{})};q.languages=q.languages.filter(x=>x&&typeof x==='object').map(x=>({...x,entries:Array.isArray(x.entries)?x.entries:[]}));q.nodes=q.nodes.filter(Boolean).map(n=>{let type=n.type;if(type==='NPC_REPLY'||type==='PLAYER_REPLY')type='PHRASE';let d={role:type==='PHRASE'?(n.type==='NPC_REPLY'?'npc':n.type==='PLAYER_REPLY'?'player':(n.data?.role||'unknown')):'unknown',roleSource:n.data?.roleSource||'migration',phraseId:n.data?.phraseId||n.id,text_id:'',use_id:false,text:'',voice_id:'',expression:'',action_type:'',params:'',metadata:{},...(n.data||{})};delete d.speaker;return {...n,type,data:d}});return q}
 export function decodeGameBytes(buf,encoding='auto'){const a=new Uint8Array(buf), ascii=new TextDecoder('latin1').decode(a.slice(0,300));let enc=encoding;if(a[0]===0xef&&a[1]===0xbb&&a[2]===0xbf)enc='utf-8';else if(a[0]===0xff&&a[1]===0xfe)enc='utf-16le';else {const x=ascii.match(/<\?xml[^>]*encoding\s*=\s*["']([^"']+)/i);if(x)enc=x[1].toLowerCase();else if(enc==='auto'){try{return new TextDecoder('utf-8',{fatal:true}).decode(a)}catch{enc='windows-1251'}}}try{return new TextDecoder(enc==='cp1251'?'windows-1251':enc).decode(a)}catch(e){if(enc==='windows-1251')throw Error('Браузер не поддерживает TextDecoder("windows-1251"); выберите UTF-8 или обновите браузер');throw e}}
 export function cp1251Encode(s){const dec=new TextDecoder('windows-1251'),rev=new Map;for(let i=0;i<256;i++)rev.set(dec.decode(Uint8Array.of(i)),i);return Uint8Array.from(Array.from(String(s),c=>c.charCodeAt(0)<128?c.charCodeAt(0):rev.has(c)?rev.get(c):63))}
+
+// === Проверка персонажа (visual, icon, community, портрет) ===
+export function validateCharacter(c, knownCommunities, textureMap) {
+  const issues = [];
+  if (!String((c && c.visual) || '').trim()) issues.push('не указан visual (модель)');
+  if (!String((c && c.icon) || '').trim()) issues.push('не указана icon (портрет)');
+  if (c && c.community && knownCommunities && knownCommunities.length && knownCommunities.indexOf(c.community) === -1) issues.push('группировка не найдена: ' + c.community);
+  if (c && c.icon && textureMap && Object.keys(textureMap).length && !textureMap[c.icon]) issues.push('портрет не найден в дескрипторах текстур: ' + c.icon);
+  return issues;
+}
+

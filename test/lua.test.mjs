@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { luaCheck, luaUndeclaredGlobals, LUA_SNIPPETS, LUA_API, luaCompletions, luaCallGraph, luaUnused, validateScriptBindings } from '../src/lib/lua.js';
+import { luaCheck, luaUndeclaredGlobals, LUA_SNIPPETS, LUA_API, luaCompletions, luaCallGraph, luaUnused, validateScriptBindings, countLuaFunctions, luaDuplicateFunctions } from '../src/lib/lua.js';
 
 test('luaCheck detects unclosed block and extra end', () => {
   assert.equal(luaCheck('function f()\n').length, 1);
@@ -42,5 +42,15 @@ test('validateScriptBindings finds missing bindings', () => {
   const issues = validateScriptBindings(ltx, scripts);
   assert.ok(issues.some((i) => i.binding === 'bind_stalker.actor_init'));
   assert.ok(!issues.some((i) => i.binding === 'bind_monster.bind'));
+});
+
+
+test('countLuaFunctions and luaDuplicateFunctions', () => {
+  const code = 'function a() end\nfunction b() end\nfunction a() end\n';
+  assert.equal(countLuaFunctions(code), 3);
+  const dups = luaDuplicateFunctions(code);
+  assert.equal(dups.length, 1);
+  assert.equal(dups[0].name, 'a');
+  assert.equal(dups[0].count, 2);
 });
 

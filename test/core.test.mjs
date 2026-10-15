@@ -11,6 +11,7 @@ import {
   cp1251Encode,
   decodeGameBytes,
   validateGraph,
+  validateCharacter,
 } from '../src/lib/core.js';
 
 test('LTX inheritance', () => {
@@ -88,4 +89,13 @@ test('large cycle validation iterative', () => {
     e.push({ source: i ? ' ' + (i - 1) : 's', target: '' + i });
   }
   assert.ok(Array.isArray(validateGraph(n, e)));
+
+test('validateCharacter flags missing fields and unknown community', () => {
+  const issues = validateCharacter({ visual: '', icon: 'ui_npc_x', community: 'nope' }, ['stalker', 'bandit'], { ui_npc_known: 1 });
+  assert.ok(issues.some((i) => i.indexOf('visual') !== -1));
+  assert.ok(issues.some((i) => i.indexOf('группировка') !== -1));
+  assert.ok(issues.some((i) => i.indexOf('портрет') !== -1));
+  assert.equal(validateCharacter({ visual: 'v', icon: 'i', community: 'stalker' }, ['stalker'], {}).length, 0);
+});
+
 });

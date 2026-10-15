@@ -275,3 +275,17 @@ export function validateScriptBindings(ltxText, scripts) {
   return issues;
 }
 
+
+// === Счётчик функций и дубликаты имён ===
+export function countLuaFunctions(code) {
+  return (String(code || '').match(/function\s+[A-Za-z_][\w.:]*\s*\(/g) || []).length;
+}
+export function luaDuplicateFunctions(code) {
+  const names = (String(code || '').match(/function\s+([A-Za-z_][\w.:]*)/g) || []).map(function (f) { return f.replace(/^function\s+/, ''); });
+  const seen = {};
+  const dups = [];
+  names.forEach(function (n) { seen[n] = (seen[n] || 0) + 1; });
+  Object.keys(seen).forEach(function (n) { if (seen[n] > 1) dups.push({ name: n, count: seen[n] }); });
+  return dups;
+}
+

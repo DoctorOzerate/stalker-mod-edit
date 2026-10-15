@@ -46,7 +46,7 @@ export function renderQuestsTab(ctx) {
                 React.createElement('b', { className: 'text-xs' }, q.id),
                 q.category && React.createElement('span', { className: 'text-[10px] px-1.5 py-0.5 rounded bg-zinc-700 text-zinc-200' }, q.category)
               ),
-              React.createElement('div', { className: 'text-[11px] ' + ui.muted }, (q.objectives || []).length + ' целей' + (q.prior ? ' · prior ' + q.prior : '') + (q.format === 'task_manager' ? ' · CoP' : '') + (dup ? ' · дубликат' : ''))
+              React.createElement('div', { className: 'text-[11px] ' + ui.muted }, (q.objectives || []).length + ' целей' + (q.prior ? ' · prior ' + q.prior : '') + (q.format === 'task_manager' ? ' · CoP' : '') + (dup ? ' · дубликат' : '') + (validateQuests([q], project.languages || []).length ? ' · ⚠ ' + validateQuests([q], project.languages || []).length : ''))
             );
           })
         )
@@ -55,7 +55,7 @@ export function renderQuestsTab(ctx) {
         (project.quests || []).length === 0 ? React.createElement('p', { className: ui.muted }, 'Квестов нет. Создайте новый, выберите шаблон или просканируйте gamedata (game_tasks*.xml / task_manager*.xml).')
           : questView === 'chains'
             ? React.createElement('div', { className: 'max-w-3xl grid gap-4' },
-                React.createElement('h2', { className: 'font-bold' }, 'Цепочки квестов'),
+                React.createElement('h2', { className: 'font-bold' }, 'Цепочки квестов · ' + computeQuestChains(project.quests || []).length + ' цепочек'),
                 (function () {
                   const list = project.quests || [];
                   const completeTo = {};

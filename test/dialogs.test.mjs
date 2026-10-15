@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { dialogueToXml, dialogsLtx, validateTextIds, gameFilesFromDialogues, findTextIdIssues, resolveTextId } from '../src/lib/dialogs.js';
+import { dialogueToXml, dialogsLtx, validateTextIds, gameFilesFromDialogues, findTextIdIssues, resolveTextId, textIdCoverage } from '../src/lib/dialogs.js';
 
 function makeDialog(id, data) {
   return {
@@ -66,3 +66,13 @@ test('resolveTextId finds translation across locales', () => {
   assert.equal(resolveTextId(languages, 'a').locale, 'rus');
   assert.equal(resolveTextId(languages, 'nope'), null);
 });
+
+test('textIdCoverage computes translation coverage', () => {
+  const dialogues = [{ nodes: [{ type: 'PHRASE', data: { text_id: 'a' } }, { type: 'PHRASE', data: { text_id: 'b' } }, { type: 'PHRASE', data: { text_id: 'c' } }] }];
+  const languages = [{ locale: 'rus', entries: [{ id: 'a', text: 'x' }, { id: 'b', text: 'y' }] }];
+  const cov = textIdCoverage(dialogues, languages);
+  assert.equal(cov.total, 3);
+  assert.equal(cov.translated, 2);
+  assert.equal(cov.pct, 67);
+});
+

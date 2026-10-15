@@ -81,7 +81,7 @@ export function renderIconsTab(ctx) {
           React.createElement('div', { className: 'text-[10px] uppercase tracking-widest font-bold ' + ui.muted }, 'Дубликаты (' + duplicateCells.length + ')'),
           React.createElement('div', { className: 'flex flex-wrap gap-1' }, duplicateCells.map(function (c, i) { return React.createElement('button', { key: i, className: 'text-[11px] px-2 py-0.5 rounded ' + btn, onClick: function () { setSelCell({ x: c.x, y: c.y }); setSelSize({ w: 1, h: 1 }); } }, c.x + '×' + c.y); }))
         ),
-        atlasTex && React.createElement('div', { className: 'text-[11px] ' + ui.muted }, atlasTex.name + ' · ' + atlasTex.width + 'x' + atlasTex.height)
+        atlasTex && React.createElement('div', { className: 'text-[11px] ' + ui.muted }, atlasTex.name + ' · ' + atlasTex.width + '×' + atlasTex.height + ' · сетка ' + Math.floor(atlasTex.width / (project.atlas.cellSize || 50)) + '×' + Math.floor(atlasTex.height / (project.atlas.cellHeight || project.atlas.cellSize || 50)) + ' ячеек')
       ),
       React.createElement('main', { className: 'flex-1 p-6 overflow-auto' },
         !atlasTex ? React.createElement('div', { className: ui.muted + ' text-sm' }, 'Загрузите ui_icon_equipment.dds через кнопку слева или сканированием gamedata.')

@@ -53,7 +53,7 @@ export function renderItemsTab(ctx) {
         !selSection ? React.createElement('p', { className: ui.muted }, 'Выберите предмет или создайте новый.')
           : React.createElement('div', { className: 'max-w-3xl grid gap-3' },
             React.createElement('div', { className: 'flex items-center justify-between' },
-              React.createElement('h2', { className: 'font-bold' }, '[' + selSection.name + ']'),
+              React.createElement('h2', { className: 'font-bold flex items-center gap-2' }, '[' + selSection.name + ']', React.createElement('span', { className: 'text-[10px] px-1.5 py-0.5 rounded font-normal ' + (dark ? 'bg-zinc-700 text-zinc-300' : 'bg-slate-200 text-slate-600') }, classifyItem(selSection))),
               React.createElement('div', { className: 'flex gap-2' },
                 React.createElement('button', { className: 'text-[11px] ' + btn, disabled: itemsHist.pos <= 0, onClick: undoItems, title: 'Отменить' }, '↶'),
                 React.createElement('button', { className: 'text-[11px] ' + btn, disabled: itemsHist.pos >= itemsHist.hist.length - 1, onClick: redoItems, title: 'Повторить' }, '↷'),
@@ -72,7 +72,7 @@ export function renderItemsTab(ctx) {
               return React.createElement(React.Fragment, null,
                 (selSection.parents && selSection.parents.length
                   ? React.createElement('div', { className: 'grid gap-1' },
-                      React.createElement('div', { className: 'text-xs ' + ui.muted }, 'Наследует от: ' + selSection.parents.join(', ') + ' · унаследовано полей: ' + inheritedCount),
+                      React.createElement('div', { className: 'text-xs ' + ui.muted }, 'Наследует от: ' + selSection.parents.join(', ') + ' · унаследовано полей: ' + inheritedCount + ' · всего полей: ' + merged.length),
                       React.createElement('div', { className: 'flex flex-wrap gap-1' }, selSection.parents.map(function (p) { return React.createElement('button', { key: p, className: 'text-[11px] ' + btn + (itemsByName[p.toLowerCase()] ? '' : ' text-red-400'), onClick: function () { if (itemsByName[p.toLowerCase()]) setSelItem(p); } }, '→ ' + p); }))
                     )
                   : React.createElement('div', { className: 'text-xs ' + ui.muted }, 'Нет родителей')),
@@ -118,7 +118,7 @@ export function renderItemsTab(ctx) {
                     React.createElement('div', { className: 'flex flex-wrap gap-1' },
                       prof.map(function (k) {
                         const present = existing.has(k);
-                        return React.createElement('button', { key: k, className: 'text-[11px] px-2 py-0.5 rounded ' + (present ? 'bg-green-500/20 text-green-600' : btn), title: present ? 'Поле есть' : 'Добавить ' + k, onClick: function () { if (!present) { mutateItems(addFieldToSection(project.itemsLtx, selSection.name, k, '')); say('Поле ' + k + ' добавлено'); } } }, k + (present ? ' ✓' : ' ＋'));
+                        return React.createElement('button', { key: k, className: 'text-[11px] px-2 py-0.5 rounded ' + (present ? 'bg-green-500/20 text-green-600' : btn), title: (FIELD_DESCRIPTIONS[k] || k) + (present ? ' · поле есть' : ' · добавить поле'), onClick: function () { if (!present) { mutateItems(addFieldToSection(project.itemsLtx, selSection.name, k, '')); say('Поле ' + k + ' добавлено'); } } }, k + (present ? ' ✓' : ' ＋'));
                       })
                     )
                   );

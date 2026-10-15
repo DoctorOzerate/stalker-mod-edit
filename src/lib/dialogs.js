@@ -113,3 +113,17 @@ export function findTextIdIssues(languages, dialogues) {
   return issues;
 }
 
+
+// === Покрытие text_id переводами (в %) ===
+export function textIdCoverage(dialogues, languages) {
+  const ids = new Set();
+  (dialogues || []).forEach(function (d) { (d.nodes || []).forEach(function (n) { if (n.type === 'PHRASE' && n.data && n.data.text_id) ids.add(n.data.text_id); }); });
+  if (!ids.size) return { total: 0, translated: 0, pct: 100 };
+  let translated = 0;
+  ids.forEach(function (id) {
+    const has = (languages || []).some(function (l) { return (l.entries || []).some(function (e) { return e.id === id && String(e.text || '').trim(); }); });
+    if (has) translated++;
+  });
+  return { total: ids.size, translated: translated, pct: Math.round(translated / ids.size * 100) };
+}
+
