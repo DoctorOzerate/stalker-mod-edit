@@ -198,7 +198,7 @@ dotnet/
 **Отложено:** `migrateProject` → Этап 4 (нужна типовая модель проекта);
 плагины (`new Function`) → решение отложено (см. §5).
 
-### Этап 2. Core: парсеры данных 🚧
+### Этап 2. Core: парсеры данных ✅
 - `ltx.js` → `Core/Ltx` (полный парсер, инклюды, секции, `mergedItemEntries`,
   категории, `parseGameRelations`, `parseRatingScales`, `parseSquadDescr`,
   `parseSecrets`, `parseSpawnSections`, `parseMonsters`, `parseActor`,
@@ -216,10 +216,12 @@ dotnet/
 - `spawn.js` → `Core/Spawn`.
 - **Порт всех тестов** `ltx/dialogs/graph/xml/quests/lua/spawn.test.mjs` в xUnit.
 
-**Прогресс от 16.10.2026** (коммит `feat(stage 2): port data parsers (Lua, Graph, Dialogs, XML, Quests, Spawn)`):
+**Прогресс от 16.10.2026**: коммиты `feat(stage 2): port data parsers (Lua, Graph, Dialogs, XML, Quests, Spawn)`
+и `feat(stage 2): port full ltx.js (text ops, includes, item catalog, validators, highlight)`.
 
 | Порт из | Классы Core | Ключевые точки входа | Тестов |
 |---|---|---|---|
+| `ltx.js` | `Ltx/`: `LtxParser` (+ модели `LtxEntry/LtxSection/LtxInclude/LtxDocument`), `LtxTextTools`, `IconGrid`, `LtxIncludes`, `ItemCatalog`, `LtxInheritance`, `LtxDomainParsers`, `LtxHighlight` | `Parse`, `SplitLines`, `UpdateLine`, `RemoveSection`, `AddSection`, `AddFieldToSection`, `RemoveFieldByLine`, `RenameSection`, `ReplaceFieldValues`, `ResolveIncludes`, `IsFileLoaded`, `FindIncludeSuggestion`, `IncludeTreeRows`, `IncludeGraphSvg`, `AtlasPresets`, `IconCoords`, `IsValidGridValue`, `IsValidGridWH`, `ClassifyItem`, `ItemFieldProfile`, `ItemFileCategory`, `IsItemFile`, `MergedEntries`, `InheritanceTree`, `ValidateRefs`, `FindDuplicateSections`, `FindInheritanceCycles`, `ParseRatingScales`, `ParseSquadDescr`, `ParseSecrets`, `ParseSpawnSections`, `ParseMonsters`, `ParseActor`, `ParseSurgeManager`, `ParseTrade`, `ParseGameRelations`, `Highlight`/`HighlightLine`/`ToHtml` | 42 |
 | `lua.js` | `Lua/`: `LuaModels`, `LuaCatalog`, `LuaTokenizer`, `LuaFormatter`, `LuaAnalyzer` | `Tokenize`, `TokenizeLines`, `CountBrackets`, `LongBracketEnd`, `Format`, `FunctionBlocks`, `Check`, `UndeclaredGlobals`, `DuplicateFunctions`, `Unused`, `BuildCallGraph`, `Completions`, `ValidateScriptBindings` | 13 |
 | `graph.js` | `Graph/`: `GraphData`, `GraphLayout`, `GraphSvg`, `DialogueGroups` + полный `GraphValidator` | `SafeNode`, `SafeData`, `SafeMetadata`, `FlattenDialogues`, `SuggestTextId`, `BracketBalanceOf`, `ValidateMetadataSyntax`, `LayoutDialogue`, `NodeLabel`, `RoleColor`, `Stats`, `GraphToSvg`, `DialogueGroup` | 9 |
 | `dialogs.js` | `Dialogs/`: `DialogueExport`, `DialogueFiles`, `TextIdTools` | `DialogueToXml`, `DialogsLtx`, `GameFilesFromDialogues`, `ValidateTextIds`, `ResolveTextId`, `FindTextIdIssues`, `Coverage` | 10 |
@@ -230,24 +232,34 @@ dotnet/
 Плюс модели `Models/{Language,DialogueFileGroup,Quest,XmlDocuments}.cs`; в
 `Text/GameEncoding.cs` добавлен `EncodeCp1251`.
 
-**Итог:** `dotnet build XRayForge.sln` — 0 ошибок / 0 предупреждений;
-`dotnet test XRayForge.sln` — **78 тестов, 0 падений** (`CoreTests` 10,
-`LuaTests` 13, `GraphTests` 9, `DialogsTests` 10, `XmlTests` 14, `QuestTests` 13,
-`SpawnTests` 5, `HistoryTests` 3, `LocalizationTests` 1).
+**Переименования при порте `ltx.js`** (JS → C#): `validateLtxRefs` →
+`LtxInheritance.ValidateRefs`, `findDuplicateSections` → `FindDuplicateSections`,
+`findInheritanceCycles` → `FindInheritanceCycles`, `mergedItemEntries` →
+`MergedEntries`, `ltxInheritanceTree` → `InheritanceTree`, `highlightLtx` →
+`LtxHighlight.Highlight` (модель токенов) + `ToHtml` (паритетная HTML-выдача),
+`ITEM_CATEGORIES`/`COMMUNITY_ICONS`/`ITEM_COMMON_FIELDS`/`ITEM_FIELD_PROFILES`/
+`FIELD_DESCRIPTIONS` → `ItemCatalog.Categories/CommunityIcons/CommonFields/
+FieldProfiles/FieldDescriptions`. Возвращаемые объекты — PascalCase-свойства
+(ключи LTX внутри значений по-прежнему snake_case).
 
-**Осталось до закрытия этапа:**
-- Полный порт `ltx.js` → `Core/Ltx/*`: `mergedItemEntries`, категории предметов,
-  `parseGameRelations`, `parseRatingScales`, `parseSquadDescr`, `parseSecrets`,
-  `parseSpawnSections`, `parseMonsters`, `parseActor`, `parseSurgeManager`,
-  `parseTrade`, `highlightLtx` (токены подсветки). Сейчас в `Ltx/LtxParser.cs`
-  есть только базовый разбор секций/ключей/`#include` (этап 1).
-- Порт `test/ltx.test.mjs` — самый крупный набор кейсов (~10.7 КБ).
-- Структурный обход `all.spawn` (все классы `CSE_*`, версия спавна) — текущий
-  `SpawnAnalyzer` даёт заголовок, читаемые строки и эвристику секций; нужен ли
-  полный обход, решить вместе с вкладкой спавна.
+**Итог:** `dotnet build XRayForge.sln` — 0 ошибок / 0 предупреждений;
+`dotnet test XRayForge.sln` — **120 тестов, 0 падений** (`CoreTests` 10,
+`LtxTests` 24, `LtxUtilsTests` 18, `LuaTests` 13, `GraphTests` 9,
+`DialogsTests` 10, `XmlTests` 14, `QuestTests` 13, `SpawnTests` 5,
+`HistoryTests` 3, `LocalizationTests` 1).
+
+**Порт `test/ltx.test.mjs` выполнен целиком** — 24 кейса в `LtxTests.cs`
+(плюс 18 собственных кейсов в `LtxUtilsTests.cs` на функции, которые в JS-тестах
+не покрыты: правка текста/секций, сетка атласа, инклюды, дерево инклюдов и SVG,
+`mergedItemEntries`, категории файлов, размеры справочников, токены подсветки).
+
+**Открытый вопрос (не блокирует этап):** структурный обход `all.spawn`
+(все классы `CSE_*`, версия спавна) — текущий `SpawnAnalyzer` даёт заголовок,
+читаемые строки и эвристику секций; нужен ли полный обход, решить вместе с
+вкладкой спавна (этап 7).
 
 **Критерий:** все Core-тесты зелёные; публичные сигнатуры стабильны.
-*(Текущее состояние: 78/78 зелёные; этап не закрыт только из-за LTX.)*
+*(Состояние: 120/120 зелёные — этап закрыт.)*
 
 ### Этап 3. DDS-кодек
 - `dds.js` → `Core/Imaging/DdsCodec.cs`: `decodeDxt1/3/5`, `decodeBc4/Bc5`,

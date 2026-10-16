@@ -37,7 +37,7 @@ public static class LtxParser
 {
     public static LtxDocument Parse(string? text)
     {
-        var lines = SplitLines(text ?? string.Empty);
+        var lines = LtxTextTools.SplitLines(text);
         var sections = new List<LtxSection>();
         var includes = new List<LtxInclude>();
         LtxSection? current = null;
@@ -109,7 +109,4 @@ public static class LtxParser
 
         return new LtxDocument { Lines = lines, Sections = sections, Includes = includes };
     }
-
-    private static List<string> SplitLines(string text) =>
-        text.Split('\n').Select(l => l.Replace("\r", "")).ToList();
 }
