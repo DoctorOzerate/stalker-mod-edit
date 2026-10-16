@@ -181,6 +181,14 @@ public static class LocalizationService
         ["graphActionType"] = "Тип действия",
         ["graphParamsPlaceholder"] = "params",
         ["graphActiveLocale"] = "Активная локаль",
+        // шаг 6.6: сворачивание панелей, полноэкранный холст и мини-карта
+        ["graphCollapsePalette"] = "Свернуть палитру",
+        ["graphExpandPalette"] = "Развернуть палитру",
+        ["graphCollapseProps"] = "Свернуть свойства",
+        ["graphExpandProps"] = "Развернуть свойства",
+        ["graphCanvasFull"] = "Полноэкранный холст",
+        ["graphCanvasFullExit"] = "🗗 Выйти из полноэкранного",
+        ["graphMiniMap"] = "Мини-карта (клик — переход)",
 
     };
 
@@ -356,6 +364,14 @@ public static class LocalizationService
         ["graphActionType"] = "Action type",
         ["graphParamsPlaceholder"] = "params",
         ["graphActiveLocale"] = "Active locale",
+        // stage 6.6: panel collapsing, fullscreen canvas and mini-map
+        ["graphCollapsePalette"] = "Collapse palette",
+        ["graphExpandPalette"] = "Expand palette",
+        ["graphCollapseProps"] = "Collapse properties",
+        ["graphExpandProps"] = "Expand properties",
+        ["graphCanvasFull"] = "Fullscreen canvas",
+        ["graphCanvasFullExit"] = "🗗 Exit fullscreen",
+        ["graphMiniMap"] = "Mini-map (click to navigate)",
 
     };
 

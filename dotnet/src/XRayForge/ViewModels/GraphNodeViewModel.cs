@@ -153,6 +153,39 @@ public sealed partial class GraphNodeViewModel : ObservableObject
         OnPropertyChanged(nameof(Y));
     }
 
+    // --- мини-карта (шаг 6.6) ---
+
+    /// <summary>Прямоугольник узла на мини-карте: `Canvas.Left`/`Canvas.Top`.</summary>
+    [ObservableProperty]
+    private double _miniMapX;
+
+    /// <summary>Прямоугольник узла на мини-карте: `Canvas.Top`.</summary>
+    [ObservableProperty]
+    private double _miniMapY;
+
+    /// <summary>Ширина прямоугольника на мини-карте (`210 × scale`).</summary>
+    [ObservableProperty]
+    private double _miniMapWidth;
+
+    /// <summary>Высота прямоугольника на мини-карте (`90 × scale`).</summary>
+    [ObservableProperty]
+    private double _miniMapHeight;
+
+    /// <summary>
+    /// Цвет узла на мини-карте: всегда цвет типа (`NODE_TYPES[n.type].color` в JS) — «цвет по роли»
+    /// на мини-карту не влияет, как и в оригинале.
+    /// </summary>
+    public string MiniMapHex => TypeInfo.Color;
+
+    /// <summary>Пересчёт прямоугольника мини-карты (`MiniMapRect` в пикселях панели 176×112).</summary>
+    public void SetMiniMapRect(MiniMapRect rect)
+    {
+        MiniMapX = rect.X;
+        MiniMapY = rect.Y;
+        MiniMapWidth = rect.Width;
+        MiniMapHeight = rect.Height;
+    }
+
     /// <summary>`[].concat(...).join(', ').slice(0, 40)` по списку ключей метаданных.</summary>
     private static string Joined(IReadOnlyDictionary<string, List<string>>? metadata, params string[] keys)
     {

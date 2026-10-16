@@ -130,11 +130,32 @@ public sealed partial class DialogueGraphViewModel : ObservableObject
     [ObservableProperty]
     private bool _canRedo;
 
-    /// <summary>Ширина холста в пикселях (обновляет представление) — для «В центр».</summary>
-    public double ViewportWidth { get; set; } = 800;
+    /// <summary>Ширина холста в пикселях (обновляет представление) — для «В центр» и мини-карты.</summary>
+    public double ViewportWidth
+    {
+        get => _viewportWidth;
+        set
+        {
+            if (_viewportWidth.Equals(value)) return;
+            _viewportWidth = value;
+            RefreshMiniMap();
+        }
+    }
 
     /// <summary>Высота холста в пикселях.</summary>
-    public double ViewportHeight { get; set; } = 600;
+    public double ViewportHeight
+    {
+        get => _viewportHeight;
+        set
+        {
+            if (_viewportHeight.Equals(value)) return;
+            _viewportHeight = value;
+            RefreshMiniMap();
+        }
+    }
+
+    private double _viewportWidth = 800;
+    private double _viewportHeight = 600;
 
     /// <summary>В графе есть узлы (иначе показывается empty state холста).</summary>
     public bool HasNodes => Nodes.Count > 0;
@@ -150,13 +171,125 @@ public sealed partial class DialogueGraphViewModel : ObservableObject
     public string ZoomText =>
         Math.Round(Zoom * 100, MidpointRounding.AwayFromZero).ToString(CultureInfo.CurrentCulture) + "%";
 
-    partial void OnZoomChanged(double value) => OnPropertyChanged(nameof(ZoomText));
+    partial void OnZoomChanged(double value)
+    {
+        OnPropertyChanged(nameof(ZoomText));
+        RefreshMiniMap();
+    }
+
+    /// <summary>Сдвиг холста по X изменился — рамка видимой области мини-карты едет за ним.</summary>
+    partial void OnPanXChanged(double value) => RefreshMiniMap();
+
+    /// <summary>Сдвиг холста по Y изменился — рамка видимой области мини-карты едет за ним.</summary>
+    partial void OnPanYChanged(double value) => RefreshMiniMap();
 
     partial void OnSearchChanged(string value) => ApplySearch();
 
     partial void OnColorByRoleChanged(bool value)
     {
         foreach (var node in Nodes) node.UseRoleColor = value;
+    }
+
+    // --- сворачивание панелей и полноэкранный холст (шаг 6.6) ---
+
+    /// <summary>Палитра свёрнута в узкую полосу (`paletteCollapsed`).</summary>
+    [ObservableProperty]
+    private bool _paletteCollapsed;
+
+    /// <summary>Панель свойств свёрнута в узкую полосу (`propsCollapsed`).</summary>
+    [ObservableProperty]
+    private bool _propsCollapsed;
+
+    /// <summary>Полноэкранный холст (`canvasFull`): обе боковые панели уходят в узкие полосы.</summary>
+    [ObservableProperty]
+    private bool _canvasFull;
+
+    /// <summary>Левая панель показана целиком (`!paletteCollapsed &amp;&amp; !canvasFull`).</summary>
+    public bool ShowsPalettePanel => !PaletteCollapsed && !CanvasFull;
+
+    /// <summary>Вместо левой панели — узкая полоса с кнопкой разворота.</summary>
+    public bool ShowsPaletteRail => !ShowsPalettePanel;
+
+    /// <summary>Панель свойств показана целиком (`!propsCollapsed &amp;&amp; !canvasFull`).</summary>
+    public bool ShowsPropsPanel => !PropsCollapsed && !CanvasFull;
+
+    /// <summary>Вместо панели свойств — узкая полоса с кнопкой разворота.</summary>
+    public bool ShowsPropsRail => !ShowsPropsPanel;
+
+    /// <summary>Глиф кнопки полноэкранного холста (`canvasFull ? '🗗' : '⛶'` в JS).</summary>
+    public string CanvasFullGlyph => CanvasFull ? "🗗" : "⛶";
+
+    partial void OnPaletteCollapsedChanged(bool value) => NotifyPanelState();
+
+    partial void OnPropsCollapsedChanged(bool value) => NotifyPanelState();
+
+    partial void OnCanvasFullChanged(bool value) => NotifyPanelState();
+
+    /// <summary>Состояние панелей изменилось: пересчитать видимость панелей и полос.</summary>
+    private void NotifyPanelState()
+    {
+        OnPropertyChanged(nameof(ShowsPalettePanel));
+        OnPropertyChanged(nameof(ShowsPaletteRail));
+        OnPropertyChanged(nameof(ShowsPropsPanel));
+        OnPropertyChanged(nameof(ShowsPropsRail));
+        OnPropertyChanged(nameof(CanvasFullGlyph));
+    }
+
+    // --- мини-карта (шаг 6.6) ---
+
+    /// <summary>Мини-карта видна, пока в графе есть узлы (`if (!nodes.length) return null`).</summary>
+    [ObservableProperty]
+    private bool _showsMiniMap;
+
+    /// <summary>Рамка видимой области на мини-карте: `Canvas.Left`.</summary>
+    [ObservableProperty]
+    private double _miniMapViewportX;
+
+    /// <summary>Рамка видимой области на мини-карте: `Canvas.Top`.</summary>
+    [ObservableProperty]
+    private double _miniMapViewportY;
+
+    /// <summary>Ширина рамки видимой области (`холст / zoom × scale`).</summary>
+    [ObservableProperty]
+    private double _miniMapViewportWidth;
+
+    /// <summary>Высота рамки видимой области.</summary>
+    [ObservableProperty]
+    private double _miniMapViewportHeight;
+
+    /// <summary>
+    /// Пересчёт мини-карты (<see cref="GraphMiniMap.Build"/>): границы содержимого, прямоугольники
+    /// узлов и рамка видимой области. Вызывается при правке графа, выделении, сдвиге, масштабе
+    /// и смене размера холста.
+    /// </summary>
+    private void RefreshMiniMap()
+    {
+        var layout = GraphMiniMap.Build(_project.Nodes, Zoom, PanX, PanY, ViewportWidth, ViewportHeight);
+        ShowsMiniMap = layout != null;
+        if (layout == null) return;
+
+        MiniMapViewportX = layout.Viewport.X;
+        MiniMapViewportY = layout.Viewport.Y;
+        MiniMapViewportWidth = layout.Viewport.Width;
+        MiniMapViewportHeight = layout.Viewport.Height;
+
+        foreach (var item in layout.Nodes)
+            if (_index.TryGetValue(item.Id, out var card)) card.SetMiniMapRect(item.Rect);
+    }
+
+    /// <summary>
+    /// Клик по мини-карте (`onClick` её `svg`): точка панели переводится в координаты графа,
+    /// и холст центрируется на ней.
+    /// </summary>
+    public void MiniMapClick(double pointX, double pointY)
+    {
+        var layout = GraphMiniMap.Build(_project.Nodes, Zoom, PanX, PanY, ViewportWidth, ViewportHeight);
+        if (layout == null) return;
+
+        var (graphX, graphY) = GraphMiniMap.ToGraph(layout, pointX, pointY);
+        var (x, y) = GraphMiniMap.CenterPan(graphX, graphY, Zoom, ViewportWidth, ViewportHeight);
+        PanX = x;
+        PanY = y;
     }
 
     // --- проект и синхронизация ---
@@ -289,6 +422,9 @@ public sealed partial class DialogueGraphViewModel : ObservableObject
             edge.IsHighlighted = highlight;
             edge.Opacity = selected == null || highlight ? 1 : 0.2;
         }
+
+        // Границы и подсветка узлов мини-карты зависят от тех же данных (позиции, выделение).
+        RefreshMiniMap();
     }
 
     /// <summary>`graphSearch`: отметить совпавшие узлы и пересчитать визуальные флаги.</summary>
@@ -1094,6 +1230,32 @@ public sealed partial class DialogueGraphViewModel : ObservableObject
         PanX = x;
         PanY = y;
     }
+
+    // --- команды панелей (шаг 6.6) ---
+
+    /// <summary>`setPaletteCollapsed(true)`: свернуть палитру в узкую полосу.</summary>
+    [RelayCommand]
+    private void CollapsePalette() => PaletteCollapsed = true;
+
+    /// <summary>`setPaletteCollapsed(false)`: развернуть палитру.</summary>
+    [RelayCommand]
+    private void ExpandPalette() => PaletteCollapsed = false;
+
+    /// <summary>`setPropsCollapsed(true)`: свернуть панель свойств.</summary>
+    [RelayCommand]
+    private void CollapseProps() => PropsCollapsed = true;
+
+    /// <summary>`setPropsCollapsed(false)`: развернуть панель свойств.</summary>
+    [RelayCommand]
+    private void ExpandProps() => PropsCollapsed = false;
+
+    /// <summary>`setCanvasFull(!canvasFull)`: полноэкранный холст — обе панели в узкие полосы.</summary>
+    [RelayCommand]
+    private void ToggleCanvasFull() => CanvasFull = !CanvasFull;
+
+    /// <summary>`setCanvasFull(false)`: выйти из полноэкранного холста (кнопка на холсте).</summary>
+    [RelayCommand]
+    private void ExitCanvasFull() => CanvasFull = false;
 }
 
 

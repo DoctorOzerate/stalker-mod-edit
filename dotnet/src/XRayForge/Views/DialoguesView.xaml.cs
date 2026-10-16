@@ -17,6 +17,7 @@ namespace XRayForge.Views;
 /// и группы, панорама, рамка выделения (Shift+drag) и масштаб колесом с Ctrl.
 /// Шаг 6.4: клики по портам (`portClick`) и по hit-зоне связи (`deleteEdge`); такие нажатия
 /// обрабатывают сами элементы, поэтому холст их не перехватывает.
+/// Шаг 6.6: клик по мини-карте (`onClick` её `svg`) центрирует холст на выбранной точке.
 /// </summary>
 public partial class DialoguesView : UserControl
 {
@@ -110,6 +111,23 @@ public partial class DialoguesView : UserControl
         if (DataContext is not ShellViewModel shell) return;
 
         shell.DialogueGraph.ZoomByWheel(e.Delta > 0 ? 1 : -1);
+        e.Handled = true;
+    }
+
+    // --- мини-карта (шаг 6.6) ---
+
+    /// <summary>
+    /// Клик по мини-карте (`onClick` её `svg` в `DialoguesTab.js`): точка панели переводится
+    /// в координаты графа, и холст центрируется на ней. Обработчик висит на `Canvas` мини-карты
+    /// (176×112), поэтому её пиксели совпадают с пикселями раскладки `GraphMiniMap`.
+    /// </summary>
+    private void OnMiniMapClick(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is not ShellViewModel shell) return;
+        if (sender is not IInputElement element) return;
+
+        var point = e.GetPosition(element);
+        shell.DialogueGraph.MiniMapClick(point.X, point.Y);
         e.Handled = true;
     }
 

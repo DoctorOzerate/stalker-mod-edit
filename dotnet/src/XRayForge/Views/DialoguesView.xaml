@@ -9,8 +9,11 @@
       Шаг 6.3 — взаимодействие: перенос узла и группы, панорама (drag по пустому холсту и средняя
       кнопка), рамка выделения с Shift, зум колесом с Ctrl.
       Шаг 6.4 — связи: клик по портам карточки (`portClick`) с подсказкой и отменой по Esc,
-      удаление связи кликом по широкой hit-зоне линии (`strokeWidth 14`). Палитра, свойства
-      реплики, проверка и плейсхолдеры — шаги 6.5–6.8.
+      удаление связи кликом по широкой hit-зоне линии (`strokeWidth 14`).
+      Шаг 6.5 — панели: палитра узлов с фильтром и списком загруженных диалогов слева, свойства
+      реплики (роль, `text_id`, перевод, метаданные) в третьей колонке.
+      Шаг 6.6 — мини-карта холста, свёртывание панелей (`paletteCollapsed`, `propsCollapsed`)
+      и полноэкранный холст (`canvasFull`). Прогон диалога, экспорт SVG и импорт — шаги 6.7–6.8.
     -->
     <UserControl.Resources>
         <!-- Холст: `radial-gradient(ui.grid 1px, transparent 1px)` с шагом 20px.
@@ -65,6 +68,9 @@
         <SolidColorBrush x:Key="GraphMultiSelect" Color="#3B82F6" />
         <SolidColorBrush x:Key="GraphMarqueeBorder" Color="#60A5FA" />
         <SolidColorBrush x:Key="GraphMarqueeFill" Color="#60A5FA" Opacity="0.1" />
+
+        <!-- Рамка видимой области на мини-карте: `stroke: '#22c55e'` в обработчике `svg` мини-карты -->
+        <SolidColorBrush x:Key="GraphMiniMapViewport" Color="#22C55E" />
 
         <!-- Карточка реплики: `absolute w-[210px] rounded-xl border-2` + активный/найденный узел -->
         <Style x:Key="GraphCard" TargetType="Border">
@@ -145,6 +151,21 @@
             <Setter Property="Margin" Value="0,0,8,0" />
         </Style>
 
+        <!-- Узкая полоса свёрнутой панели (`aside w-9 py-3` в JS): одна кнопка разворота -->
+        <Style x:Key="GraphRail" TargetType="Border" BasedOn="{StaticResource PanelBorder}">
+            <Setter Property="Width" Value="36" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+
+        <!-- Кнопка разворота/свёртывания панели (`‹`/`›` в JS) и переключатель полноэкранного
+             холста: компактная кнопка с глифом по центру. -->
+        <Style x:Key="GraphPanelButton" TargetType="Button">
+            <Setter Property="Padding" Value="6,2" />
+            <Setter Property="MinWidth" Value="26" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+        </Style>
+
         <!-- Подпись поля панели свойств (`text-xs` в JS) -->
         <Style x:Key="PropsLabel" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
             <Setter Property="FontSize" Value="11" />
@@ -186,10 +207,27 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <!-- Панель управления графом (в JS `aside w-72`); палитра узлов и список диалогов — этап 6.5 -->
-            <Border Grid.Column="0" Style="{StaticResource PanelBorder}" Width="250" Margin="0,0,10,0">
+            <!-- Панель управления графом (в JS `aside w-72`): палитра узлов и список диалогов — этап 6.5,
+                 кнопки свёртывания палитры и полноэкранного холста — шаг 6.6 -->
+            <Border Grid.Column="0" Style="{StaticResource PanelBorder}" Width="250" Margin="0,0,10,0"
+                    Visibility="{Binding DialogueGraph.ShowsPalettePanel, Converter={StaticResource BoolToVisibility}}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
+                        <!-- Шапка панели (`flex gap-1` из JS): «‹» — свернуть палитру, «⛶» — полный экран -->
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Style="{StaticResource GraphPanelButton}"
+                                    Content="‹" Margin="0,0,3,0"
+                                    ToolTip="{loc:Loc graphCollapsePalette}"
+                                    Command="{Binding DialogueGraph.CollapsePaletteCommand}" />
+                            <Button Grid.Column="1" Style="{StaticResource GraphPanelButton}"
+                                    Content="{Binding DialogueGraph.CanvasFullGlyph}" Margin="3,0,0,0"
+                                    ToolTip="{loc:Loc graphCanvasFull}"
+                                    Command="{Binding DialogueGraph.ToggleCanvasFullCommand}" />
+                        </Grid>
                         <Button Style="{StaticResource AccentButton}" HorizontalAlignment="Stretch"
                                 Content="{loc:Loc createDialogue}"
                                 Command="{Binding DialogueGraph.CreateDialogueCommand}" Margin="0,0,0,6" />
@@ -293,6 +331,18 @@
                         </ItemsControl>
                     </StackPanel>
                 </ScrollViewer>
+            </Border>
+
+            <!-- Свёрнутая палитра (`paletteCollapsed || canvasFull`): узкая полоса `w-9` с единственной
+                 кнопкой разворота. Как и в JS, кнопка снимает только `paletteCollapsed`, поэтому под
+                 полноэкранным холстом полоса остаётся до выхода из него. -->
+            <Border Grid.Column="0" Style="{StaticResource GraphRail}" Margin="0,0,10,0"
+                    Visibility="{Binding DialogueGraph.ShowsPaletteRail, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel Margin="0,12,0,0" HorizontalAlignment="Center">
+                    <Button Style="{StaticResource GraphPanelButton}" Content="›"
+                            ToolTip="{loc:Loc graphExpandPalette}"
+                            Command="{Binding DialogueGraph.ExpandPaletteCommand}" />
+                </StackPanel>
             </Border>
 
             <!-- Холст редактора: связи и карточки в transform-слое (`translate(pan) scale(zoom)`) -->
@@ -458,12 +508,75 @@
                                    TextWrapping="Wrap" MaxWidth="420" TextAlignment="Center" Margin="0,6,0,0" />
                     </StackPanel>
 
+                    <!-- Полноэкранный холст (`canvasFull && <button absolute top-4 right-4>`): выход -->
+                    <Button HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,16,16,0"
+                            Style="{StaticResource AccentButton}"
+                            Content="{loc:Loc graphCanvasFullExit}"
+                            Command="{Binding DialogueGraph.ExitCanvasFullCommand}"
+                            Visibility="{Binding DialogueGraph.CanvasFull, Converter={StaticResource BoolToVisibility}}" />
+
+                    <!-- Мини-карта (`absolute right-4 bottom-4 w-44 h-28`): обзор узлов и рамка видимой
+                         области холста, клик — переход на точку. Живёт вне transform-слоя, поэтому её
+                         размер не зависит от зума. -->
+                    <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,16,16"
+                            CornerRadius="12" ClipToBounds="True"
+                            Background="{DynamicResource SurfacePanel}"
+                            BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
+                            ToolTip="{loc:Loc graphMiniMap}"
+                            Visibility="{Binding DialogueGraph.ShowsMiniMap, Converter={StaticResource BoolToVisibility}}">
+                        <Canvas Width="176" Height="112" Background="Transparent"
+                                MouseLeftButtonDown="OnMiniMapClick">
+                            <!-- Рамка видимой области (`stroke #22c55e`) рисуется под узлами -->
+                            <Rectangle Canvas.Left="{Binding DialogueGraph.MiniMapViewportX}"
+                                       Canvas.Top="{Binding DialogueGraph.MiniMapViewportY}"
+                                       Width="{Binding DialogueGraph.MiniMapViewportWidth}"
+                                       Height="{Binding DialogueGraph.MiniMapViewportHeight}"
+                                       Stroke="{StaticResource GraphMiniMapViewport}" StrokeThickness="1.5"
+                                       Opacity="0.85" IsHitTestVisible="False" />
+                            <!-- Узлы (`210×90 × scale` в пикселях панели): цвет типа, выделенный — белый контур -->
+                            <ItemsControl Width="176" Height="112" Canvas.Left="0" Canvas.Top="0"
+                                          ItemsSource="{Binding DialogueGraph.Nodes}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <Canvas />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="{Binding MiniMapX}" />
+                                        <Setter Property="Canvas.Top" Value="{Binding MiniMapY}" />
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Rectangle Width="{Binding MiniMapWidth}" Height="{Binding MiniMapHeight}"
+                                                   Opacity="0.75" IsHitTestVisible="False"
+                                                   Fill="{Binding MiniMapHex, Converter={StaticResource HexBrush}}">
+                                            <Rectangle.Style>
+                                                <Style TargetType="Rectangle">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                            <Setter Property="Stroke" Value="White" />
+                                                            <Setter Property="StrokeThickness" Value="1.5" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Rectangle.Style>
+                                        </Rectangle>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Canvas>
+                    </Border>
+
                 </Grid>
             </Border>
 
             <!-- Панель свойств реплики (в JS `aside w-80`): роль, phraseId, text_id и переводы,
-                 «Действия и условия» (метаданные), voice_id, expression и поля действия. -->
-            <Border Grid.Column="2" Style="{StaticResource PanelBorder}" Width="300" Margin="10,0,0,0">
+                 «Действия и условия» (метаданные), voice_id, expression и поля действия.
+                 Кнопка «›» сворачивает панель (`propsCollapsed`), шаг 6.6. -->
+            <Border Grid.Column="2" Style="{StaticResource PanelBorder}" Width="300" Margin="10,0,0,0"
+                    Visibility="{Binding DialogueGraph.ShowsPropsPanel, Converter={StaticResource BoolToVisibility}}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -471,8 +584,13 @@
                     </Grid.RowDefinitions>
 
                     <Grid Grid.Row="0" Margin="0,0,0,8">
-                        <TextBlock Text="{loc:Loc graphPropsTitle}" FontWeight="Bold" FontSize="11"
-                                   VerticalAlignment="Center" />
+                        <StackPanel Orientation="Horizontal">
+                            <Button Style="{StaticResource GraphPanelButton}" Content="›" Margin="0,0,6,0"
+                                    ToolTip="{loc:Loc graphCollapseProps}"
+                                    Command="{Binding DialogueGraph.CollapsePropsCommand}" />
+                            <TextBlock Text="{loc:Loc graphPropsTitle}" FontWeight="Bold" FontSize="11"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
                         <Button Style="{StaticResource DangerButton}" HorizontalAlignment="Right"
                                 Content="{loc:Loc delete}"
                                 Command="{Binding DialogueGraph.DeleteSelectedCommand}"
@@ -624,6 +742,16 @@
                         </Grid>
                     </ScrollViewer>
                 </Grid>
+            </Border>
+
+            <!-- Свёрнутая панель свойств (`propsCollapsed || canvasFull`): `w-9` с кнопкой разворота -->
+            <Border Grid.Column="2" Style="{StaticResource GraphRail}" Margin="10,0,0,0"
+                    Visibility="{Binding DialogueGraph.ShowsPropsRail, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel Margin="0,12,0,0" HorizontalAlignment="Center">
+                    <Button Style="{StaticResource GraphPanelButton}" Content="‹"
+                            ToolTip="{loc:Loc graphExpandProps}"
+                            Command="{Binding DialogueGraph.ExpandPropsCommand}" />
+                </StackPanel>
             </Border>
 
         </Grid>
