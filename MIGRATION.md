@@ -10,7 +10,7 @@
 - [x] Этап 0. Каркас и соглашения — решение `dotnet/XRayForge.sln` создано, собирается, тесты проходят
 - [x] Этап 1. Core: фундамент (history, i18n, core) — выполнено (14 тестов зелёные)
 - [x] Этап 2. Core: парсеры данных — выполнено: Lua / Graph / Dialogs / XML / Quests / Spawn / Ltx (121 тест зелёный)
-- [ ] Этап 3. DDS-кодек
+- [x] Этап 3. DDS-кодек — выполнено: DXT1/3/5 + BC4/BC5 + энкодер + mip-цепочка (214 теста зелёные)
 - [ ] Этап 4. Модель проекта + персистенция
 - [ ] Этап 5. Каркас UI
 - [ ] Этап 6. Редактор диалогов (граф)
@@ -55,7 +55,7 @@ X-Ray Forge — редактор модов для игр на движке X-Ra
 | `src/lib/xml.js` | string_table, персонажи, локали, info_portions, encyclopedia, npc_profile, дескрипторы текстур | `Core/Xml/` |
 | `src/lib/dialogs.js` | экспорт диалогов → XML/ZIP, валидация text_id | `Core/Dialogs/` |
 | `src/lib/graph.js` | типы узлов, валидация графа, раскладка, `graphToSvg` | `Core/Graph/` |
-| `src/lib/dds.js` | DDS-кодек: DXT1/3/5, BC4/BC5, энкодер, mip-цепочка | `Core/Imaging/DdsCodec.cs` |
+| `src/lib/dds.js` | DDS-кодек: DXT1/3/5, BC4/BC5, энкодер, mip-цепочка | `Core/Imaging/` (`DdsCodec`, `DdsDecode`, `DdsEncode`, `DdsModels`) |
 | `src/lib/lua.js` | токенизация Lua, подсветка, баланс блоков, сниппеты | `Core/Lua/` |
 | `src/lib/quests.js` | парсинг/экспорт квестов, цепочки, condlist | `Core/Quests/` |
 | `src/lib/spawn.js` | разбор `all.spawn` (заголовок + строки) | `Core/Spawn/` |
@@ -124,8 +124,11 @@ Project {
    `new Function`. Варианты: (а) убрать в v1, (б) Roslyn
    (`Microsoft.CodeAnalysis.CSharp.Scripting`) с C#-скриптами, (в) встроенный
    JS-движок. **Требует решения до этапа UI.**
-2. **DDS-кодек** — большой, но чисто вычислительный; переносится 1:1, тесты
-   уже есть (`test/dds.test.mjs`).
+2. **DDS-кодек** — перенесён 1:1 (этап 3): код чисто вычислительный, тесты
+   `test/dds.test.mjs` портированы. Ради побайтового паритета сохранены два
+   дефекта оригинала: зацикливание `maskInfo` на маске со старшим битом
+   (`aMask = 0xFF000000`) и рассинхронизация порядка байтов у 48-битных
+   индексов альфы BC4/BC5/DXT5 (см. «Этап 3»).
 3. **SVG-экспорт графов** — визуальная фича; можно сохранить генератор строк
    или заменить экспортом PNG через `RenderTargetBitmap`.
 4. **3D-предпросмотр `visual`** — не поддерживался и в оригинале (нужны
@@ -260,14 +263,64 @@ FieldProfiles/FieldDescriptions`. Возвращаемые объекты — Pa
 вкладкой спавна (этап 7).
 
 **Критерий:** все Core-тесты зелёные; публичные сигнатуры стабильны.
-*(Состояние: 120/120 зелёные — этап закрыт.)*
+*(Состояние: 121/121 зелёный — этап закрыт.)*
 
-### Этап 3. DDS-кодек
-- `dds.js` → `Core/Imaging/DdsCodec.cs`: `decodeDxt1/3/5`, `decodeBc4/Bc5`,
-  `encodeDds`, `buildMipChain`, `downsampleRgba`.
-- Порт `dds.test.mjs`.
+### Этап 3. DDS-кодек ✅
+- `src/lib/dds.js` (337 стр.) → `Core/Imaging/`:
+  `DdsCodec` — примитивы (`Rgb565`, `MaskInfo`, `RgbTo565`, `JsRound`);
+  `DdsDecode` — `DecodeDxt1/3/5`, `DecodeBc4/Bc5`, `DecodeUncompressed`, `DecodeDds`;
+  `DdsEncode` — `EncodeDxt1/3/5`, `EncodeDxtColorBlock`, `SampleBlock`,
+  `DownsampleRgba`, `BuildMipChain`, `EncodeDds`; модели — `DdsImage`,
+  `DdsMipLevel`, `DdsFormat`.
+- Порядок байтов и текст ошибок совпадают с JS (`InvalidOperationException`
+  с теми же русскими сообщениями вместо `Error`).
 
-**Критерий:** декодирование/кодирование DXT1/3/5 и BC4/BC5 с round-trip.
+**Прогресс от 16.10.2026**: коммит
+`feat(stage 3): port dds.js (decode/encode DXT1/3/5, BC4/BC5, mipmaps)`.
+
+| Порт из | Классы Core | Ключевые точки входа | Тестов |
+|---|---|---|---|
+| `dds.js` | `Imaging/`: `DdsCodec`, `DdsDecode`, `DdsEncode`, `DdsModels` | `DecodeDds`, `DecodeDxt1/3/5`, `DecodeBc4/Bc5`, `DecodeUncompressed`, `EncodeDds`, `EncodeDxt1/3/5`, `EncodeDxtColorBlock`, `SampleBlock`, `DownsampleRgba`, `BuildMipChain`, `Rgb565`, `RgbTo565`, `MaskInfo` | 93 |
+
+**Отклонения от JS (сознательные):**
+
+1. `maskInfo` — в JS сдвиг `>>` знаковый, поэтому для маски со старшим битом
+   (`aMask = 0xFF000000`) цикл подсчёта ширины канала не завершается вовсе.
+   Порт работает с `uint` и возвращает `{24, 8}`. Для масок без старшего бита
+   результат совпадает с JS.
+2. `encodeDxt5` — в JS `best << (i * 3)` переполняет int32, а сдвиг маскируется
+   по mod 32: индексы пикселей 11–15 попадают в младшие биты и портят индексы
+   пикселей 0–4. Порт накапливает 48 бит в `ulong` и кодирует все 16 индексов
+   корректно (`EncodeDxt5_keeps_alpha_index_of_high_pixels`).
+3. Чтение за границей буфера — в JS `DataView` молча возвращает `undefined`,
+   в порту бросается исключение с тем же текстом, что и у ветки `decodeDds`
+   («Обрезанный DXT1.» и т.п.).
+4. `pixelsToDataURL` не переносится: в Core нет canvas, конвертация в
+   `BitmapSource` живёт в WPF-слое (этап 7).
+
+**Наследованный дефект JS, сохранённый ради паритета:** энкодер пишет 48-битные
+индексы альфы BC4/BC5/DXT5 младшими байтами вперёд, а декодер читает их
+старшим байтом вперёд (`alphaBits << 8`, сдвиг `45 - i * 3`). При разных
+индексах round-trip альфы переставляет пиксели внутри блока. Порт воспроизводит
+обе стороны буквально (`DecodeDxt5_expands_alpha_ramp`,
+`EncodeDxt5_keeps_alpha_index_of_high_pixels`); согласование сторон возможно, но
+нарушит побайтовый паритет с оригиналом.
+
+**Итог:** `dotnet test XRayForge.sln` — **214 тестов, 0 падений**; новых 93:
+`DdsTests` 5 (порт `test/dds.test.mjs`: BC4 white block, BC5 R/G,
+`downsampleRgba` 2×2, `encodeDds` с/без mipmaps), `DdsPrimitivesTests` 23
+(`rgb565`/`rgbTo565`/`maskInfo`), `DdsDecodeTests` 9 (режимы DXT1 с 3 и 4
+цветами, обрезка блоков по размеру, нибблы DXT3, уровни DXT5 для `a0 > a1` и
+`a0 <= a1`, BC4/BC5), `DdsEncodeTests` 31 (размеры блоков для 1×1 / 2×3 / 5×7,
+побайтовые блоки цвета, `sampleBlock` с прижатием к краю, `downsampleRgba` с
+округлением половин вверх, mip-цепочка, заголовок `encodeDds`, round-trip
+DXT1/DXT3/DXT5/mipmaps), `DdsContainerTests` 25 (32- и 24-битный
+`decodeUncompressed`, узкие маски 5-6-5, сигнатура, размеры, обрезка,
+`BC4U/BC4S/ATI1`, `BC5U/BC5S/ATI2`, несжатый контейнер).
+
+**Критерий:** декодирование/кодирование DXT1/3/5 и BC4/BC5 с round-trip —
+выполнено (DXT1 — побайтово точный на 2-цветных блоках и с толерантностью 5-6-5
+на остальных, DXT3-альфа — точная, DXT5 — см. наследованный дефект выше).
 
 ### Этап 4. Модель проекта + персистенция
 - `Models/Project.cs` и вложенные сущности.
