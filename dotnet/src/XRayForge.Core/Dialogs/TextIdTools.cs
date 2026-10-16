@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using XRayForge.Core.Models;
 
 namespace XRayForge.Core.Dialogs;
@@ -122,5 +123,108 @@ public static class TextIdTools
             Translated = translated,
             Pct = (int)Math.Round((double)translated / ids.Count * 100, MidpointRounding.AwayFromZero)
         };
+    }
+
+    // --- правки таблиц переводов из панели свойств реплики (шаг 6.5) ---
+
+    /// <summary>Локаль таблицы переводов по умолчанию (`bindId` в `DialoguesTab.js`).</summary>
+    public const string DefaultLocale = "rus";
+
+    /// <summary>Имя таблицы переводов по умолчанию.</summary>
+    public const string DefaultLocaleName = "Русский";
+
+    /// <summary>`'st_' + selectedNode.id.replace(/[^a-z0-9_]/gi, '_')` — text_id из id узла.</summary>
+    public static string GeneratedTextId(string? nodeId) =>
+        "st_" + Regex.Replace(nodeId ?? string.Empty, "[^a-zA-Z0-9_]", "_");
+
+    /// <summary>
+    /// `langs.find(l => l.locale === activePhraseLocale) || langs[0]` — активная таблица переводов
+    /// (если локаль не выбрана или не найдена, берётся первая).
+    /// </summary>
+    public static Language? ActiveLanguage(IReadOnlyList<Language>? languages, string? locale)
+    {
+        var list = languages ?? Array.Empty<Language>();
+        if (list.Count == 0) return null;
+        return list.FirstOrDefault(l => l.Locale == locale) ?? list[0];
+    }
+
+    /// <summary>`entry ? entry.text : ''` — перевод text_id в указанной локали.</summary>
+    public static string TranslationOf(IReadOnlyList<Language>? languages, string? locale, string? textId)
+    {
+        var language = ActiveLanguage(languages, locale);
+        if (language == null || string.IsNullOrEmpty(textId)) return "";
+        return language.Entries.FirstOrDefault(e => e.Id == textId)?.Text ?? "";
+    }
+
+    /// <summary>
+    /// `bindId`: привязать text_id к таблицам переводов. Без таблиц создаётся одна (`rus`/«Русский»)
+    /// с fallback-текстом реплики; если такого id нет ни в одной локали, запись (`text`) добавляется
+    /// во все локали (текст попадает только в `rus`), иначе список возвращается без изменений.
+    /// </summary>
+    public static List<Language> BindTextId(IReadOnlyList<Language>? languages, string? textId, string? fallbackText)
+    {
+        var list = languages ?? Array.Empty<Language>();
+        if (string.IsNullOrEmpty(textId)) return Copy(list);
+
+        if (list.Count == 0)
+            return new List<Language>
+            {
+                new()
+                {
+                    Locale = DefaultLocale,
+                    Name = DefaultLocaleName,
+                    Entries = new List<LanguageEntry> { new() { Id = textId!, Text = fallbackText ?? "" } }
+                }
+            };
+
+        if (list.Any(l => l.Entries.Any(e => e.Id == textId))) return Copy(list);
+
+        var result = Copy(list);
+        foreach (var language in result)
+            language.Entries.Add(new LanguageEntry
+            {
+                Id = textId!,
+                Text = language.Locale == DefaultLocale ? fallbackText ?? "" : ""
+            });
+
+        return result;
+    }
+
+    /// <summary>
+    /// `setTranslation`: правка перевода активной локали — существующая запись перезаписывается,
+    /// отсутствующая добавляется (в локаль, где запись есть, изменения не уходят).
+    /// </summary>
+    public static List<Language> SetTranslation(
+        IReadOnlyList<Language>? languages, string? locale, string? textId, string? text)
+    {
+        var result = Copy(languages ?? Array.Empty<Language>());
+        var active = ActiveLanguage(languages, locale);
+        if (active == null || string.IsNullOrEmpty(textId)) return result;
+
+        var target = result.First(l => l.Locale == active.Locale);
+        var entry = target.Entries.FirstOrDefault(e => e.Id == textId);
+        if (entry != null) entry.Text = text ?? "";
+        else target.Entries.Add(new LanguageEntry { Id = textId!, Text = text ?? "" });
+
+        return result;
+    }
+
+    /// <summary>Копия списка таблиц переводов со всеми записями (правки не меняют проект на месте).</summary>
+    private static List<Language> Copy(IReadOnlyList<Language> languages)
+    {
+        var result = new List<Language>(languages.Count);
+        foreach (var language in languages)
+            result.Add(new Language
+            {
+                Locale = language.Locale,
+                Name = language.Name,
+                Path = language.Path,
+                Entries = language.Entries
+                    .Select(e => new LanguageEntry { Id = e.Id, Text = e.Text })
+                    .ToList(),
+                Extra = language.Extra
+            });
+
+        return result;
     }
 }

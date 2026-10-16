@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:loc="clr-namespace:XRayForge.Localization"
+        xmlns:views="clr-namespace:XRayForge.Views"
         Title="{Binding Title}"
         Width="1440" Height="900" MinWidth="1024" MinHeight="640"
         WindowStyle="None" ResizeMode="CanResize"
@@ -12,6 +13,16 @@
         <WindowChrome CaptionHeight="0" ResizeBorderThickness="6" CornerRadius="0"
                       GlassFrameThickness="0" UseAeroCaptionButtons="False" />
     </WindowChrome.WindowChrome>
+
+    <!-- Содержимое вкладки: редактор раздела (этапы 6–7) или строки данных проекта (заглушка) -->
+    <Window.Resources>
+        <DataTemplate x:Key="SectionStubTemplate">
+            <views:SectionStubView />
+        </DataTemplate>
+        <DataTemplate x:Key="DialoguesTemplate">
+            <views:DialoguesView />
+        </DataTemplate>
+    </Window.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
@@ -172,48 +183,20 @@
                         </WrapPanel>
                     </StackPanel>
                 </ScrollViewer>
-                <!-- Раздел: строки данных проекта (редакторы — этапы 6–7) -->
-                <Grid Visibility="{Binding IsOverviewActive, Converter={StaticResource InverseBoolToVisibility}}">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-
-                    <StackPanel Grid.Row="0" Margin="16,14,16,10">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="{Binding ActiveTab.Glyph}" Margin="0,0,8,0"
-                                       Foreground="{Binding ActiveTab.AccentHex, Converter={StaticResource HexBrush}}" />
-                            <TextBlock Text="{Binding ActiveTab.Label}" Style="{StaticResource TitleText}" />
-                            <TextBlock Text="{Binding ActiveTab.Hotkey}" Style="{StaticResource CaptionText}"
-                                       Margin="10,0,0,0" VerticalAlignment="Center" />
-                        </StackPanel>
-                        <TextBlock Text="{loc:Loc tabStubHint}" Style="{StaticResource CaptionText}" Margin="0,2,0,0" />
-                    </StackPanel>
-
-                    <Grid Grid.Row="1" Margin="16,0,16,16">
-                        <ListBox ItemsSource="{Binding Rows}">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="{Binding Glyph}" Margin="0,0,8,0" />
-                                        <TextBlock Grid.Column="1" Text="{Binding Label}" />
-                                        <TextBlock Grid.Column="2" Text="{Binding Detail}"
-                                                   Style="{StaticResource CaptionText}" />
-                                    </Grid>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                        <TextBlock Text="{loc:Loc noData}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
-                                   MaxWidth="420" TextAlignment="Center"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"
-                                   Visibility="{Binding HasRows, Converter={StaticResource InverseBoolToVisibility}}" />
-                    </Grid>
-                </Grid>
+                <!-- Раздел: редактор вкладки (этап 6+) или строки данных проекта (заглушка) -->
+                <ContentControl Content="{Binding}"
+                                Visibility="{Binding IsOverviewActive, Converter={StaticResource InverseBoolToVisibility}}">
+                    <ContentControl.Style>
+                        <Style TargetType="ContentControl">
+                            <Setter Property="ContentTemplate" Value="{StaticResource SectionStubTemplate}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ActiveTab.Id}" Value="dialogues">
+                                    <Setter Property="ContentTemplate" Value="{StaticResource DialoguesTemplate}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ContentControl.Style>
+                </ContentControl>
                 <!-- Приветственный экран (`welcomeTitle`): проекты профиля и создание проекта -->
                 <Grid Background="{DynamicResource Scrim}"
                       Visibility="{Binding IsWelcomeOpen, Converter={StaticResource BoolToVisibility}}">

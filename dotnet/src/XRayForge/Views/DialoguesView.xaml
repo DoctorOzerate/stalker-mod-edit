@@ -1,0 +1,631 @@
+<UserControl x:Class="XRayForge.Views.DialoguesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:XRayForge.Localization">
+    <!--
+      Вкладка «Диалоги»: визуальный редактор графа (`DialoguesTab.js`).
+      Шаг 6.2 — холст: карточки узлов, связи, выделение, поиск по графу, статистика,
+      отмена/повтор, авто-раскладка, центрирование и масштаб.
+      Шаг 6.3 — взаимодействие: перенос узла и группы, панорама (drag по пустому холсту и средняя
+      кнопка), рамка выделения с Shift, зум колесом с Ctrl.
+      Шаг 6.4 — связи: клик по портам карточки (`portClick`) с подсказкой и отменой по Esc,
+      удаление связи кликом по широкой hit-зоне линии (`strokeWidth 14`). Палитра, свойства
+      реплики, проверка и плейсхолдеры — шаги 6.5–6.8.
+    -->
+    <UserControl.Resources>
+        <!-- Холст: `radial-gradient(ui.grid 1px, transparent 1px)` с шагом 20px.
+             Плитка залита фоном холста, поэтому клик по пустому месту попадает в неё. -->
+        <DrawingBrush x:Key="GraphDotGrid" TileMode="Tile" Stretch="Fill"
+                      Viewport="0,0,20,20" ViewportUnits="Absolute">
+            <DrawingBrush.Drawing>
+                <DrawingGroup>
+                    <GeometryDrawing Brush="{DynamicResource SurfaceDisplay}">
+                        <GeometryDrawing.Geometry>
+                            <RectangleGeometry Rect="0,0,20,20" />
+                        </GeometryDrawing.Geometry>
+                    </GeometryDrawing>
+                    <GeometryDrawing Brush="{DynamicResource GridLine}">
+                        <GeometryDrawing.Geometry>
+                            <EllipseGeometry Center="1,1" RadiusX="1" RadiusY="1" />
+                        </GeometryDrawing.Geometry>
+                    </GeometryDrawing>
+                </DrawingGroup>
+            </DrawingBrush.Drawing>
+        </DrawingBrush>
+
+        <!-- `bg-slate-400` порта и `hover:bg-green-400` (палитра Tailwind в JS) -->
+        <SolidColorBrush x:Key="GraphPortHover" Color="#4ADE80" />
+
+        <!-- Слот порта узла: `w-4 h-4 rounded-full bg-slate-400 border-2 border-white` с
+             `hover:bg-green-400` — порт кликабелен (`portClick` в App.js), шаг 6.4. -->
+        <Style x:Key="NodePort" TargetType="Button">
+            <Setter Property="Width" Value="16" />
+            <Setter Property="Height" Value="16" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Ellipse x:Name="PortDot"
+                                 Fill="{DynamicResource BorderStrong}"
+                                 Stroke="{DynamicResource SurfacePanel}"
+                                 StrokeThickness="2" />
+                        <ControlTemplate.Triggers>
+                            <!-- `hover:bg-green-400` из Tailwind -->
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="PortDot" Property="Fill"
+                                        Value="{StaticResource GraphPortHover}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Групповое выделение и рамка выделения: `border-blue-500` / `border-blue-400` + `bg-blue-400/10`
+             из палитры Tailwind в JS. В токенах темы синего нет, поэтому цвета взяты как в исходнике. -->
+        <SolidColorBrush x:Key="GraphMultiSelect" Color="#3B82F6" />
+        <SolidColorBrush x:Key="GraphMarqueeBorder" Color="#60A5FA" />
+        <SolidColorBrush x:Key="GraphMarqueeFill" Color="#60A5FA" Opacity="0.1" />
+
+        <!-- Карточка реплики: `absolute w-[210px] rounded-xl border-2` + активный/найденный узел -->
+        <Style x:Key="GraphCard" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaised}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBevel}" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Style.Triggers>
+                <!-- Узел в групповом выделении: `border-blue-500` (одиночное выделение сильнее — ниже) -->
+                <DataTrigger Binding="{Binding IsMultiSelected}" Value="True">
+                    <Setter Property="BorderBrush" Value="{StaticResource GraphMultiSelect}" />
+                </DataTrigger>
+                <!-- Найденный поиском узел: `ring-2 ring-green-400/40` (зелёный токена StateOk) -->
+                <DataTrigger Binding="{Binding IsSearchHit}" Value="True">
+                    <Setter Property="Effect">
+                        <Setter.Value>
+                            <DropShadowEffect BlurRadius="12" ShadowDepth="0" Opacity="0.45" Color="#2FE06A" />
+                        </Setter.Value>
+                    </Setter>
+                </DataTrigger>
+                <!-- Выделенный узел: `border-green-500 ring-4 ring-green-500/20` -->
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter Property="BorderBrush" Value="{DynamicResource StateOk}" />
+                    <Setter Property="Effect">
+                        <Setter.Value>
+                            <DropShadowEffect BlurRadius="10" ShadowDepth="0" Opacity="0.6" Color="#2FE06A" />
+                        </Setter.Value>
+                    </Setter>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Связь: `stroke ui.line` (2.5), связи выделенного узла — зелёные `#22c55e` -->
+        <Style x:Key="GraphEdge" TargetType="Path">
+            <Setter Property="Stroke" Value="{DynamicResource BorderStrong}" />
+            <Setter Property="StrokeThickness" Value="2.5" />
+            <Setter Property="Fill" Value="Transparent" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsHighlighted}" Value="True">
+                    <Setter Property="Stroke" Value="{DynamicResource StateOk}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Кнопка-карточка палитры и списка диалогов: `rounded-xl border p-3 ui.card ui.hover` -->
+        <Style x:Key="GraphCardButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Card" CornerRadius="10" Padding="8" BorderThickness="1"
+                                Background="{DynamicResource SurfaceRaised}"
+                                BorderBrush="{DynamicResource BorderBevel}">
+                            <ContentPresenter HorizontalAlignment="Stretch" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Card" Property="BorderBrush"
+                                        Value="{DynamicResource BorderStrong}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Card" Property="Background"
+                                        Value="{DynamicResource SurfaceSunken}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Квадрат с иконкой типа узла (`w-7 h-7 rounded-lg text-white`, фон — цвет типа) -->
+        <Style x:Key="PaletteIcon" TargetType="Border">
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+        </Style>
+
+        <!-- Подпись поля панели свойств (`text-xs` в JS) -->
+        <Style x:Key="PropsLabel" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="0,0,0,3" />
+        </Style>
+
+        <!-- Многострочное поле свойств (`textarea rows=2`): fallback-текст, метаданные, перевод -->
+        <Style x:Key="PropsArea" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="AcceptsReturn" Value="True" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="MinHeight" Value="46" />
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="16,14,16,10">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding ActiveTab.Glyph}" Margin="0,0,8,0"
+                           Foreground="{Binding ActiveTab.AccentHex, Converter={StaticResource HexBrush}}" />
+                <TextBlock Text="{Binding ActiveTab.Label}" Style="{StaticResource TitleText}" />
+                <TextBlock Text="{Binding ActiveTab.Hotkey}" Style="{StaticResource CaptionText}"
+                           Margin="10,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+            <TextBlock Text="{loc:Loc graphHeaderHint}" Style="{StaticResource CaptionText}" Margin="0,2,0,0" />
+        </StackPanel>
+
+        <Grid Grid.Row="1" Margin="16,0,16,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Панель управления графом (в JS `aside w-72`); палитра узлов и список диалогов — этап 6.5 -->
+            <Border Grid.Column="0" Style="{StaticResource PanelBorder}" Width="250" Margin="0,0,10,0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <Button Style="{StaticResource AccentButton}" HorizontalAlignment="Stretch"
+                                Content="{loc:Loc createDialogue}"
+                                Command="{Binding DialogueGraph.CreateDialogueCommand}" Margin="0,0,0,6" />
+                        <Button HorizontalAlignment="Stretch" Content="{loc:Loc demoGraph}"
+                                Command="{Binding LoadDemoGraphCommand}" Margin="0,0,0,6" />
+
+                        <!-- Палитра узлов: фильтр (`paletteFilter`) и кнопки `filteredTypes.map` -->
+                        <TextBox Text="{Binding DialogueGraph.PaletteFilter, UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="0,6,0,6" />
+                        <TextBlock Text="{loc:Loc graphPalette}" Style="{StaticResource PropsLabel}"
+                                   FontWeight="Bold" Margin="0,0,0,4" />
+                        <ItemsControl ItemsSource="{Binding DialogueGraph.PaletteItems}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource GraphCardButton}"
+                                            Command="{Binding DataContext.DialogueGraph.PaletteAddCommand,
+                                                      RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding Type}"
+                                            ToolTip="{Binding Info.Desc}">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Style="{StaticResource PaletteIcon}"
+                                                        Background="{Binding ColorHex, Converter={StaticResource HexBrush}}">
+                                                    <TextBlock Text="{Binding Icon}" Foreground="White"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                </Border>
+                                                <TextBlock Text="{Binding Label}" FontWeight="Bold" FontSize="11"
+                                                           VerticalAlignment="Center" />
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding Desc}" Style="{StaticResource PropsLabel}"
+                                                       TextWrapping="Wrap" Margin="0,4,0,0" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Text="{loc:Loc graphSearchPlaceholder}" Style="{StaticResource CaptionText}"
+                                   Margin="0,6,0,3" />
+                        <TextBox Text="{Binding DialogueGraph.Search, UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="0,0,0,6" />
+
+                        <CheckBox Content="{loc:Loc graphColorByRole}" Margin="0,2,0,6"
+                                  IsChecked="{Binding DialogueGraph.ColorByRole}" />
+                        <Button HorizontalAlignment="Stretch" Content="{loc:Loc checkGraph}"
+                                Command="{Binding CheckGraphCommand}" Margin="0,0,0,6" />
+
+                        <TextBlock Text="{Binding DialogueGraph.StatsText}" Style="{StaticResource CaptionText}"
+                                   TextWrapping="Wrap" />
+                        <Separator Margin="0,10,0,10" />
+
+                        <Button HorizontalAlignment="Stretch" Content="{loc:Loc graphUndo}"
+                                Command="{Binding DialogueGraph.UndoCommand}"
+                                IsEnabled="{Binding DialogueGraph.CanUndo}" Margin="0,0,0,6" />
+                        <Button HorizontalAlignment="Stretch" Content="{loc:Loc graphRedo}"
+                                Command="{Binding DialogueGraph.RedoCommand}"
+                                IsEnabled="{Binding DialogueGraph.CanRedo}" Margin="0,0,0,6" />
+                        <Button HorizontalAlignment="Stretch" Content="{loc:Loc graphAutoLayout}"
+                                Command="{Binding DialogueGraph.AutoLayoutCommand}" Margin="0,0,0,6" />
+                        <Button HorizontalAlignment="Stretch" Content="{loc:Loc graphCenterView}"
+                                Command="{Binding DialogueGraph.CenterViewCommand}" Margin="0,0,0,6" />
+                        <Button Style="{StaticResource DangerButton}" HorizontalAlignment="Stretch"
+                                Content="{loc:Loc delete}"
+                                Command="{Binding DialogueGraph.DeleteSelectedCommand}"
+                                IsEnabled="{Binding DialogueGraph.HasSelection}" />
+
+                        <!-- Список загруженных диалогов (`project.dialogues`, сгруппированный `dialogueGroup`) -->
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,4">
+                            <TextBlock Text="{loc:Loc graphDialoguesTitle}" Style="{StaticResource PropsLabel}"
+                                       FontWeight="Bold" Margin="0" />
+                            <TextBlock Text="·" Style="{StaticResource PropsLabel}" Margin="4,0,0,0" />
+                            <TextBlock Text="{Binding DialogueGraph.DialogueCount}"
+                                       Style="{StaticResource PropsLabel}" Margin="4,0,0,0" />
+                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding DialogueGraph.DialogueBuckets}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Header}" Style="{StaticResource PropsLabel}"
+                                                   FontWeight="Bold" Margin="0,6,0,4" />
+                                        <ItemsControl ItemsSource="{Binding Items}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button Style="{StaticResource GraphCardButton}"
+                                                            Command="{Binding DataContext.DialogueGraph.LoadDialogueCommand,
+                                                                      RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding Dialogue}">
+                                                        <StackPanel>
+                                                            <TextBlock Text="{Binding Name}" FontWeight="Bold"
+                                                                       FontSize="11" TextWrapping="Wrap" />
+                                                            <TextBlock Text="{Binding Meta}"
+                                                                       Style="{StaticResource PropsLabel}" Margin="0,2,0,0" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- Холст редактора: связи и карточки в transform-слое (`translate(pan) scale(zoom)`) -->
+            <Border x:Name="CanvasHost" Grid.Column="1" Style="{StaticResource PanelBorder}" Padding="0"
+                    ClipToBounds="True" SizeChanged="OnCanvasSizeChanged">
+                <Grid>
+                    <!-- Взаимодействие холста (шаг 6.3): Shift+drag — рамка выделения, иначе — перенос узла
+                         или панорама. Мышь захватывается при нажатии (`dragRef` + window-слушатели в JS),
+                         поэтому move/up доходят и за пределами холста. -->
+                    <Grid x:Name="GraphLayer" Focusable="False"
+                          PreviewMouseDown="OnCanvasMouseDown"
+                          PreviewMouseMove="OnCanvasMouseMove"
+                          PreviewMouseUp="OnCanvasMouseUp"
+                          PreviewMouseWheel="OnCanvasMouseWheel"
+                          LostMouseCapture="OnCanvasLostCapture">
+                        <Grid.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform ScaleX="{Binding DialogueGraph.Zoom}"
+                                                ScaleY="{Binding DialogueGraph.Zoom}" />
+                                <TranslateTransform X="{Binding DialogueGraph.PanX}"
+                                                    Y="{Binding DialogueGraph.PanY}" />
+                            </TransformGroup>
+                        </Grid.RenderTransform>
+
+                        <!-- Фон холста с точками сетки: поверхность для клика по пустому месту -->
+                        <Border Width="20000" Height="20000" Margin="-10000,-10000,0,0"
+                                HorizontalAlignment="Left" VerticalAlignment="Top"
+                                Background="{StaticResource GraphDotGrid}" />
+
+                        <!-- Связи узлов: `edges.map` → `<path d=…>` -->
+                        <ItemsControl ItemsSource="{Binding DialogueGraph.Edges}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <Canvas />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <!-- Видимая линия связи не перехватывает мышь (в JS слой рёбер `pointer-events-none`) -->
+                                        <Path Style="{StaticResource GraphEdge}"
+                                              Data="{Binding Path, Converter={StaticResource EdgeGeometry}}"
+                                              Opacity="{Binding Opacity}" IsHitTestVisible="False"
+                                              Visibility="{Binding HasPath, Converter={StaticResource BoolToVisibility}}" />
+                                        <!-- Широкая прозрачная hit-зона (`strokeWidth 14`, `pointerEvents: 'stroke'`,
+                                             `cursor: pointer`): клик по связи удаляет её (`deleteEdge` в App.js). -->
+                                        <Path Data="{Binding Path, Converter={StaticResource EdgeGeometry}}"
+                                              Stroke="Transparent" StrokeThickness="14" Fill="{x:Null}"
+                                              Cursor="Hand" MouseLeftButtonDown="OnEdgeDelete"
+                                              Visibility="{Binding HasPath, Converter={StaticResource BoolToVisibility}}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Рамка выделения (`marquee` в JS): `border-dashed border-blue-400 bg-blue-400/10`,
+                             рисуется внутри transform-слоя — под карточками узлов, как в оригинале. -->
+                        <Canvas IsHitTestVisible="False"
+                                Visibility="{Binding DialogueGraph.HasMarquee, Converter={StaticResource BoolToVisibility}}">
+                            <Rectangle Canvas.Left="{Binding DialogueGraph.MarqueeX}"
+                                       Canvas.Top="{Binding DialogueGraph.MarqueeY}"
+                                       Width="{Binding DialogueGraph.MarqueeWidth}"
+                                       Height="{Binding DialogueGraph.MarqueeHeight}"
+                                       Stroke="{StaticResource GraphMarqueeBorder}" StrokeThickness="1"
+                                       StrokeDashArray="4 2" Fill="{StaticResource GraphMarqueeFill}" />
+                        </Canvas>
+
+                        <!-- Карточки узлов: `nodes.map` → `div w-[210px] rounded-xl border-2` -->
+                        <ItemsControl ItemsSource="{Binding DialogueGraph.Nodes}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <Canvas />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerStyle>
+                                <Style TargetType="ContentPresenter">
+                                    <Setter Property="Canvas.Left" Value="{Binding X}" />
+                                    <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                                </Style>
+                            </ItemsControl.ItemContainerStyle>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Width="210" Opacity="{Binding Opacity}">
+                                        <Border Style="{StaticResource GraphCard}" MinHeight="64">
+                                            <StackPanel>
+                                                <!-- Шапка: цвет типа (или роли), иконка с подписью и короткий id -->
+                                                <Border CornerRadius="10,10,0,0" Padding="12,6"
+                                                        Background="{Binding HeaderHex, Converter={StaticResource HexBrush}}">
+                                                    <Grid>
+                                                        <TextBlock Text="{Binding HeaderText}" FontWeight="Bold"
+                                                                   FontSize="11" Foreground="White" />
+                                                        <TextBlock Text="{Binding ShortId}" FontSize="10"
+                                                                   Foreground="White" Opacity="0.7"
+                                                                   HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                                    </Grid>
+                                                </Border>
+                                                <StackPanel Margin="12,10,12,12">
+                                                    <TextBlock Text="{Binding Title}" TextWrapping="Wrap"
+                                                               FontSize="{DynamicResource DensitySmallFontSize}" />
+                                                    <TextBlock Text="{Binding VoiceText}" FontSize="10" Margin="0,4,0,0"
+                                                               Foreground="{DynamicResource TextMuted}"
+                                                               Visibility="{Binding VoiceText, Converter={StaticResource NotEmptyToVisibility}}" />
+                                                    <TextBlock Text="{Binding ConditionText}" FontSize="10" Margin="0,4,0,0"
+                                                               Foreground="{DynamicResource TextAccent}"
+                                                               Visibility="{Binding ConditionText, Converter={StaticResource NotEmptyToVisibility}}" />
+                                                    <TextBlock Text="{Binding ActionText}" FontSize="10" Margin="0,4,0,0"
+                                                               Foreground="{DynamicResource StateWarn}"
+                                                               Visibility="{Binding ActionText, Converter={StaticResource NotEmptyToVisibility}}" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Border>
+                                        <!-- Порты: `left-[-8px] top-10` и `right-[-8px] top-10`. Клик по порту
+                                             взводит связь (`portClick` в App.js), шаг 6.4. -->
+                                        <Button Style="{StaticResource NodePort}" HorizontalAlignment="Left"
+                                                VerticalAlignment="Top" Margin="-8,40,0,0"
+                                                Click="OnInputPortClick"
+                                                Visibility="{Binding HasInputPort, Converter={StaticResource BoolToVisibility}}" />
+                                        <Button Style="{StaticResource NodePort}" HorizontalAlignment="Right"
+                                                VerticalAlignment="Top" Margin="0,40,-8,0"
+                                                Click="OnOutputPortClick"
+                                                Visibility="{Binding HasOutputPort, Converter={StaticResource BoolToVisibility}}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                    </Grid>
+
+                    <!-- Подсказка взведённого порта (`absolute top-4 left-4 … accent text-white text-xs`):
+                         живёт вне transform-слоя, поэтому её размер не зависит от зума. -->
+                    <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16,16,0,0"
+                            CornerRadius="8" Padding="12,8" IsHitTestVisible="False"
+                            Background="{DynamicResource AccentMain}"
+                            Visibility="{Binding DialogueGraph.IsConnecting, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="{loc:Loc graphConnectHint}" Foreground="White" FontSize="12" />
+                    </Border>
+
+                    <!-- Масштаб и центрирование (`absolute left-4 bottom-4`): вне transform-слоя -->
+                    <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="16,0,0,16"
+                            CornerRadius="12" Padding="6"
+                            Background="{DynamicResource SurfacePanel}"
+                            BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Style="{StaticResource ToolbarButton}" Content="⌖"
+                                    ToolTip="{loc:Loc graphCenterView}"
+                                    Command="{Binding DialogueGraph.CenterViewCommand}" />
+                            <Button Style="{StaticResource ToolbarButton}" Content="−"
+                                    Command="{Binding DialogueGraph.ZoomOutCommand}" />
+                            <TextBlock Text="{Binding DialogueGraph.ZoomText}" MinWidth="40"
+                                       TextAlignment="Center" VerticalAlignment="Center"
+                                       Style="{StaticResource CaptionText}" />
+                            <Button Style="{StaticResource ToolbarButton}" Content="+"
+                                    Command="{Binding DialogueGraph.ZoomInCommand}" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Пустой граф (`graphEmptyTitle`/`graphEmptyHint`) -->
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
+                                Visibility="{Binding DialogueGraph.HasNodes, Converter={StaticResource InverseBoolToVisibility}}">
+                        <TextBlock Text="{loc:Loc graphEmptyTitle}" Style="{StaticResource TitleText}"
+                                   HorizontalAlignment="Center" />
+                        <TextBlock Text="{loc:Loc graphEmptyHint}" Style="{StaticResource CaptionText}"
+                                   TextWrapping="Wrap" MaxWidth="420" TextAlignment="Center" Margin="0,6,0,0" />
+                    </StackPanel>
+
+                </Grid>
+            </Border>
+
+            <!-- Панель свойств реплики (в JS `aside w-80`): роль, phraseId, text_id и переводы,
+                 «Действия и условия» (метаданные), voice_id, expression и поля действия. -->
+            <Border Grid.Column="2" Style="{StaticResource PanelBorder}" Width="300" Margin="10,0,0,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Margin="0,0,0,8">
+                        <TextBlock Text="{loc:Loc graphPropsTitle}" FontWeight="Bold" FontSize="11"
+                                   VerticalAlignment="Center" />
+                        <Button Style="{StaticResource DangerButton}" HorizontalAlignment="Right"
+                                Content="{loc:Loc delete}"
+                                Command="{Binding DialogueGraph.DeleteSelectedCommand}"
+                                Visibility="{Binding DialogueGraph.HasSelection, Converter={StaticResource BoolToVisibility}}" />
+                    </Grid>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <Grid>
+                            <TextBlock Text="{loc:Loc graphPropsEmpty}"
+                                       Style="{StaticResource PropsLabel}"
+                                       HorizontalAlignment="Center" Margin="0,60,0,0"
+                                       Visibility="{Binding DialogueGraph.HasSelection, Converter={StaticResource InverseBoolToVisibility}}" />
+
+                            <StackPanel Visibility="{Binding DialogueGraph.HasSelection, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="{Binding DialogueGraph.PropsHeader}" Style="{StaticResource MonoText}"
+                                           FontSize="11" Margin="0,0,0,8" TextWrapping="Wrap" />
+
+                                <!-- Реплика (`selectedNode.type === 'PHRASE'`): роль, phraseId,
+                                     text_id с подсказкой, переводы и fallback-текст -->
+                                <StackPanel Visibility="{Binding DialogueGraph.ShowsPhraseFields, Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock Text="{loc:Loc graphPropsRole}" Style="{StaticResource PropsLabel}" />
+                                    <ComboBox SelectedValue="{Binding DialogueGraph.PhraseRole}" SelectedValuePath="Tag"
+                                              Margin="0,0,0,6">
+                                        <ComboBoxItem Content="{loc:Loc graphRoleUnknown}" Tag="unknown" />
+                                        <ComboBoxItem Content="{loc:Loc graphRoleNpc}" Tag="npc" />
+                                        <ComboBoxItem Content="{loc:Loc graphRolePlayer}" Tag="player" />
+                                    </ComboBox>
+
+                                    <TextBox Text="{Binding DialogueGraph.PhraseId, UpdateSourceTrigger=PropertyChanged}"
+                                             ToolTip="{loc:Loc graphPhraseIdPlaceholder}" Margin="0,0,0,6" />
+
+                                    <TextBlock Text="{loc:Loc graphTextId}" Style="{StaticResource PropsLabel}" />
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Grid.Column="0" Margin="0,0,6,0"
+                                                 ToolTip="{loc:Loc graphTextIdPlaceholder}"
+                                                 Text="{Binding DialogueGraph.PhraseTextId, UpdateSourceTrigger=PropertyChanged}" />
+                                        <Button Grid.Column="1" Style="{StaticResource ToolbarButton}" Content="⤵"
+                                                ToolTip="{loc:Loc graphSuggestTextId}"
+                                                Command="{Binding DialogueGraph.SuggestTextIdCommand}" />
+                                    </Grid>
+
+                                    <TextBlock Text="{Binding DialogueGraph.ResolvedPhraseText}"
+                                               Style="{StaticResource PropsLabel}" FontStyle="Italic"
+                                               TextWrapping="Wrap" Margin="0,0,0,6"
+                                               Visibility="{Binding DialogueGraph.ResolvedPhraseText, Converter={StaticResource NotEmptyToVisibility}}" />
+
+                                    <ComboBox ItemsSource="{Binding DialogueGraph.PhraseLanguages}"
+                                              SelectedValuePath="Locale"
+                                              SelectedValue="{Binding DialogueGraph.ActivePhraseLocale}"
+                                              ToolTip="{loc:Loc graphActiveLocale}" Margin="0,0,0,6"
+                                              Visibility="{Binding DialogueGraph.HasPhraseLanguages, Converter={StaticResource BoolToVisibility}}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Tooltip}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+
+                                    <!-- Текст кнопки — `TextBlock`: в шаблоне кнопки `RecognizesAccessKey`,
+                                         и «_» из подписи `text_id` съедался бы как мнемоника. -->
+                                    <Button Margin="0,0,0,6"
+                                            Command="{Binding DialogueGraph.BindTextIdCommand}"
+                                            Visibility="{Binding DialogueGraph.ShowsBindTextId, Converter={StaticResource BoolToVisibility}}">
+                                        <TextBlock Text="{loc:Loc graphBindTextId}" />
+                                    </Button>
+                                    <Button Content="{loc:Loc graphCreateLanguage}" Margin="0,0,0,6"
+                                            Command="{Binding DialogueGraph.BindTextIdCommand}"
+                                            Visibility="{Binding DialogueGraph.ShowsCreateLanguage, Converter={StaticResource BoolToVisibility}}" />
+
+                                    <StackPanel Margin="0,0,0,6"
+                                                Visibility="{Binding DialogueGraph.ShowsTranslation, Converter={StaticResource BoolToVisibility}}">
+                                        <TextBlock Text="{Binding DialogueGraph.TranslationLabel}" Style="{StaticResource PropsLabel}" />
+                                        <TextBox Style="{StaticResource PropsArea}" MinHeight="58"
+                                                 ToolTip="{Binding DialogueGraph.TranslationPlaceholder}"
+                                                 Text="{Binding DialogueGraph.PhraseTranslation, UpdateSourceTrigger=PropertyChanged}" />
+                                    </StackPanel>
+
+                                    <TextBlock Text="{loc:Loc graphFallbackText}" Style="{StaticResource PropsLabel}" />
+                                    <TextBox Style="{StaticResource PropsArea}"
+                                             ToolTip="{loc:Loc graphFallbackPlaceholder}"
+                                             Text="{Binding DialogueGraph.PhraseText, UpdateSourceTrigger=PropertyChanged}" />
+                                </StackPanel>
+
+                                <!-- Озвучка реплики (`voice_id` показывается только для PHRASE) -->
+                                <TextBox ToolTip="{loc:Loc graphVoicePlaceholder}" Margin="0,6,0,6"
+                                         Visibility="{Binding DialogueGraph.ShowsPhraseFields, Converter={StaticResource BoolToVisibility}}"
+                                         Text="{Binding DialogueGraph.PhraseVoiceId, UpdateSourceTrigger=PropertyChanged}" />
+
+                                <!-- «Действия и условия» (`metaOpen` свёрнут по умолчанию): сниппеты
+                                     и шесть полей `META_KEYS` — доступны узлам любого типа -->
+                                <Expander Header="{loc:Loc graphMetaSection}" Margin="0,6,0,0">
+                                    <StackPanel>
+                                        <ItemsControl ItemsSource="{Binding DialogueGraph.MetadataSnippets}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button Style="{StaticResource ToolbarButton}" FontSize="10"
+                                                            Margin="0,0,4,4"
+                                                            Content="{Binding Label}" ToolTip="{Binding Tooltip}"
+                                                            CommandParameter="{Binding Snippet}"
+                                                            Command="{Binding DataContext.DialogueGraph.AddMetadataSnippetCommand,
+                                                                      RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <ItemsControl ItemsSource="{Binding DialogueGraph.MetadataFields}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Margin="0,0,0,6">
+                                                        <TextBlock Text="{Binding Label}" Style="{StaticResource PropsLabel}" />
+                                                        <TextBox Style="{StaticResource PropsArea}"
+                                                                 Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" />
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Expander>
+
+                                <!-- Проверки CONDITION/QUEST_CHECK/ITEM_CHECK: поле `expression` -->
+                                <TextBox Margin="0,6,0,0" ToolTip="{loc:Loc graphExpressionPlaceholder}"
+                                         Visibility="{Binding DialogueGraph.ShowsExpressionFields, Converter={StaticResource BoolToVisibility}}"
+                                         Text="{Binding DialogueGraph.PhraseExpression, UpdateSourceTrigger=PropertyChanged}" />
+
+                                <!-- Действие (`selectedNode.type === 'ACTION'`): тип и параметры -->
+                                <StackPanel Margin="0,6,0,0"
+                                            Visibility="{Binding DialogueGraph.ShowsActionFields, Converter={StaticResource BoolToVisibility}}">
+                                    <ComboBox SelectedValue="{Binding DialogueGraph.PhraseActionType}" SelectedValuePath="Tag">
+                                        <ComboBoxItem Content="{loc:Loc graphActionType}" Tag="" />
+                                        <ComboBoxItem Content="give_info" Tag="give_info" />
+                                        <ComboBoxItem Content="give_item" Tag="give_item" />
+                                        <ComboBoxItem Content="take_item" Tag="take_item" />
+                                        <ComboBoxItem Content="script_call" Tag="script_call" />
+                                    </ComboBox>
+                                    <TextBox Margin="0,6,0,0" ToolTip="{loc:Loc graphParamsPlaceholder}"
+                                             Text="{Binding DialogueGraph.PhraseParams, UpdateSourceTrigger=PropertyChanged}" />
+                                </StackPanel>
+
+                            </StackPanel>
+                        </Grid>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+        </Grid>
+    </Grid>
+</UserControl>

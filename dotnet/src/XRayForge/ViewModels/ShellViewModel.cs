@@ -62,6 +62,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Rows = new ObservableCollection<SectionRow>();
         SearchHits = new ObservableCollection<ProjectSearchHit>();
         Backups = new ObservableCollection<BackupItemViewModel>();
+        DialogueGraph = new DialogueGraphViewModel(this, _dialogs);
+
+
 
         _autosave = new AutosaveService(
             _store,
@@ -90,6 +93,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         LoadWelcomeList();
         LoadBackups();
         PublishSearch();
+        // Граф диалога (этап 6) строится из текущего проекта до пересборки обзора.
+        DialogueGraph.Attach(_project);
+
         RefreshProjectView();
     }
 
@@ -120,6 +126,10 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     public ObservableCollection<BackupItemViewModel> Backups { get; }
 
     /// <summary>Текущий проект (запросы ViewModels просмотров).</summary>
+    /// <summary>Вкладка «Диалоги» (этап 6): редактор графа диалога (`DialoguesTab.js`).</summary>
+    public DialogueGraphViewModel DialogueGraph { get; }
+
+
     public Project Project => _project;
 
     /// <summary>Окно-владелец модальных диалогов (ставит `MainWindow`).</summary>
@@ -424,6 +434,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         GamedataPath = _project.GamedataPath;
         IsWelcomeOpen = false;
         SetDirty(dirty);
+        // Граф вкладки «Диалоги» пересобирается из принятого проекта (как `patch` в JS).
+        DialogueGraph.Attach(_project);
+
         RefreshProjectView();
     }
 
@@ -934,6 +947,19 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         StatusDetail = LastAutosaveText;
     }
 
+    /// <summary>
+    /// Граф диалога изменился (`patch` в JS): отметить проект изменённым, пересобрать обзор,
+    /// проблемы и строки разделов, показать подпись действия в статусной строке.
+    /// </summary>
+    public void OnGraphEdited(string? statusText = null, string? statusDetail = null)
+    {
+        SetDirty(true);
+        RefreshProjectView();
+        if (statusText != null) StatusText = statusText;
+        if (statusDetail != null) StatusDetail = statusDetail;
+    }
+
+
     /// <summary>Флаг изменений: оболочка (`dirty`) и автосохранение (`AutosaveService.Dirty`).</summary>
     private void SetDirty(bool value)
     {
@@ -977,7 +1003,17 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             case "save": Save(); break;
             case "exportXml": ExportXml(); break;
             case "globalSearch": OpenSearch(); break;
+            // Действия редактора графа (этап 6) — по id из `HotkeyCatalog` и только на вкладке «Диалоги».
+            case "undo": RunGraphCommand(DialogueGraph.UndoCommand); break;
+            case "redo": RunGraphCommand(DialogueGraph.RedoCommand); break;
+            case "addStart": RunGraphCommand(DialogueGraph.AddStartCommand); break;
+            case "addPhrase": RunGraphCommand(DialogueGraph.AddPhraseCommand); break;
+            case "addRandom": RunGraphCommand(DialogueGraph.AddRandomCommand); break;
+            case "addEnd": RunGraphCommand(DialogueGraph.AddEndCommand); break;
+            case "deleteSelected": RunGraphCommand(DialogueGraph.DeleteSelectedCommand); break;
             case "escape":
+                // Связь, ожидающая второй порт, отменяется первой (`setConnectFrom(null)` в App.js).
+                DialogueGraph.CancelConnect();
                 if (IsWelcomeOpen) IsWelcomeOpen = false;
                 else CloseHotkeyHint();
                 break;
@@ -988,6 +1024,16 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>`hotkeys`: сочетания из настроек (окно пересобирает `KeyBinding`).</summary>
+    /// <summary>
+    /// Горячая клавиша редактора графа: выполняется только на вкладке «Диалоги»
+    /// (в JS обработчики `undoActive`/`addNode` зависят от `tab === 'dialogues'`).
+    /// </summary>
+    private void RunGraphCommand(IRelayCommand command)
+    {
+        if (ActiveTab?.Id == NavigationCatalog.DialoguesId) command.Execute(null);
+        else StatusDetail = LocalizationSource.Get("tabStubHint");
+    }
+
     public IReadOnlyList<HotkeyBinding> Hotkeys => HotkeyCatalog.Bindings(_settings.Hotkeys);
 
     /// <summary>`hotkeyConflicts`: id действия → конфликтующая комбинация.</summary>

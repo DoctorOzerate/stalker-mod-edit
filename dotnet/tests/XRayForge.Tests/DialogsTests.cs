@@ -187,6 +187,83 @@ public class DialogsTests
     }
 
     [Fact]
+    public void GeneratedTextId_replaces_non_word_characters()
+    {
+        Assert.Equal("st_node_1", TextIdTools.GeneratedTextId("node-1"));
+        Assert.Equal("st_node__2", TextIdTools.GeneratedTextId("node__2"));
+        // Не-ASCII символы становятся подчёркиваниями (`[^a-z0-9_]`): «реплика» → 7 подчёркиваний.
+        Assert.Equal("st_" + new string('_', 7), TextIdTools.GeneratedTextId("реплика"));
+        Assert.Equal("st_", TextIdTools.GeneratedTextId(null));
+    }
+
+    [Fact]
+    public void ActiveLanguage_prefers_locale_and_falls_back_to_first()
+    {
+        var languages = new List<Language>
+        {
+            new() { Locale = "rus", Name = "Русский" },
+            new() { Locale = "eng", Name = "English" }
+        };
+
+        Assert.Equal("eng", TextIdTools.ActiveLanguage(languages, "eng")!.Locale);
+        Assert.Equal("rus", TextIdTools.ActiveLanguage(languages, "deu")!.Locale);
+        Assert.Equal("rus", TextIdTools.ActiveLanguage(languages, null)!.Locale);
+        Assert.Null(TextIdTools.ActiveLanguage(null, "rus"));
+        Assert.Equal("", TextIdTools.TranslationOf(languages, "eng", "st_1"));
+    }
+
+    [Fact]
+    public void BindTextId_creates_default_table_then_adds_entry_to_every_locale()
+    {
+        var created = TextIdTools.BindTextId(null, "st_1", "Привет");
+        Assert.Single(created);
+        Assert.Equal("rus", created[0].Locale);
+        Assert.Equal("Русский", created[0].Name);
+        Assert.Single(created[0].Entries);
+        Assert.Equal("st_1", created[0].Entries[0].Id);
+        Assert.Equal("Привет", created[0].Entries[0].Text);
+
+        var existing = new List<Language>
+        {
+            new() { Locale = "rus", Entries = new() { new LanguageEntry { Id = "st_0", Text = "a" } } },
+            new() { Locale = "eng", Entries = new() { new LanguageEntry { Id = "st_0", Text = "a" } } }
+        };
+
+        var bound = TextIdTools.BindTextId(existing, "st_1", "Привет");
+        Assert.Equal(2, bound.Count);
+        // Текст попадает только в `rus`, остальные локали получают пустую запись.
+        Assert.Equal("Привет", bound[0].Entries.First(e => e.Id == "st_1").Text);
+        Assert.Equal("", bound[1].Entries.First(e => e.Id == "st_1").Text);
+        // Правки не меняют проект на месте.
+        Assert.DoesNotContain(existing[0].Entries, e => e.Id == "st_1");
+
+        // Запись уже есть в одной из локалей — список остаётся как был.
+        var again = TextIdTools.BindTextId(bound, "st_1", "Другое");
+        Assert.Equal("Привет", again[0].Entries.First(e => e.Id == "st_1").Text);
+    }
+
+    [Fact]
+    public void SetTranslation_updates_active_entry_or_appends_new_one()
+    {
+        var languages = new List<Language>
+        {
+            new() { Locale = "rus", Entries = new() { new LanguageEntry { Id = "st_1", Text = "Привет" } } },
+            new() { Locale = "eng" }
+        };
+
+        var updated = TextIdTools.SetTranslation(languages, "rus", "st_1", "Здравствуйте");
+        Assert.Equal("Здравствуйте", TextIdTools.TranslationOf(updated, "rus", "st_1"));
+        Assert.Equal("Привет", TextIdTools.TranslationOf(languages, "rus", "st_1"));
+
+        var added = TextIdTools.SetTranslation(languages, "eng", "st_1", "Hello");
+        Assert.Equal("Hello", TextIdTools.TranslationOf(added, "eng", "st_1"));
+        Assert.Equal("Привет", TextIdTools.TranslationOf(added, "rus", "st_1"));
+
+        // Без активной таблицы или без text_id правка не применяется (`if (!active || !textId) return`).
+        Assert.Equal("", TextIdTools.TranslationOf(TextIdTools.SetTranslation(languages, "rus", "", "x"), "rus", ""));
+    }
+
+    [Fact]
     public void TextIdCoverage_computes_translation_coverage()
     {
         var dialogues = new[]

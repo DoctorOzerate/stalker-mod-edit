@@ -1,0 +1,50 @@
+<UserControl x:Class="XRayForge.Views.SectionStubView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:XRayForge.Localization">
+    <!--
+      Раздел-заглушка (этап 5): шапка вкладки и строки данных проекта (`ShellViewModel.Rows`).
+      Используется всеми разделами, у которых ещё нет редактора (этапы 6–7).
+    -->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="16,14,16,10">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding ActiveTab.Glyph}" Margin="0,0,8,0"
+                           Foreground="{Binding ActiveTab.AccentHex, Converter={StaticResource HexBrush}}" />
+                <TextBlock Text="{Binding ActiveTab.Label}" Style="{StaticResource TitleText}" />
+                <TextBlock Text="{Binding ActiveTab.Hotkey}" Style="{StaticResource CaptionText}"
+                           Margin="10,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+            <TextBlock Text="{loc:Loc tabStubHint}" Style="{StaticResource CaptionText}" Margin="0,2,0,0" />
+        </StackPanel>
+
+        <Grid Grid.Row="1" Margin="16,0,16,16">
+            <ListBox ItemsSource="{Binding Rows}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding Glyph}" Margin="0,0,8,0" />
+                            <TextBlock Grid.Column="1" Text="{Binding Label}" />
+                            <TextBlock Grid.Column="2" Text="{Binding Detail}"
+                                       Style="{StaticResource CaptionText}" />
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <TextBlock Text="{loc:Loc noData}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                       MaxWidth="420" TextAlignment="Center"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       Visibility="{Binding HasRows, Converter={StaticResource InverseBoolToVisibility}}" />
+        </Grid>
+    </Grid>
+</UserControl>

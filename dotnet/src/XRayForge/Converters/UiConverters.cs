@@ -53,3 +53,30 @@ public sealed class InverseBooleanToVisibilityConverter : IValueConverter
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         throw new NotSupportedException();
 }
+
+/// <summary>Разметка пути связи (`M x y C …` из `GraphEditing.EdgePath`) → геометрия `Path.Data`.</summary>
+public sealed class PathDataConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var data = value as string;
+        if (string.IsNullOrWhiteSpace(data)) return Geometry.Empty;
+
+        try { return Geometry.Parse(data); }
+        catch (FormatException) { return Geometry.Empty; }
+        catch (NotSupportedException) { return Geometry.Empty; }
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
+/// <summary>Непустая подпись → Visible: бейджи озвучки, условий и действий в карточке узла.</summary>
+public sealed class NonEmptyToVisibilityConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is string text && !string.IsNullOrWhiteSpace(text) ? Visibility.Visible : Visibility.Collapsed;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}

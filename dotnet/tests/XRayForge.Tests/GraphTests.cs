@@ -66,6 +66,36 @@ public class GraphTests
     }
 
     [Fact]
+    public void Grouped_splits_loaded_dialogues_by_prefix_and_sorts_groups()
+    {
+        var dialogues = new List<DialogueGraph>
+        {
+            new() { Id = "tm_trader_1", Nodes = { new DialogueNode() }, Edges = { new DialogueEdge() } },
+            new() { Id = "esc_wolf_1" },
+            new() { Id = "bar_barman_1" },
+            new() { Id = "tm_trader_2" },
+            new() { Name = "" }
+        };
+
+        var buckets = DialogueGroups.Grouped(dialogues);
+        // Группы отсортированы по коду символов, как `Object.keys(groups).sort()`.
+        Assert.Equal(new[] { "Бар", "Кордон", "Прочее", "Торговля" }, buckets.Select(b => b.Group));
+        Assert.Equal(new[] { 1, 1, 1, 2 }, buckets.Select(b => b.Dialogues.Count));
+        // Диалоги внутри группы сохраняют порядок появления в проекте.
+        Assert.Equal(new[] { "tm_trader_1", "tm_trader_2" }, buckets[3].Dialogues.Select(d => d.Id));
+        Assert.Empty(DialogueGroups.Grouped(null));
+    }
+
+    [Fact]
+    public void Name_falls_back_from_name_to_id()
+    {
+        Assert.Equal("Бармен", DialogueGroups.Name(new DialogueGraph { Id = "bar_barman", Name = "Бармен" }));
+        Assert.Equal("bar_barman", DialogueGroups.Name(new DialogueGraph { Id = "bar_barman" }));
+        Assert.Equal("", DialogueGroups.Name(new DialogueGraph { Id = "", Name = "" }));
+        Assert.Equal("", DialogueGroups.Name(null));
+    }
+
+    [Fact]
     public void SafeNode_migrates_legacy_types_and_fills_defaults()
     {
         var migrated = GraphData.SafeNode(new DialogueNode { Id = "", Type = "NPC_REPLY" }, 3);
