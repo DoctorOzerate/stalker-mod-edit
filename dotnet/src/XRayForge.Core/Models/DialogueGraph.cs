@@ -37,6 +37,7 @@ public sealed class GraphIssue
 {
     public string Severity { get; set; } = ""; // "error" | "warning"
     public string Code { get; set; } = "";
+    public string? Key { get; set; }
     public string? Message { get; set; }
 }
 

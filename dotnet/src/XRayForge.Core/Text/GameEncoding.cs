@@ -46,6 +46,12 @@ public static class GameEncoding
     /// <summary>Кодировать текст в Windows-1251 (непредставимые символы → «?»).</summary>
     public static byte[] EncodeCp1251(string? s) => Cp1251.GetBytes(s ?? string.Empty);
 
+    /// <summary>Декодировать байты как Windows-1251 (без автоопределения BOM/декларации).</summary>
+    public static string DecodeCp1251(byte[] bytes) => Cp1251.GetString(bytes);
+
+    /// <summary>Декодировать фрагмент байтов как Windows-1251.</summary>
+    public static string DecodeCp1251(byte[] bytes, int index, int count) => Cp1251.GetString(bytes, index, count);
+
     private static Encoding Resolve(string enc)
     {
         var e = enc.ToLowerInvariant();
