@@ -212,4 +212,28 @@ public class LtxUtilsTests
         Assert.Contains("#6b7280", html);
         Assert.Contains("<span style=\"color:#a78bfa;font-weight:bold\">[wpn_ak74]</span>", html);
     }
+
+    [Fact]
+    public void CommunityIcons_keep_expected_code_points()
+    {
+        Assert.Equal("1f3ad", CodePoints("actor"));
+        Assert.Equal("1f6e1+fe0f", CodePoints("dolg"));
+        Assert.Equal("2622+fe0f", CodePoints("monolith"));
+        Assert.Equal("1f981", CodePoints("chimera"));
+        Assert.Equal("1f47e", CodePoints("arena_monstr"));
+        Assert.Equal("1fa78", CodePoints("bloodsucker"));
+    }
+
+    /// <summary>Кодовые точки значения COMMUNITY_ICONS через «+» (эталон из src/lib/ltx.js).</summary>
+    private static string CodePoints(string key)
+    {
+        var s = ItemCatalog.CommunityIcons[key];
+        var parts = new List<string>();
+        for (var i = 0; i < s.Length; i++)
+        {
+            parts.Add(char.ConvertToUtf32(s, i).ToString("x"));
+            if (char.IsHighSurrogate(s[i])) i++;
+        }
+        return string.Join('+', parts);
+    }
 }

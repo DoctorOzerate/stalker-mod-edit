@@ -9,7 +9,7 @@
 
 - [x] Этап 0. Каркас и соглашения — решение `dotnet/XRayForge.sln` создано, собирается, тесты проходят
 - [x] Этап 1. Core: фундамент (history, i18n, core) — выполнено (14 тестов зелёные)
-- [~] Этап 2. Core: парсеры данных — сделано: Lua / Graph / Dialogs / XML / Quests / Spawn (78 тестов зелёные); осталось: полный порт `ltx.js` + `ltx.test.mjs`
+- [x] Этап 2. Core: парсеры данных — выполнено: Lua / Graph / Dialogs / XML / Quests / Spawn / Ltx (121 тест зелёный)
 - [ ] Этап 3. DDS-кодек
 - [ ] Этап 4. Модель проекта + персистенция
 - [ ] Этап 5. Каркас UI
@@ -221,7 +221,7 @@ dotnet/
 
 | Порт из | Классы Core | Ключевые точки входа | Тестов |
 |---|---|---|---|
-| `ltx.js` | `Ltx/`: `LtxParser` (+ модели `LtxEntry/LtxSection/LtxInclude/LtxDocument`), `LtxTextTools`, `IconGrid`, `LtxIncludes`, `ItemCatalog`, `LtxInheritance`, `LtxDomainParsers`, `LtxHighlight` | `Parse`, `SplitLines`, `UpdateLine`, `RemoveSection`, `AddSection`, `AddFieldToSection`, `RemoveFieldByLine`, `RenameSection`, `ReplaceFieldValues`, `ResolveIncludes`, `IsFileLoaded`, `FindIncludeSuggestion`, `IncludeTreeRows`, `IncludeGraphSvg`, `AtlasPresets`, `IconCoords`, `IsValidGridValue`, `IsValidGridWH`, `ClassifyItem`, `ItemFieldProfile`, `ItemFileCategory`, `IsItemFile`, `MergedEntries`, `InheritanceTree`, `ValidateRefs`, `FindDuplicateSections`, `FindInheritanceCycles`, `ParseRatingScales`, `ParseSquadDescr`, `ParseSecrets`, `ParseSpawnSections`, `ParseMonsters`, `ParseActor`, `ParseSurgeManager`, `ParseTrade`, `ParseGameRelations`, `Highlight`/`HighlightLine`/`ToHtml` | 42 |
+| `ltx.js` | `Ltx/`: `LtxParser` (+ модели `LtxEntry/LtxSection/LtxInclude/LtxDocument`), `LtxTextTools`, `IconGrid`, `LtxIncludes`, `ItemCatalog`, `LtxInheritance`, `LtxDomainParsers`, `LtxHighlight` | `Parse`, `SplitLines`, `UpdateLine`, `RemoveSection`, `AddSection`, `AddFieldToSection`, `RemoveFieldByLine`, `RenameSection`, `ReplaceFieldValues`, `ResolveIncludes`, `IsFileLoaded`, `FindIncludeSuggestion`, `IncludeTreeRows`, `IncludeGraphSvg`, `AtlasPresets`, `IconCoords`, `IsValidGridValue`, `IsValidGridWH`, `ClassifyItem`, `ItemFieldProfile`, `ItemFileCategory`, `IsItemFile`, `MergedEntries`, `InheritanceTree`, `ValidateRefs`, `FindDuplicateSections`, `FindInheritanceCycles`, `ParseRatingScales`, `ParseSquadDescr`, `ParseSecrets`, `ParseSpawnSections`, `ParseMonsters`, `ParseActor`, `ParseSurgeManager`, `ParseTrade`, `ParseGameRelations`, `Highlight`/`HighlightLine`/`ToHtml` | 43 |
 | `lua.js` | `Lua/`: `LuaModels`, `LuaCatalog`, `LuaTokenizer`, `LuaFormatter`, `LuaAnalyzer` | `Tokenize`, `TokenizeLines`, `CountBrackets`, `LongBracketEnd`, `Format`, `FunctionBlocks`, `Check`, `UndeclaredGlobals`, `DuplicateFunctions`, `Unused`, `BuildCallGraph`, `Completions`, `ValidateScriptBindings` | 13 |
 | `graph.js` | `Graph/`: `GraphData`, `GraphLayout`, `GraphSvg`, `DialogueGroups` + полный `GraphValidator` | `SafeNode`, `SafeData`, `SafeMetadata`, `FlattenDialogues`, `SuggestTextId`, `BracketBalanceOf`, `ValidateMetadataSyntax`, `LayoutDialogue`, `NodeLabel`, `RoleColor`, `Stats`, `GraphToSvg`, `DialogueGroup` | 9 |
 | `dialogs.js` | `Dialogs/`: `DialogueExport`, `DialogueFiles`, `TextIdTools` | `DialogueToXml`, `DialogsLtx`, `GameFilesFromDialogues`, `ValidateTextIds`, `ResolveTextId`, `FindTextIdIssues`, `Coverage` | 10 |
@@ -243,15 +243,16 @@ FieldProfiles/FieldDescriptions`. Возвращаемые объекты — Pa
 (ключи LTX внутри значений по-прежнему snake_case).
 
 **Итог:** `dotnet build XRayForge.sln` — 0 ошибок / 0 предупреждений;
-`dotnet test XRayForge.sln` — **120 тестов, 0 падений** (`CoreTests` 10,
-`LtxTests` 24, `LtxUtilsTests` 18, `LuaTests` 13, `GraphTests` 9,
+`dotnet test XRayForge.sln` — **121 тест, 0 падений** (`CoreTests` 10,
+`LtxTests` 24, `LtxUtilsTests` 19, `LuaTests` 13, `GraphTests` 9,
 `DialogsTests` 10, `XmlTests` 14, `QuestTests` 13, `SpawnTests` 5,
 `HistoryTests` 3, `LocalizationTests` 1).
 
 **Порт `test/ltx.test.mjs` выполнен целиком** — 24 кейса в `LtxTests.cs`
-(плюс 18 собственных кейсов в `LtxUtilsTests.cs` на функции, которые в JS-тестах
+(плюс 19 собственных кейсов в `LtxUtilsTests.cs` на функции, которые в JS-тестах
 не покрыты: правка текста/секций, сетка атласа, инклюды, дерево инклюдов и SVG,
-`mergedItemEntries`, категории файлов, размеры справочников, токены подсветки).
+`mergedItemEntries`, категории файлов, размеры справочников, токены подсветки,
+кодовые точки эмодзи `COMMUNITY_ICONS`).
 
 **Открытый вопрос (не блокирует этап):** структурный обход `all.spawn`
 (все классы `CSE_*`, версия спавна) — текущий `SpawnAnalyzer` даёт заголовок,
