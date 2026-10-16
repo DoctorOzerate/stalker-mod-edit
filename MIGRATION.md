@@ -9,13 +9,14 @@
 
 - [x] Этап 0. Каркас и соглашения — решение `dotnet/XRayForge.sln` создано, собирается, тесты проходят
 - [x] Этап 1. Core: фундамент (history, i18n, core) — выполнено (14 тестов зелёные)
-- [ ] Этап 2. Core: парсеры данных
+- [~] Этап 2. Core: парсеры данных — сделано: Lua / Graph / Dialogs / XML / Quests / Spawn (78 тестов зелёные); осталось: полный порт `ltx.js` + `ltx.test.mjs`
 - [ ] Этап 3. DDS-кодек
 - [ ] Этап 4. Модель проекта + персистенция
 - [ ] Этап 5. Каркас UI
 - [ ] Этап 6. Редактор диалогов (граф)
 - [ ] Этап 7. Остальные вкладки
 - [ ] Этап 8. Экспорт и самопроверка
+- [ ] Этап 9. UI по референсам (скриншоты, шрифты, палитра, иконки)
 
 ---
 
@@ -197,7 +198,7 @@ dotnet/
 **Отложено:** `migrateProject` → Этап 4 (нужна типовая модель проекта);
 плагины (`new Function`) → решение отложено (см. §5).
 
-### Этап 2. Core: парсеры данных
+### Этап 2. Core: парсеры данных 🚧
 - `ltx.js` → `Core/Ltx` (полный парсер, инклюды, секции, `mergedItemEntries`,
   категории, `parseGameRelations`, `parseRatingScales`, `parseSquadDescr`,
   `parseSecrets`, `parseSpawnSections`, `parseMonsters`, `parseActor`,
@@ -215,7 +216,38 @@ dotnet/
 - `spawn.js` → `Core/Spawn`.
 - **Порт всех тестов** `ltx/dialogs/graph/xml/quests/lua/spawn.test.mjs` в xUnit.
 
+**Прогресс от 16.10.2026** (коммит `feat(stage 2): port data parsers (Lua, Graph, Dialogs, XML, Quests, Spawn)`):
+
+| Порт из | Классы Core | Ключевые точки входа | Тестов |
+|---|---|---|---|
+| `lua.js` | `Lua/`: `LuaModels`, `LuaCatalog`, `LuaTokenizer`, `LuaFormatter`, `LuaAnalyzer` | `Tokenize`, `TokenizeLines`, `CountBrackets`, `LongBracketEnd`, `Format`, `FunctionBlocks`, `Check`, `UndeclaredGlobals`, `DuplicateFunctions`, `Unused`, `BuildCallGraph`, `Completions`, `ValidateScriptBindings` | 13 |
+| `graph.js` | `Graph/`: `GraphData`, `GraphLayout`, `GraphSvg`, `DialogueGroups` + полный `GraphValidator` | `SafeNode`, `SafeData`, `SafeMetadata`, `FlattenDialogues`, `SuggestTextId`, `BracketBalanceOf`, `ValidateMetadataSyntax`, `LayoutDialogue`, `NodeLabel`, `RoleColor`, `Stats`, `GraphToSvg`, `DialogueGroup` | 9 |
+| `dialogs.js` | `Dialogs/`: `DialogueExport`, `DialogueFiles`, `TextIdTools` | `DialogueToXml`, `DialogsLtx`, `GameFilesFromDialogues`, `ValidateTextIds`, `ResolveTextId`, `FindTextIdIssues`, `Coverage` | 10 |
+| `xml.js` | `Xml/`: `XmlHelpers`, `StringTableParser`, `GameXmlParsers`, `GameXmlParsersExtra`, `DialogueImporter` | `XmlAttr`, `XmlTag`, `DetectLocale`, `MergeLanguages`, `ParseGeneralCharactersXml`, `Parse` (string_table), `ParseCharacterDescGeneral` и `…ToXml`, `ParseInfoPortions`, `ParseEncyclopedia`, `ParseNpcProfile`, `ParseTextureDescriptor`, `Import` | 14 |
+| `quests.js` | `Quests/`: `GameTasksParser`, `TaskManagerParser`, `QuestExport`, `QuestAnalysis`, `QuestCatalog`, `QuestChainSvg` + `Models/Quest.cs` | `Parse` (game_tasks / task_manager), `QuestsToXml`, `TaskManagerLtx`, `Validate`, `ComputeChains`, `Render`, `ParseCondlistEntry`, `CondlistEntryToStr` | 13 |
+| `spawn.js` | `Spawn/`: `SpawnAnalyzer` | `ParseSpawnHeader`, `ReadCString`, `ExtractSpawnStrings`, `AnalyzeSpawn` | 5 |
+
+Плюс модели `Models/{Language,DialogueFileGroup,Quest,XmlDocuments}.cs`; в
+`Text/GameEncoding.cs` добавлен `EncodeCp1251`.
+
+**Итог:** `dotnet build XRayForge.sln` — 0 ошибок / 0 предупреждений;
+`dotnet test XRayForge.sln` — **78 тестов, 0 падений** (`CoreTests` 10,
+`LuaTests` 13, `GraphTests` 9, `DialogsTests` 10, `XmlTests` 14, `QuestTests` 13,
+`SpawnTests` 5, `HistoryTests` 3, `LocalizationTests` 1).
+
+**Осталось до закрытия этапа:**
+- Полный порт `ltx.js` → `Core/Ltx/*`: `mergedItemEntries`, категории предметов,
+  `parseGameRelations`, `parseRatingScales`, `parseSquadDescr`, `parseSecrets`,
+  `parseSpawnSections`, `parseMonsters`, `parseActor`, `parseSurgeManager`,
+  `parseTrade`, `highlightLtx` (токены подсветки). Сейчас в `Ltx/LtxParser.cs`
+  есть только базовый разбор секций/ключей/`#include` (этап 1).
+- Порт `test/ltx.test.mjs` — самый крупный набор кейсов (~10.7 КБ).
+- Структурный обход `all.spawn` (все классы `CSE_*`, версия спавна) — текущий
+  `SpawnAnalyzer` даёт заголовок, читаемые строки и эвристику секций; нужен ли
+  полный обход, решить вместе с вкладкой спавна.
+
 **Критерий:** все Core-тесты зелёные; публичные сигнатуры стабильны.
+*(Текущее состояние: 78/78 зелёные; этап не закрыт только из-за LTX.)*
 
 ### Этап 3. DDS-кодек
 - `dds.js` → `Core/Imaging/DdsCodec.cs`: `decodeDxt1/3/5`, `decodeBc4/Bc5`,
@@ -237,7 +269,8 @@ dotnet/
 - `MainWindow` с левой навигацией/вкладками: Диалоги, Персонажи, Предметы,
   Иконки, Скрипты, system.ltx, Языки, Квесты, Обзор.
 - Welcome-окно (создание/открытие/импорт/удаление проектов).
-- Настройки программы и проекта; темы (dark/light) через `ResourceDictionary`;
+- Настройки программы и проекта; тема **Steel** (основная) + акцентные
+  состояния **Olive/Hazard** через `ResourceDictionary` (см. §9);
   горячие клавиши (`InputBindings`/`KeyBinding`).
 - `ViewModels` с привязками, `RelayCommand`.
 
@@ -271,6 +304,44 @@ dotnet/
 - Порядок переноса тестов определяет порядок готовности этапов 1–3.
 - UI-логика покрывается по мере возможности (сервисы + ViewModels), сложный
   граф — ручная проверка по чек-листу исходного README.
+
+---
+
+## 9. UI по референсам (скриншоты и шрифты)
+
+Папка `dotnet/docs/ui-references/` — реестр визуальных референсов, по которым
+воссоздаётся интерфейс WPF (этапы 5–7). См. `ui-references/README.md`.
+
+**Решение (16.10.2026):** основная тема — **Steel** (`work.png`, серый металл +
+зелёный фосфор) для всего UI; **Olive** (`good-sborka.png`) и **Hazard**
+(`fail-sborka.png`) — акцентные состояния для плотных редакторов и экрана
+проверки/ошибок, а не отдельные скины. Палитра снята пиксельно и зафиксирована
+в `ui-references/tokens/00-palette.tokens.md`.
+
+**Возможности:**
+- Анализ скриншотов (PNG/JPG/WEBP): иерархия layout, сетка, отступы и радиусы,
+  состояния компонентов, типографика, иконографика.
+- Сэмплирование палитры: пиксельные цвета фонов/акцентов/текста (скрипт на
+  `System.Drawing`) → токены темы.
+- Скачивание шрифтов по прямым URL (`Invoke-WebRequest`) с файлом лицензии;
+  альтернатива — NuGet-упаковки (`MahApps.Metro.IconPacks` и др.).
+- Перенос токенов в XAML: `Colors.xaml`, `Typography.xaml`, `Controls.xaml`
+  (+ `ResourceDictionary` тем dark/light из этапа 5).
+
+**Раскладка папки:**
+- `screenshots/` — скриншоты (имя `NN_<экран>_<тема>.png`);
+- `fonts/` — шрифты `.ttf/.otf` + `LICENSE`, URL в реестре;
+- `tokens/` — извлечённые палитры и размеры (`*.tokens.md`).
+
+**Порядок работы:**
+1. Пользователь добавляет скриншоты в `screenshots/`.
+2. Я анализирую layout/палитру/типографику, фиксирую токены в `tokens/`.
+3. Токены → `ResourceDictionary` (этап 5) → применение во вкладках (этапы 6–7).
+4. При необходимости скачиваю шрифты по URL и подключаю как `Resource`.
+
+**Критерий:** интерфейс WPF визуально соответствует референсам (layout,
+палитра, типографика); все используемые шрифты — с открытой лицензией и
+зафиксированным источником.
 
 
 
