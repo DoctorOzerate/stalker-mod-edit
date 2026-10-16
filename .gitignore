@@ -18,3 +18,4 @@ Thumbs.db
 # .NET build output
 dotnet/**/bin/
 dotnet/**/obj/
+.vscode/settings.json

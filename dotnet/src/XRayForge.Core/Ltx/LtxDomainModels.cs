@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace XRayForge.Core.Ltx;
 
 /// <summary>Пара «имя — значение» из шкал рангов/репутации.</summary>
@@ -132,10 +134,18 @@ public sealed class TradeInfo
     public List<TradeSupply> Supplies { get; set; } = new();
 }
 
-/// <summary>Сообщества и матрица отношений из game_relations.ltx (#9).</summary>
+/// <summary>
+/// Сообщества и матрица отношений из game_relations.ltx (#9) плюс шкалы
+/// рангов/репутации (в JS сканер добавляет `gameRelations.scales`).
+/// </summary>
 public sealed class GameRelationsInfo
 {
-    public List<string> Communities { get; set; } = new();
-    public Dictionary<string, List<string>> Relations { get; set; } = new(StringComparer.Ordinal);
-    public List<string> MonsterCommunities { get; set; } = new();
+    [JsonPropertyName("communities")] public List<string> Communities { get; set; } = new();
+    [JsonPropertyName("relations")] public Dictionary<string, List<string>> Relations { get; set; } = new(StringComparer.Ordinal);
+    [JsonPropertyName("monsterCommunities")] public List<string> MonsterCommunities { get; set; } = new();
+
+    /// <summary>Шкалы rating/reputation/goodwill (ставится сканером gamedata).</summary>
+    [JsonPropertyName("scales")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public RatingScales? Scales { get; set; }
 }

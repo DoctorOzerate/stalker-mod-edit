@@ -47,7 +47,8 @@ public static class GraphData
             Expression = src.Expression,
             ActionType = src.ActionType,
             Params = src.Params,
-            Metadata = SafeMetadata(src.Metadata)
+            Metadata = SafeMetadata(src.Metadata),
+            Extra = src.Extra
         };
     }
 
@@ -72,7 +73,8 @@ public static class GraphData
             Type = type,
             X = raw.X,
             Y = raw.Y,
-            Data = data
+            Data = data,
+            Extra = raw.Extra
         };
     }
 
@@ -98,7 +100,10 @@ public static class GraphData
                 Nodes = nodes,
                 Edges = d.Edges.Where(e => e != null).ToList(),
                 Warnings = d.Warnings,
-                Imported = d.Imported
+                Imported = d.Imported,
+                SourcePath = d.SourcePath,
+                SourceFile = d.SourceFile,
+                Extra = d.Extra
             });
         }
 

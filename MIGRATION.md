@@ -10,13 +10,12 @@
 - [x] Этап 0. Каркас и соглашения — решение `dotnet/XRayForge.sln` создано, собирается, тесты проходят
 - [x] Этап 1. Core: фундамент (history, i18n, core) — выполнено (14 тестов зелёные)
 - [x] Этап 2. Core: парсеры данных — выполнено: Lua / Graph / Dialogs / XML / Quests / Spawn / Ltx (121 тест зелёный)
-- [x] Этап 3. DDS-кодек — выполнено: DXT1/3/5 + BC4/BC5 + энкодер + mip-цепочка (214 теста зелёные)
-- [ ] Этап 4. Модель проекта + персистенция
-- [ ] Этап 5. Каркас UI
+- [x] Этап 3. DDS-кодек — выполнено: DXT1/3/5 + BC4/BC5 + энкодер + mip-цепочка (214 тестов зелёные)
+- [x] Этап 4. Модель проекта + персистенция — выполнено: модель схемы 3, миграция, JSON-паритет, профиль `%APPDATA%`, сканер gamedata, автосейв (249 тестов зелёные)
+- [ ] Этап 5. Каркас UI + UI по референсам (скриншоты, палитра, шрифты, иконки — объединён с этапом 9)
 - [ ] Этап 6. Редактор диалогов (граф)
 - [ ] Этап 7. Остальные вкладки
 - [ ] Этап 8. Экспорт и самопроверка
-- [ ] Этап 9. UI по референсам (скриншоты, шрифты, палитра, иконки)
 
 ---
 
@@ -46,11 +45,11 @@ X-Ray Forge — редактор модов для игр на движке X-Ra
 
 | Файл | Назначение | Куда в WPF |
 |---|---|---|
-| `electron/main.cjs` | IPC: save-project, open-dir, read-dir, save-file, open-file | `Services/FileSystemService` + нативные диалоги WPF |
+| `electron/main.cjs` | IPC: save-project, open-dir, read-dir, save-file, open-file | `Storage/ProjectFileService`, `Storage/FileSystemService` + нативные диалоги WPF |
 | `electron/preload.cjs` | мост `window.xrayForge` | не нужен |
 | `src/main.jsx` | точка входа React | `App.xaml` |
-| `src/App.js` (2270 стр.) | монолит: состояние + рендер всех экранов | `MainWindow` + ViewModels |
-| `src/lib/core.js` | пути, экранирование XML, парсинг LTX/XML, кодировки, миграция | `Core/` |
+| `src/App.js` (2270 стр.) | монолит: состояние + рендер всех экранов | `Projects/` (модель, миграция, целостность), `Storage/` (профиль, автосейв), `Gamedata/` (сканер) + `MainWindow` + ViewModels |
+| `src/lib/core.js` | пути, экранирование XML, парсинг LTX/XML, кодировки, миграция | `Core/` + `Projects/ProjectMigration` |
 | `src/lib/ltx.js` | LTX-парсер, инклюды, предметы, категории, подсветка, `parse*` | `Core/Ltx/` |
 | `src/lib/xml.js` | string_table, персонажи, локали, info_portions, encyclopedia, npc_profile, дескрипторы текстур | `Core/Xml/` |
 | `src/lib/dialogs.js` | экспорт диалогов → XML/ZIP, валидация text_id | `Core/Dialogs/` |
@@ -69,16 +68,27 @@ X-Ray Forge — редактор модов для игр на движке X-Ra
 
 ## 3. Доменная модель
 
-Проект (`.project.json`, `SCHEMA_VERSION = 3`):
+Проект (`.project.json`, `SCHEMA_VERSION = 3`; legacy-ветка `core.js:migrateProject` пишет 4):
 
 ```
 Project {
-  version, projectName, dialogueId, series (soc/cs/cop), theme,
-  nodes[], edges[], characters[], languages[], scripts[], dialogues[],
-  ltxFiles{path→text}, textures[], itemCategories{}, pinnedIcons[], quests[],
-  settings{ importEncoding, exportEncoding }
+  version, projectName, dialogueId, series (soc/cs/cop), theme, gamedataPath, resourcesPath,
+  nodes[], edges[], characters[], dialogues[], quests[], generalCommunities[], itemsLtx,
+  scripts[], systemLtx, languages[], atlas{ columns, cellSize, cellHeight },
+  settings{ importEncoding, exportEncoding, showNodeText, autosaveInterval },
+  ltxFiles{path→text}, textures[], itemCategories{}, itemFiles{}, itemOrigins{},
+  equipSlots{}, pinnedIcons[], pinCollections{name→[]},
+  // поля, наполняемые сканером gamedata: в `.project.json` не пишутся (toPersistable)
+  gameRelations, squads[], secrets, spawnSections[], actor, monsters[], npcProfiles[],
+  infoPortions[], encyclopedia[], trade, surgeManager, textureMap{}
 }
 ```
+
+Пять «тяжёлых» gamedata-полей (`ltxFiles`, `textures`, `scripts`, `itemFiles`,
+`itemOrigins`) хранятся в снапшоте gamedata (в JS — `GAMEDATA_KEY`, в порте —
+`gamedata.json` профиля); `toPersistable` вычищает их перед сохранением проекта.
+Незнакомые ключи файла не теряются — идут в `JsonExtensionData` (`Project.Extra`),
+как в JS они просто остаются свойствами объекта.
 
 Настройки программы (профиль, отдельно от проекта): тема, акцентный цвет,
 плотность UI, отображение узлов (текст/id), автосейв (сек), горячие клавиши,
@@ -110,8 +120,8 @@ Project {
 | интерактивный канвас (pan/zoom/marquee, Shift+drag, Ctrl+wheel) | `Canvas` в `ScrollViewer` + `RenderTransform` + обработчики мыши |
 | `useState`/`useEffect` | MVVM: `ObservableObject`/`INotifyPropertyChanged` (CommunityToolkit.Mvvm) |
 | `createHistory` (undo/redo) | паттерн Command / снапшот-стеки |
-| `localStorage` | JSON-файлы в `%APPDATA%\XRayForge` |
-| Electron-диалоги + `fs` | `Microsoft.Win32.OpenFolderDialog` / `OpenFileDialog` / `SaveFileDialog` + `System.IO` |
+| `localStorage` (5 ключей) | `Storage/AppDataService` → `%APPDATA%\XRayForge`: `settings.json`, `current.project.json`, `projects.json`, `backups.json`, `gamedata.json` |
+| Electron-диалоги + `fs` | `Storage/ProjectFileService` (`saves/<имя>.project.json`), `Storage/FileSystemService`, `Gamedata/GamedataScanner`; нативные диалоги — `Microsoft.Win32.*Dialog` (этап 5) |
 | `tr(locale, key)` | `.resx` (RU по умолчанию, EN fallback) |
 | `new Function(...)` для плагинов | см. §5 |
 | Tailwind-стили / темы | WPF `ResourceDictionary` + DynamicResource, dark/light |
@@ -198,8 +208,8 @@ dotnet/
 - `Validation/CharacterValidator.cs` — проверка персонажа.
 - Порт тестов: `HistoryTests`, `LocalizationTests`, `CoreTests` (14 тестов, зелёные).
 
-**Отложено:** `migrateProject` → Этап 4 (нужна типовая модель проекта);
-плагины (`new Function`) → решение отложено (см. §5).
+**Отложено:** плагины (`new Function`) → решение отложено (см. §5).
+`migrateProject` (core.js) реализован на этапе 4 — `Projects/ProjectMigration.MigrateLegacy`.
 
 ### Этап 2. Core: парсеры данных ✅
 - `ltx.js` → `Core/Ltx` (полный парсер, инклюды, секции, `mergedItemEntries`,
@@ -322,23 +332,118 @@ DXT1/DXT3/DXT5/mipmaps), `DdsContainerTests` 25 (32- и 24-битный
 выполнено (DXT1 — побайтово точный на 2-цветных блоках и с толерантностью 5-6-5
 на остальных, DXT3-альфа — точная, DXT5 — см. наследованный дефект выше).
 
-### Этап 4. Модель проекта + персистенция
-- `Models/Project.cs` и вложенные сущности.
-- `Services/ProjectSerializer.cs` (JSON `.project.json`, миграция версий).
-- `Services/AppDataService.cs` (%APPDATA% — профиль, настройки, бэкапы).
-- `Services/FileSystemService.cs` + `GamedataScanner.cs` (рекурсивное чтение
-  папки, определение типа `.xml/.ltx/.script/.lua/.dds`, кодировки, пропуск
-  повреждённых, прогресс).
-- Автосейв по таймеру (настройка интервала).
+### Этап 4. Модель проекта + персистенция ✅
+- `Projects/Project.cs` — модель схемы 3 (`Project`, `ProjectSettings`,
+  `ProjectAtlas`, `ScriptFile`, `ProjectTexture`, `PinnedIcon`, `TextureMapEntry`)
+  и `ProjectSchema` (версии 3/4, лимит бэкапов 10).
+- `Projects/ProjectReader.cs` + `Projects/ProjectMigration.cs` — порт `migrate`
+  (App.js) и `migrateProject` (core.js): нормализация узлов/рёбер/языков/скриптов/
+  квестов/атласа/настроек, незнакомые ключи — в `JsonExtensionData` (`Extra`).
+- `Projects/ProjectSerializer.cs` — `.project.json`: camelCase + snake_case-ключи
+  как в JS, ключи словарей (пути LTX, имена секций) пишутся без преобразования,
+  `UnsafeRelaxedJsonEscaping` (кириллица не эскейпится), `ToPersistable`, `Save`/`Load`.
+- `Projects/ProjectIntegrity.cs` — порт `validateProjectIntegrity` (text_id,
+  start_dialog/actor_dialog, квесты, битые `#include` system.ltx).
+- `Storage/AppDataService.cs` — `%APPDATA%\XRayForge` вместо `localStorage`:
+  `settings.json`, `current.project.json`, `projects.json`, `backups.json`
+  (лимит 10), `gamedata.json` (снапшоты по имени проекта). `Storage/ProgramSettings.cs`
+  — порт `loadProgramSettings` (тема, акцент, плотность, локаль, размер шрифта,
+  горячие клавиши) и `comboMatches`.
+- `Storage/ProjectFileService.cs` — порт IPC `xray:save-project`:
+  `saves/<sanitized-имя>.project.json` (`\w` в ECMAScript-режиме, как в JS).
+- `Storage/FileSystemService.cs` — рекурсивное чтение папки (`readDirectoryFiles`),
+  нормализация путей, пропуск нечитаемых файлов, `ReadGameText`.
+- `Gamedata/GamedataScanner.cs` — порт `processGamedataFiles`: классификация
+  `.dds/.ltx/.script/.lua/.xml`, разбор XML (переводы/персонажи/диалоги/квесты +
+  контентная детекция), слияние с проектом (персонажи, языки через
+  `MergeLanguages`, квесты), пост-обработка LTX (game_relations + scales, squads,
+  secrets, spawn_sections, actor, monsters, surge_manager, trade_*), `textureMap`,
+  слияние item-файлов в `itemsLtx`/`itemOrigins`, статистика и `skipped`.
+  Результат — `GamedataPatch` с `Apply(project)` (аналог `patch(next)`);
+  PNG-энкодер текстур подставляется делегатом (canvas в Core нет).
 
-### Этап 5. Каркас UI
+**Отклонения от JS (осознанные):**
+1. Прогресс сканирования: в JS `continue` внутри `try` пропускал `done++`,
+   поэтому счётчик прогресса почти не двигался; в порте считается каждый файл.
+2. `NaN`/`null` в `settings.autosaveInterval` → `0` (в JS — `NaN`, а
+   `JSON.stringify` пишет `null`); `null` и нечисловые значения отключают автосейв,
+   как и в JS.
+3. Не-скалярные значения строковых полей проекта заменяются значениями по
+   умолчанию, а элементы массивов, не приводимые к модели, пропускаются (в JS они
+   остаются как есть); незнакомые ключи не теряются (`Extra`), а «неразобранные»
+   персонажи сохраняют `id`/`name` и остаток полей в `Extra`.
+4. `validateProjectIntegrity` в JS сравнивает массив `start_dialog`/`actor_dialog`
+   со множеством id и из-за этого всегда сообщает о проблеме; в порте проверяется
+   каждый id (иначе проверка бесполезна).
+5. `pixelsToDataURL` не переносится — вместо него `GamedataScanOptions.PngEncoder`
+   (WPF-слой, этапы 5–7); без энкодера `textures[].dataURL` остаётся `null`.
+
+**Тесты (35 новых, всего 249):** `ProjectTests` 12 (дефолты `emptyProject`, ключи
+JSON и snake_case, кириллица без эскейпа, verbatim-ключи словарей, `toPersistable`,
+миграция узлов/рёбер/языков/скриптов/квестов/атласа/настроек, толерантность к
+битым типам, исключения `Deserialize`, legacy `migrateProject` с удалением
+`speaker`, целостность проекта, round-trip реального `saves/*.project.json`),
+`StorageTests` 16 (настройки программы и их нормализация, `comboMatches`, текущий
+проект, список проектов и его нормализация, лимит бэкапов, снапшоты gamedata,
+`resetStorage`, путь `%APPDATA%`, `sanitizeName` + `saves/*.project.json`, три
+сценария автосейва), `GamedataScanTests` 7 (классификация и статистика,
+item-файлы и `itemsLtx`, пропуски при ошибке чтения, `Apply` только найденных
+полей, игнор чужих `.dds`, PNG-энкодер, нормализация путей при чтении каталога).
+
+**Итог:** `dotnet build XRayForge.sln` — 0 ошибок / 0 предупреждений;
+`dotnet test XRayForge.sln` — **249 тестов, 0 падений**.
+
+**Критерий:** проект сохраняется и читается в формате JS-версии, старые файлы
+мигрируются, профиль перенесён в `%APPDATA%`, сканирование gamedata воспроизводит
+`processGamedataFiles` — выполнено.
+
+### Этап 5. Каркас UI + UI по референсам
+> Этап 9 («UI по референсам») объединён с этим этапом: визуальный слой делается
+> сразу по референсам, а не отдельной итерацией.
+
 - `MainWindow` с левой навигацией/вкладками: Диалоги, Персонажи, Предметы,
   Иконки, Скрипты, system.ltx, Языки, Квесты, Обзор.
 - Welcome-окно (создание/открытие/импорт/удаление проектов).
 - Настройки программы и проекта; тема **Steel** (основная) + акцентные
-  состояния **Olive/Hazard** через `ResourceDictionary` (см. §9);
-  горячие клавиши (`InputBindings`/`KeyBinding`).
-- `ViewModels` с привязками, `RelayCommand`.
+  состояния **Olive/Hazard** через `ResourceDictionary` (см. «UI по референсам»
+  ниже); горячие клавиши (`InputBindings`/`KeyBinding`).
+- `ViewModels` с привязками, `RelayCommand`; подключение сервисов этапа 4
+  (`AppDataService`, `ProjectFileService`, `GamedataScanner`, `AutosaveService`).
+
+**UI по референсам (скриншоты и шрифты).** Папка `dotnet/docs/ui-references/` —
+реестр визуальных референсов, по которым воссоздаётся интерфейс WPF (этапы 5–7).
+См. `ui-references/README.md`.
+
+**Решение (16.10.2026):** основная тема — **Steel** (`work.png`, серый металл +
+зелёный фосфор) для всего UI; **Olive** (`good-sborka.png`) и **Hazard**
+(`fail-sborka.png`) — акцентные состояния для плотных редакторов и экрана
+проверки/ошибок, а не отдельные скины. Палитра снята пиксельно и зафиксирована
+в `ui-references/tokens/00-palette.tokens.md`.
+
+**Возможности:**
+- Анализ скриншотов (PNG/JPG/WEBP): иерархия layout, сетка, отступы и радиусы,
+  состояния компонентов, типографика, иконографика.
+- Сэмплирование палитры: пиксельные цвета фонов/акцентов/текста (скрипт на
+  `System.Drawing`) → токены темы.
+- Скачивание шрифтов по прямым URL (`Invoke-WebRequest`) с файлом лицензии;
+  альтернатива — NuGet-упаковки (`MahApps.Metro.IconPacks` и др.).
+- Перенос токенов в XAML: `Colors.xaml`, `Typography.xaml`, `Controls.xaml`
+  (+ `ResourceDictionary` тем dark/light этого этапа).
+
+**Раскладка папки:**
+- `screenshots/` — скриншоты (имя `NN_<экран>_<тема>.png`);
+- `fonts/` — шрифты `.ttf/.otf` + `LICENSE`, URL в реестре;
+- `tokens/` — извлечённые палитры и размеры (`*.tokens.md`).
+
+**Порядок работы:**
+1. Пользователь добавляет скриншоты в `screenshots/`.
+2. Я анализирую layout/палитру/типографику, фиксирую токены в `tokens/`.
+3. Токены → `ResourceDictionary` (этап 5) → применение во вкладках (этапы 6–7).
+4. При необходимости скачиваю шрифты по URL и подключаю как `Resource`.
+
+**Критерий:** интерфейс WPF визуально соответствует референсам (layout,
+палитра, типографика); все используемые шрифты — с открытой лицензией и
+зафиксированным источником.
 
 ### Этап 6. Редактор диалогов (граф)
 - Граф-канвас: `Canvas` + `ScrollViewer`, `RenderTransform` для pan/zoom,
@@ -367,47 +472,14 @@ DXT1/DXT3/DXT5/mipmaps), `DdsContainerTests` 25 (32- и 24-битный
 
 - Каждый JS-модуль `src/lib/*` → класс(ы) `Core/*` с 1:1 портом тестов из
   `test/*.mjs` в xUnit — это главный якорь корректности.
-- Порядок переноса тестов определяет порядок готовности этапов 1–3.
+- Порядок переноса тестов определяет порядок готовности этапов 1–4.
+- Формат `.project.json` проверяется round-trip'ом реальных файлов
+  `saves/*.project.json` (тест `ProjectTests.Real_js_project_file_round_trips_without_field_loss`).
 - UI-логика покрывается по мере возможности (сервисы + ViewModels), сложный
   граф — ручная проверка по чек-листу исходного README.
 
 ---
 
-## 9. UI по референсам (скриншоты и шрифты)
-
-Папка `dotnet/docs/ui-references/` — реестр визуальных референсов, по которым
-воссоздаётся интерфейс WPF (этапы 5–7). См. `ui-references/README.md`.
-
-**Решение (16.10.2026):** основная тема — **Steel** (`work.png`, серый металл +
-зелёный фосфор) для всего UI; **Olive** (`good-sborka.png`) и **Hazard**
-(`fail-sborka.png`) — акцентные состояния для плотных редакторов и экрана
-проверки/ошибок, а не отдельные скины. Палитра снята пиксельно и зафиксирована
-в `ui-references/tokens/00-palette.tokens.md`.
-
-**Возможности:**
-- Анализ скриншотов (PNG/JPG/WEBP): иерархия layout, сетка, отступы и радиусы,
-  состояния компонентов, типографика, иконографика.
-- Сэмплирование палитры: пиксельные цвета фонов/акцентов/текста (скрипт на
-  `System.Drawing`) → токены темы.
-- Скачивание шрифтов по прямым URL (`Invoke-WebRequest`) с файлом лицензии;
-  альтернатива — NuGet-упаковки (`MahApps.Metro.IconPacks` и др.).
-- Перенос токенов в XAML: `Colors.xaml`, `Typography.xaml`, `Controls.xaml`
-  (+ `ResourceDictionary` тем dark/light из этапа 5).
-
-**Раскладка папки:**
-- `screenshots/` — скриншоты (имя `NN_<экран>_<тема>.png`);
-- `fonts/` — шрифты `.ttf/.otf` + `LICENSE`, URL в реестре;
-- `tokens/` — извлечённые палитры и размеры (`*.tokens.md`).
-
-**Порядок работы:**
-1. Пользователь добавляет скриншоты в `screenshots/`.
-2. Я анализирую layout/палитру/типографику, фиксирую токены в `tokens/`.
-3. Токены → `ResourceDictionary` (этап 5) → применение во вкладках (этапы 6–7).
-4. При необходимости скачиваю шрифты по URL и подключаю как `Resource`.
-
-**Критерий:** интерфейс WPF визуально соответствует референсам (layout,
-палитра, типографика); все используемые шрифты — с открытой лицензией и
-зафиксированным источником.
 
 
 

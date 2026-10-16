@@ -119,8 +119,9 @@ public static class QuestExport
             if (q.RewardItem.Length > 0) sb.Append(Nl).Append("reward_item = ").Append(q.RewardItem);
             if (q.RewardTreasure.Length > 0) sb.Append(Nl).Append("reward_treasure = ").Append(q.RewardTreasure);
 
-            for (var i = 0; i < q.Condlist.Count; i++)
-                sb.Append(Nl).Append("condlist_").Append(i).Append(" = ").Append(q.Condlist[i]);
+            var condlist = q.Condlist ?? new List<string>();
+            for (var i = 0; i < condlist.Count; i++)
+                sb.Append(Nl).Append("condlist_").Append(i).Append(" = ").Append(condlist[i]);
         }
 
         return sb.ToString();

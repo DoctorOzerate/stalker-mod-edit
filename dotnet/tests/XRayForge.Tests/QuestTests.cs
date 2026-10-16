@@ -91,7 +91,7 @@ public class QuestTests
         Assert.Equal("test_task", q[0].Id);
         Assert.Equal("money:10000", q[0].Reward);
         Assert.Equal("test_target", q[0].Objectives[0].Text);
-        Assert.Equal("{+x} complete", q[0].Condlist[0]);
+        Assert.Equal("{+x} complete", q[0].Condlist![0]);
         Assert.Equal("task_manager", q[0].Format);
     }
 
@@ -105,7 +105,7 @@ public class QuestTests
         var q = parsed[0];
         Assert.Equal("10000", q.RewardMoney);
         Assert.Equal("true", q.Storyline);
-        Assert.Equal("{+tbt_task_1_complete} complete", q.Condlist[0]);
+        Assert.Equal("{+tbt_task_1_complete} complete", q.Condlist![0]);
 
         var outText = QuestExport.TaskManagerLtx(parsed);
         Assert.Contains("reward_money = 10000", outText);
