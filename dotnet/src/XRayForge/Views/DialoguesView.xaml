@@ -13,7 +13,9 @@
       Шаг 6.5 — панели: палитра узлов с фильтром и списком загруженных диалогов слева, свойства
       реплики (роль, `text_id`, перевод, метаданные) в третьей колонке.
       Шаг 6.6 — мини-карта холста, свёртывание панелей (`paletteCollapsed`, `propsCollapsed`)
-      и полноэкранный холст (`canvasFull`). Прогон диалога, экспорт SVG и импорт — шаги 6.7–6.8.
+      и полноэкранный холст (`canvasFull`).
+      Шаг 6.7 — пошаговый прогон диалога (`playthrough`) и экспорт холста в SVG (`graphToSvg`),
+      шаг 6.8 — импорт диалогов из файла `game_dialogs*.xml`.
     -->
     <UserControl.Resources>
         <!-- Холст: `radial-gradient(ui.grid 1px, transparent 1px)` с шагом 20px.
@@ -166,6 +168,18 @@
             <Setter Property="HorizontalContentAlignment" Value="Center" />
         </Style>
 
+        <!-- Кнопка прогона диалога (`playthrough ? accentBtn : btn` в DialoguesTab.js):
+             пока прогон идёт, кнопка «Завершить прогон» подсвечена акцентом. -->
+        <Style x:Key="GraphPlaythroughButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding DialogueGraph.IsPlaythrough}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AccentDim}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentMain}" />
+                    <Setter Property="Foreground" Value="{DynamicResource TextAccent}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <!-- Подпись поля панели свойств (`text-xs` в JS) -->
         <Style x:Key="PropsLabel" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
             <Setter Property="FontSize" Value="11" />
@@ -289,6 +303,12 @@
                                 Command="{Binding DialogueGraph.AutoLayoutCommand}" Margin="0,0,0,6" />
                         <Button HorizontalAlignment="Stretch" Content="{loc:Loc graphCenterView}"
                                 Command="{Binding DialogueGraph.CenterViewCommand}" Margin="0,0,0,6" />
+                        <Button Style="{StaticResource GraphPlaythroughButton}" HorizontalAlignment="Stretch"
+                                Content="{Binding DialogueGraph.PlaythroughButtonLabel}"
+                                ToolTip="{loc:Loc graphPlaythroughTooltip}"
+                                Command="{Binding DialogueGraph.TogglePlaythroughCommand}" Margin="0,0,0,6" />
+                        <Button HorizontalAlignment="Stretch" Content="{loc:Loc graphExportSvg}"
+                                Command="{Binding DialogueGraph.ExportSvgCommand}" Margin="0,0,0,6" />
                         <Button Style="{StaticResource DangerButton}" HorizontalAlignment="Stretch"
                                 Content="{loc:Loc delete}"
                                 Command="{Binding DialogueGraph.DeleteSelectedCommand}"
@@ -302,6 +322,10 @@
                             <TextBlock Text="{Binding DialogueGraph.DialogueCount}"
                                        Style="{StaticResource PropsLabel}" Margin="4,0,0,0" />
                         </StackPanel>
+                        <!-- Импорт диалогов из файла `game_dialogs*.xml` (шаг 6.8): в JS диалоги
+                             попадают в проект сканированием gamedata. -->
+                        <Button HorizontalAlignment="Stretch" Content="{loc:Loc graphImportGameDialogs}"
+                                Command="{Binding DialogueGraph.ImportGameDialogsCommand}" Margin="0,0,0,6" />
                         <ItemsControl ItemsSource="{Binding DialogueGraph.DialogueBuckets}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -478,6 +502,63 @@
                             Background="{DynamicResource AccentMain}"
                             Visibility="{Binding DialogueGraph.IsConnecting, Converter={StaticResource BoolToVisibility}}">
                         <TextBlock Text="{loc:Loc graphConnectHint}" Foreground="White" FontSize="12" />
+                    </Border>
+
+                    <!-- Панель прогона диалога (`playthrough && <div absolute left-4 top-4 w-72
+                         max-h-[70%] overflow-auto rounded-xl border p-3>`): текущая реплика,
+                         варианты перехода и число пройденных нод. -->
+                    <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16,16,0,0" Width="288"
+                            CornerRadius="12" Padding="12"
+                            Background="{DynamicResource SurfacePanel}"
+                            BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
+                            Visibility="{Binding DialogueGraph.IsPlaythrough, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{loc:Loc graphPlaythroughTitle}"
+                                           FontWeight="Bold" VerticalAlignment="Center" />
+                                <Button Grid.Column="1" Style="{StaticResource GraphPanelButton}" Content="✕"
+                                        Foreground="{DynamicResource StateDanger}"
+                                        ToolTip="{loc:Loc graphPlaythroughStop}"
+                                        Command="{Binding DialogueGraph.ExitPlaythroughCommand}" />
+                            </Grid>
+                            <TextBlock Text="{Binding DialogueGraph.PlaythroughNode}"
+                                       Style="{StaticResource PropsLabel}" FontWeight="Bold"
+                                       TextWrapping="Wrap" Margin="0" />
+                            <!-- Текст реплики: у пропавшей ноды он пуст, поэтому блок скрывается
+                                 (`cur && <div muted>{nodeLabel}</div>` в JS). -->
+                            <TextBlock Text="{Binding DialogueGraph.PlaythroughText}"
+                                       Style="{StaticResource PropsLabel}" TextWrapping="Wrap"
+                                       Visibility="{Binding DialogueGraph.PlaythroughText,
+                                                    Converter={StaticResource NotEmptyToVisibility}}" />
+                            <TextBlock Text="{Binding DialogueGraph.PlaythroughStatus}"
+                                       Style="{StaticResource PropsLabel}" FontWeight="Bold" Margin="0,8,0,4" />
+                            <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto">
+                                <ItemsControl ItemsSource="{Binding DialogueGraph.PlaythroughChoices}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button HorizontalAlignment="Stretch" Margin="0,0,0,3"
+                                                    HorizontalContentAlignment="Left"
+                                                    Command="{Binding DataContext.DialogueGraph.StepPlaythroughCommand,
+                                                              RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding Id}">
+                                                <TextBlock Text="{Binding Label}" TextWrapping="Wrap"
+                                                           TextAlignment="Left" />
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                <TextBlock Text="{loc:Loc graphPlaythroughPath}"
+                                           Style="{StaticResource PropsLabel}" Margin="0" />
+                                <TextBlock Text="{Binding DialogueGraph.PlaythroughPathCount}"
+                                           Style="{StaticResource PropsLabel}" Margin="4,0,0,0" />
+                            </StackPanel>
+                        </StackPanel>
                     </Border>
 
                     <!-- Масштаб и центрирование (`absolute left-4 bottom-4`): вне transform-слоя -->

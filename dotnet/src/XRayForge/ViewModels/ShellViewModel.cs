@@ -297,6 +297,12 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
     // --- проекты: открытие, импорт, удаление, демо-граф, сохранение, копии ---
 
+    /// <summary>
+    /// Каталог точек сохранения профиля (`saves`): общий стартовый каталог для файловых
+    /// диалогов вкладок (экспорт XML/SVG, импорт `game_dialogs`).
+    /// </summary>
+    public string SavesDirectory => _store.SavesDirectory;
+
     /// <summary>`openProject(name)`: открыть проект профиля вместе со снапшотом gamedata.</summary>
     [RelayCommand]
     private void OpenProject(ProjectItemViewModel? item)

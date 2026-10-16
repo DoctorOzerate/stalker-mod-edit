@@ -18,6 +18,9 @@ public interface IDialogService
     /// <summary>Выбор каталога (`showDirectoryPicker` gamedata).</summary>
     string? PickFolder(string? initialDirectory);
 
+    /// <summary>Открытие файла с произвольным фильтром (импорт `game_dialogs*.xml`).</summary>
+    string? PickOpenFile(string title, string filter, string? initialDirectory);
+
     /// <summary>Открытие файла `.json` (импорт проекта/настроек).</summary>
     string? PickOpenJson(string title, string? initialDirectory);
 
@@ -51,6 +54,18 @@ public sealed class WpfDialogService : IDialogService
         var dialog = new OpenFolderDialog { Title = LocalizationSource.Get("chooseFolder") };
         SetInitialDirectory(dialog, initialDirectory);
         return dialog.ShowDialog(Owner()) == true ? dialog.FolderName : null;
+    }
+
+    public string? PickOpenFile(string title, string filter, string? initialDirectory)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = title,
+            Filter = filter,
+            CheckFileExists = true
+        };
+        SetInitialDirectory(dialog, initialDirectory);
+        return dialog.ShowDialog(Owner()) == true ? dialog.FileName : null;
     }
 
     public string? PickOpenJson(string title, string? initialDirectory)

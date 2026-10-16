@@ -189,6 +189,25 @@ public static class LocalizationService
         ["graphCanvasFull"] = "Полноэкранный холст",
         ["graphCanvasFullExit"] = "🗗 Выйти из полноэкранного",
         ["graphMiniMap"] = "Мини-карта (клик — переход)",
+        // шаг 6.7: прогон диалога и экспорт SVG
+        ["graphPlaythroughPlay"] = "▶ Прогон диалога",
+        ["graphPlaythroughStop"] = "■ Завершить прогон",
+        ["graphPlaythroughTooltip"] = "Пошаговый прогон диалога",
+        ["graphPlaythroughTitle"] = "▶ Прогон диалога",
+        ["graphPlaythroughNext"] = "Следующие реплики",
+        ["graphPlaythroughEnd"] = "Диалог завершён",
+        ["graphPlaythroughDeadEnd"] = "Тупик",
+        ["graphPlaythroughPath"] = "Пройдено нод:",
+        ["graphPlaythroughNoStart"] = "Нет стартовой ноды",
+        ["graphExportSvg"] = "Экспорт SVG",
+        ["graphNoNodesToExport"] = "Нет нод для экспорта",
+        ["graphExportedSvg"] = "Граф экспортирован в SVG",
+        // шаг 6.8: импорт диалогов из game_dialogs
+        ["graphImportGameDialogs"] = "Импорт game_dialogs",
+        ["graphImportDone"] = "Импортировано диалогов",
+        ["graphImportNone"] = "В файле нет диалогов",
+        ["graphImportSkipped"] = "пропущено (уже в проекте)",
+        ["graphImportFailed"] = "Не удалось прочитать файл диалогов",
 
     };
 
@@ -372,6 +391,25 @@ public static class LocalizationService
         ["graphCanvasFull"] = "Fullscreen canvas",
         ["graphCanvasFullExit"] = "🗗 Exit fullscreen",
         ["graphMiniMap"] = "Mini-map (click to navigate)",
+        // stage 6.7: dialogue run and SVG export
+        ["graphPlaythroughPlay"] = "▶ Run dialogue",
+        ["graphPlaythroughStop"] = "■ Stop run",
+        ["graphPlaythroughTooltip"] = "Step-by-step dialogue run",
+        ["graphPlaythroughTitle"] = "▶ Dialogue run",
+        ["graphPlaythroughNext"] = "Next lines",
+        ["graphPlaythroughEnd"] = "Dialogue finished",
+        ["graphPlaythroughDeadEnd"] = "Dead end",
+        ["graphPlaythroughPath"] = "Nodes visited:",
+        ["graphPlaythroughNoStart"] = "No start node",
+        ["graphExportSvg"] = "Export SVG",
+        ["graphNoNodesToExport"] = "No nodes to export",
+        ["graphExportedSvg"] = "Graph exported to SVG",
+        // stage 6.8: importing dialogues from game_dialogs
+        ["graphImportGameDialogs"] = "Import game_dialogs",
+        ["graphImportDone"] = "Dialogues imported",
+        ["graphImportNone"] = "No dialogues in the file",
+        ["graphImportSkipped"] = "skipped (already in project)",
+        ["graphImportFailed"] = "Failed to read the dialogue file",
 
     };
 

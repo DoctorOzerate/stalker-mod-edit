@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.IO;
+using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using XRayForge.Core.Dialogs;
@@ -7,6 +9,8 @@ using XRayForge.Core.Graph;
 using XRayForge.Core.History;
 using XRayForge.Core.Models;
 using XRayForge.Core.Projects;
+using XRayForge.Core.Text;
+using XRayForge.Core.Xml;
 using XRayForge.Localization;
 using XRayForge.Services;
 
@@ -23,6 +27,9 @@ namespace XRayForge.ViewModels;
 /// Правки выполняют чистые функции <see cref="GraphEditing"/>; VM держит коллекции карточек и
 /// связей, синхронизирует их с <c>Project.Nodes/Edges</c> (активный редактируемый граф,
 /// импортированные диалоги лежат в <c>Project.Dialogues</c>) и отмечает проект изменённым.
+/// Шаг 6.7 — прогон диалога (`playthrough` + `GraphPlaythrough`) и экспорт холста в SVG
+/// (`graphToSvg` + `download`), шаг 6.8 — импорт диалогов из файла `game_dialogs*.xml`
+/// (`DialogueImporter.ImportFile`).
 /// </summary>
 public sealed partial class DialogueGraphViewModel : ObservableObject
 {
@@ -292,6 +299,218 @@ public sealed partial class DialogueGraphViewModel : ObservableObject
         PanY = y;
     }
 
+    // --- прогон диалога (шаг 6.7, `playthrough` в App.js) ---
+
+    /// <summary>Состояние прогона: текущий узел и пройденный путь (`playthrough` в JS).</summary>
+    private PlaythroughState? _playthrough;
+
+    /// <summary>Прогон идёт (`playthrough` непустой): панель прогона на холсте и кнопка-переключатель.</summary>
+    [ObservableProperty]
+    private bool _isPlaythrough;
+
+    /// <summary>Текущий узел прогона («Тип · id» или «—»).</summary>
+    [ObservableProperty]
+    private string _playthroughNode = "";
+
+    /// <summary>Текст текущей реплики (`nodeLabel`, до 160 символов).</summary>
+    [ObservableProperty]
+    private string _playthroughText = "";
+
+    /// <summary>Заголовок списка вариантов: «Следующие реплики» / «Диалог завершён» / «Тупик».</summary>
+    [ObservableProperty]
+    private string _playthroughStatus = "";
+
+    /// <summary>Число пройденных нод (`playthrough.path.length`).</summary>
+    [ObservableProperty]
+    private int _playthroughPathCount;
+
+    /// <summary>Варианты перехода из текущей ноды (`choices`).</summary>
+    public ObservableCollection<PlaythroughChoiceViewModel> PlaythroughChoices { get; } = new();
+
+    /// <summary>Подпись кнопки прогона (`playthrough ? '■ Завершить прогон' : '▶ Прогон диалога'`).</summary>
+    public string PlaythroughButtonLabel =>
+        LocalizationSource.Get(IsPlaythrough ? "graphPlaythroughStop" : "graphPlaythroughPlay");
+
+    partial void OnIsPlaythroughChanged(bool value) => OnPropertyChanged(nameof(PlaythroughButtonLabel));
+
+    /// <summary>Кнопка «Прогон диалога»: без активного прогона запускает его, с активным — завершает.</summary>
+    [RelayCommand]
+    private void TogglePlaythrough()
+    {
+        if (IsPlaythrough) ExitPlaythrough();
+        else StartPlaythrough();
+    }
+
+    /// <summary>
+    /// `startPlaythrough`: старт с первой START-ноды (иначе с первого узла), выделение стартовой
+    /// ноды и открытие панели прогона.
+    /// </summary>
+    private void StartPlaythrough()
+    {
+        var state = GraphPlaythrough.Start(_project.Nodes);
+        if (state == null)
+        {
+            _shell.OnGraphEdited(LocalizationSource.Get("graphPlaythroughNoStart"));
+            return;
+        }
+
+        _playthrough = state;
+        IsPlaythrough = true;
+        Select(state.Current);
+        RefreshPlaythrough();
+    }
+
+    /// <summary>`exitPlaythrough`: закрыть панель прогона и забыть путь (выделение не сбрасывается).</summary>
+    [RelayCommand]
+    private void ExitPlaythrough()
+    {
+        _playthrough = null;
+        IsPlaythrough = false;
+        PlaythroughNode = "";
+        PlaythroughText = "";
+        PlaythroughStatus = "";
+        PlaythroughPathCount = 0;
+        PlaythroughChoices.Clear();
+    }
+
+    /// <summary>`stepPlaythrough(nextId)`: переход по выбранной связи с выделением нового узла.</summary>
+    [RelayCommand]
+    private void StepPlaythrough(string? id)
+    {
+        if (_playthrough == null || string.IsNullOrEmpty(id)) return;
+
+        _playthrough = GraphPlaythrough.Step(_playthrough, id!);
+        Select(id);
+        RefreshPlaythrough();
+    }
+
+    /// <summary>
+    /// Пересборка панели прогона (`playthrough &amp;&amp; …` из DialoguesTab.js): текущая реплика,
+    /// варианты перехода и число пройденных нод. Вызывается на каждом шаге и после правок графа.
+    /// </summary>
+    private void RefreshPlaythrough()
+    {
+        if (_playthrough == null) return;
+
+        var languages = _project.Languages;
+        var showText = _shell.Settings.ShowNodeText;
+        var current = GraphPlaythrough.Current(_project.Nodes, _playthrough.Current);
+        var choices = GraphPlaythrough.Choices(_project.Nodes, _project.Edges, _playthrough.Current);
+
+        PlaythroughNode = GraphPlaythrough.CurrentLabel(current);
+        PlaythroughText = GraphPlaythrough.CurrentText(current, languages, showText);
+        PlaythroughStatus = LocalizationSource.Get(GraphPlaythrough.StatusKey(choices, current));
+        PlaythroughPathCount = _playthrough.Path.Count;
+
+        PlaythroughChoices.Clear();
+        foreach (var node in choices)
+            PlaythroughChoices.Add(new PlaythroughChoiceViewModel(
+                node.Id, GraphPlaythrough.ChoiceLabel(node, languages, showText)));
+    }
+
+    // --- экспорт холста в SVG (шаг 6.7, `graphToSvg` + `download`) ---
+
+    /// <summary>
+    /// `graphToSvg` + `download`: разметка текущего графа сохраняется в `.svg` (UTF-8 без BOM —
+    /// в JS `download(..., bom = false)`); пустой граф — только статус «Нет нод для экспорта».
+    /// </summary>
+    [RelayCommand]
+    private void ExportSvg()
+    {
+        var svg = GraphSvg.GraphToSvg(_project.Nodes, _project.Edges);
+        if (svg.Length == 0)
+        {
+            _shell.OnGraphEdited(LocalizationSource.Get("graphNoNodesToExport"));
+            return;
+        }
+
+        var name = string.IsNullOrWhiteSpace(_project.DialogueId) ? _project.ProjectName : _project.DialogueId;
+        if (string.IsNullOrWhiteSpace(name)) name = "dialogue";
+
+        var path = _dialogs.PickSaveFile(LocalizationSource.Get("graphExportSvg"), name + ".svg",
+            "SVG (*.svg)|*.svg|*.*|*.*", _shell.SavesDirectory);
+        if (string.IsNullOrEmpty(path)) return;
+
+        try
+        {
+            File.WriteAllText(path, svg, new UTF8Encoding(false));
+        }
+        catch (IOException e)
+        {
+            _dialogs.ShowMessage(LocalizationSource.Get("appTitle"), e.Message);
+            return;
+        }
+        catch (UnauthorizedAccessException e)
+        {
+            _dialogs.ShowMessage(LocalizationSource.Get("appTitle"), e.Message);
+            return;
+        }
+
+        _shell.OnGraphEdited(LocalizationSource.Get("graphExportedSvg"), path);
+    }
+
+    // --- импорт диалогов из game_dialogs (шаг 6.8) ---
+
+    /// <summary>
+    /// Импорт файла `game_dialogs*.xml` в список диалогов проекта: файл читается в кодировке
+    /// импорта проекта, диалоги нормализуются (`DialogueImporter.ImportFile`), уже загруженные
+    /// id пропускаются. В JS диалоги попадают в проект только сканированием gamedata.
+    /// </summary>
+    [RelayCommand]
+    private void ImportGameDialogs()
+    {
+        var path = _dialogs.PickOpenFile(LocalizationSource.Get("graphImportGameDialogs"),
+            "XML (*.xml)|*.xml|*.*|*.*", _shell.SavesDirectory);
+        if (string.IsNullOrEmpty(path)) return;
+
+        string text;
+        try
+        {
+            text = GameEncoding.Decode(File.ReadAllBytes(path), _project.Settings.ImportEncoding);
+        }
+        catch (IOException e)
+        {
+            _dialogs.ShowMessage(LocalizationSource.Get("appTitle"), e.Message);
+            return;
+        }
+        catch (UnauthorizedAccessException e)
+        {
+            _dialogs.ShowMessage(LocalizationSource.Get("appTitle"), e.Message);
+            return;
+        }
+
+        DialogueImportResult result;
+        try
+        {
+            result = DialogueImporter.ImportFile(text, DialogueIds(), path, Path.GetFileName(path));
+        }
+        catch (InvalidOperationException e)
+        {
+            // Некорректный XML: `XmlParsers.ParseDialogueXml` сообщает об этом исключением.
+            _shell.OnGraphEdited(LocalizationSource.Get("graphImportFailed"), e.Message);
+            return;
+        }
+
+        if (result.Imported.Count == 0)
+        {
+            _shell.OnGraphEdited(LocalizationSource.Get("graphImportNone"), Path.GetFileName(path));
+            return;
+        }
+
+        _project.Dialogues.AddRange(result.Imported);
+        RefreshDialogueList();
+
+        var detail = result.Imported.Count.ToString(CultureInfo.CurrentCulture);
+        if (result.Skipped.Count > 0)
+            detail += " · " + LocalizationSource.Get("graphImportSkipped") + " " +
+                result.Skipped.Count.ToString(CultureInfo.CurrentCulture);
+        _shell.OnGraphEdited(LocalizationSource.Get("graphImportDone"), detail);
+    }
+
+    /// <summary>Id диалогов проекта (свой id, иначе имя) — для отсева уже загруженных при импорте.</summary>
+    private IEnumerable<string> DialogueIds() =>
+        _project.Dialogues.Select(d => d.Id.Length > 0 ? d.Id : d.Name);
+
     // --- проект и синхронизация ---
 
     /// <summary>
@@ -303,6 +522,7 @@ public sealed partial class DialogueGraphViewModel : ObservableObject
         _project = project ?? ProjectMigration.Empty();
         _hist = HistoryState<GraphSnapshot>.Empty;
         _selectedId = null;
+        ExitPlaythrough();
         ResetInteraction();
         Search = "";
         PanX = 0;
@@ -342,6 +562,8 @@ public sealed partial class DialogueGraphViewModel : ObservableObject
         RefreshStats();
         ApplySearch();
         RefreshProps();
+        // Панель прогона живёт по тем же данным: правки графа, undo и раскладка её пересобирают.
+        RefreshPlaythrough();
 
         OnPropertyChanged(nameof(SelectedNode));
         OnPropertyChanged(nameof(HasSelection));
