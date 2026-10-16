@@ -1,0 +1,153 @@
+<Window x:Class="XRayForge.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:XRayForge.Localization"
+        Title="{loc:Loc programSettingsTitle}"
+        Width="880" Height="640" MinWidth="700" MinHeight="480"
+        WindowStyle="None" ResizeMode="CanResize" ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner">
+    <Border Background="{DynamicResource SurfacePanel}" BorderBrush="{DynamicResource BorderStrong}" BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Background="{DynamicResource SurfaceRaised}" BorderBrush="{DynamicResource BorderBevel}"
+                    BorderThickness="0,0,0,1" Padding="12,6" MouseLeftButtonDown="OnHeaderDrag">
+                <Grid>
+                    <StackPanel>
+                        <TextBlock Text="{loc:Loc programSettingsTitle}" Style="{StaticResource TitleText}" />
+                        <TextBlock Text="{loc:Loc programSettingsSub}" Style="{StaticResource CaptionText}" />
+                    </StackPanel>
+                    <Button Content="✕" Style="{StaticResource IconButton}" HorizontalAlignment="Right"
+                            VerticalAlignment="Top" Click="OnCancel" />
+                </Grid>
+            </Border>
+
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="16,14">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="16" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Тема, акцент, плотность, язык -->
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="{loc:Loc theme}" Style="{StaticResource CaptionText}" />
+                        <ListBox ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}"
+                                 MaxHeight="132" Margin="0,4,0,14">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Name}" />
+                                        <TextBlock Text="{Binding Reference}" Style="{StaticResource CaptionText}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <TextBlock Text="{loc:Loc accentColor}" Style="{StaticResource CaptionText}" />
+                        <ListBox ItemsSource="{Binding Accents}" SelectedItem="{Binding SelectedAccent}"
+                                 MaxHeight="112" Margin="0,4,0,14">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding LabelKey, Converter={StaticResource LocKey}}" />
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <TextBlock Text="{loc:Loc density}" Style="{StaticResource CaptionText}" />
+                        <ListBox ItemsSource="{Binding Densities}" SelectedItem="{Binding SelectedDensity}"
+                                 MaxHeight="96" Margin="0,4,0,14">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding LabelKey, Converter={StaticResource LocKey}}" />
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <TextBlock Text="{loc:Loc language}" Style="{StaticResource CaptionText}" />
+                        <ListBox ItemsSource="{Binding Locales}" SelectedItem="{Binding SelectedLocale}"
+                                 MaxHeight="72" Margin="0,4,0,0">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </StackPanel>
+
+                    <!-- Узлы, автосейв, шрифт, синхронизация, плагины, горячие клавиши -->
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="{loc:Loc nodesDisplay}" Style="{StaticResource CaptionText}" />
+                        <CheckBox Content="{loc:Loc nodesDisplay}" IsChecked="{Binding ShowNodeText}" Margin="0,6,0,14" />
+
+                        <TextBlock Text="{loc:Loc autosave}" Style="{StaticResource CaptionText}" />
+                        <TextBox Text="{Binding AutosaveInterval, UpdateSourceTrigger=LostFocus}" Margin="0,4,0,14" />
+
+                        <TextBlock Text="{loc:Loc editorFontSize}" Style="{StaticResource CaptionText}" />
+                        <TextBox Text="{Binding EditorFontSize, UpdateSourceTrigger=LostFocus}" Margin="0,4,0,14" />
+
+                        <TextBlock Text="{loc:Loc syncSection}" Style="{StaticResource CaptionText}" />
+                        <TextBox Text="{Binding SyncUrl, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,0,6" />
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                            <Button Content="{loc:Loc syncLoad}" Command="{Binding SyncLoadCommand}" Margin="0,0,6,0" />
+                            <Button Content="{loc:Loc syncNow}" Command="{Binding SyncNowCommand}" />
+                        </StackPanel>
+
+                        <TextBlock Text="{loc:Loc pluginsSection}" Style="{StaticResource CaptionText}" />
+                        <Button Content="{loc:Loc addPlugin}" Command="{Binding RunPluginsCommand}"
+                                HorizontalAlignment="Left" Margin="0,4,0,14" />
+
+                        <TextBlock Text="{loc:Loc hotkeys}" Style="{StaticResource CaptionText}" />
+                        <ItemsControl ItemsSource="{Binding Hotkeys}" Margin="0,4,0,4">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Action.Label}" Style="{StaticResource MonoText}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Display}" Style="{StaticResource MonoText}"
+                                                   Foreground="{DynamicResource TextAccent}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Text="{loc:Loc hotkeyConflict}" Style="{StaticResource CaptionText}"
+                                   Foreground="{DynamicResource StateWarn}"
+                                   Visibility="{Binding HasConflicts, Converter={StaticResource BoolToVisibility}}" />
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                            <Button Content="{loc:Loc resetHotkey}" Command="{Binding ResetHotkeysCommand}" />
+                        </StackPanel>
+                        <TextBlock Text="{loc:Loc pressKey}" Style="{StaticResource CaptionText}" Margin="0,6,0,0"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+
+                </Grid>
+            </ScrollViewer>
+
+            <!-- Профиль: экспорт/импорт настроек и сброс данных -->
+            <Border Grid.Row="2" Background="{DynamicResource SurfacePanel}" BorderBrush="{DynamicResource BorderBevel}"
+                    BorderThickness="0,1,0,0" Padding="16,10">
+                <Grid>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Button Content="{loc:Loc exportSettings}" Command="{Binding ExportSettingsCommand}" Margin="0,0,6,0" />
+                        <Button Content="{loc:Loc importSettings}" Command="{Binding ImportSettingsCommand}" Margin="0,0,6,0" />
+                        <Button Content="{loc:Loc resetData}" Style="{StaticResource DangerButton}"
+                                Command="{Binding ResetDataCommand}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="{loc:Loc apply}" Command="{Binding ApplyCommand}" Margin="0,0,8,0" />
+                        <Button Content="{loc:Loc save}" Style="{StaticResource AccentButton}"
+                                IsDefault="True" Click="OnSave" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

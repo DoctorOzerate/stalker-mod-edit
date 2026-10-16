@@ -1,13 +1,317 @@
 ﻿<Window x:Class="XRayForge.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:XRayForge"
-        mc:Ignorable="d"
-        Title="X-Ray Forge" Height="900" Width="1440"
-        WindowStartupLocation="CenterScreen">
-    <Grid>
+        xmlns:loc="clr-namespace:XRayForge.Localization"
+        Title="{Binding Title}"
+        Width="1440" Height="900" MinWidth="1024" MinHeight="640"
+        WindowStyle="None" ResizeMode="CanResize"
+        WindowStartupLocation="CenterScreen"
+        PreviewKeyDown="OnPreviewKeyDown" StateChanged="OnStateChanged">
+    <!-- Свой хром окна: заголовок и кнопки рисуются в панели инструментов -->
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="0" ResizeBorderThickness="6" CornerRadius="0"
+                      GlassFrameThickness="0" UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
 
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Панель инструментов: заголовок, действия, кнопки окна -->
+        <Border Grid.Row="0" Background="{DynamicResource ChromeBackdrop}" BorderBrush="{DynamicResource BorderBevel}"
+                BorderThickness="0,0,0,1" Padding="10,6" MouseLeftButtonDown="OnHeaderDrag">
+            <Grid>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="☢" FontSize="16" Foreground="{DynamicResource AccentGlow}" Margin="0,0,8,0" />
+                    <TextBlock Text="{loc:Loc appTitle}" Style="{StaticResource TitleText}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding ProjectName}" Style="{StaticResource MonoText}" Margin="10,0,0,0"
+                               VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding SeriesLabel}" Style="{StaticResource CaptionText}" Margin="8,0,0,0"
+                               VerticalAlignment="Center" />
+                    <TextBlock Text="●" Foreground="{DynamicResource StateWarn}" Margin="8,0,0,0"
+                               VerticalAlignment="Center" ToolTip="{loc:Loc unsaved}"
+                               Visibility="{Binding Dirty, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc projects}"
+                            Command="{Binding ShowWelcomeCommand}" />
+                    <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc save}"
+                            Command="{Binding SaveCommand}" />
+                    <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc checkGraph}"
+                            Command="{Binding CheckGraphCommand}" />
+                    <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc exportXml}"
+                            Command="{Binding ExportXmlCommand}" />
+                    <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc globalSearch}"
+                            Command="{Binding OpenSearchCommand}" />
+                    <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc backups}"
+                            Command="{Binding OpenBackupsCommand}" />
+                    <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc addBackup}"
+                            Command="{Binding AddBackupCommand}" />
+                    <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc scanGamedata}"
+                            Command="{Binding ScanGamedataCommand}" />
+                    <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc projectSettings}"
+                            Command="{Binding OpenProjectSettingsCommand}" />
+                    <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc programSettings}"
+                            Command="{Binding OpenProgramSettingsCommand}" />
+                    <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc help}"
+                            Command="{Binding OpenHelpCommand}" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button Style="{StaticResource IconButton}" Content="—" Click="OnMinimize" />
+                    <Button x:Name="MaximizeButton" Style="{StaticResource IconButton}" Content="▢" Click="OnMaximize" />
+                    <Button Style="{StaticResource IconButton}" Content="✕" Click="OnClose" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="228" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Левая навигация: разделы `NavigationCatalog` со счётчиками и Ctrl+1…9 -->
+            <Border Grid.Column="0" Background="{DynamicResource SurfacePanel}"
+                    BorderBrush="{DynamicResource BorderBevel}" BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Margin="12,10,12,8">
+                        <TextBlock Text="{loc:Loc savedProjects}" Style="{StaticResource CaptionText}" />
+                        <TextBlock Text="{Binding ProjectName}" Style="{StaticResource MonoText}" Margin="0,2,0,0"
+                                   TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Tabs}" Margin="6,0,6,8">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource NavButton}" ToolTip="{Binding Hotkey}"
+                                            Command="{Binding DataContext.ActivateTabCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding Glyph}" Margin="0,0,8,0"
+                                                       Foreground="{Binding AccentHex, Converter={StaticResource HexBrush}}" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Label}" />
+                                            <TextBlock Grid.Column="2" Text="{Binding CountText}"
+                                                       Style="{StaticResource CaptionText}" />
+                                        </Grid>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+
+            <!-- Рабочая область: обзор, раздел и приветственный экран поверх -->
+            <Grid Grid.Column="1" Background="{DynamicResource SurfaceBase}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="16,14"
+                              Visibility="{Binding IsOverviewActive, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Loc overviewTitle}" Style="{StaticResource TitleText}" />
+                        <TextBlock Text="{loc:Loc overviewSub}" Style="{StaticResource CaptionText}" Margin="0,2,0,12" />
+
+                        <!-- Сводка по разделам: чипы `ProjectSummary.Chips()` плюс иконки -->
+                        <ItemsControl ItemsSource="{Binding OverviewChips}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource PanelBorder}" Margin="0,0,10,10" MinWidth="132">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Glyph}" Margin="0,0,6,0" />
+                                                <TextBlock Text="{Binding LabelKey, Converter={StaticResource LocKey}}"
+                                                           Style="{StaticResource CaptionText}" />
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding CountText}" Style="{StaticResource TitleText}"
+                                                       Margin="0,4,0,0" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Проблемы целостности и графа (`checkProject` + `validateGraph`) -->
+                        <TextBlock Text="{loc:Loc issues}" Style="{StaticResource CaptionText}" Margin="0,8,0,4" />
+                        <TextBlock Text="{loc:Loc noIssues}" Style="{StaticResource MonoText}"
+                                   Visibility="{Binding HasIssues, Converter={StaticResource InverseBoolToVisibility}}" />
+                        <ItemsControl ItemsSource="{Binding Issues}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Margin="0,2">
+                                        <TextBlock Text="{Binding Where}" Style="{StaticResource CaptionText}"
+                                                   MinWidth="110" />
+                                        <TextBlock Text="{Binding Message}" Style="{StaticResource MonoText}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Separator />
+
+                        <!-- Быстрые действия обзора -->
+                        <WrapPanel>
+                            <Button Content="{loc:Loc checkGraph}" Command="{Binding CheckGraphCommand}" Margin="0,0,8,8" />
+                            <Button Content="{loc:Loc scanGamedata}" Command="{Binding ScanGamedataCommand}" Margin="0,0,8,8" />
+                            <Button Content="{loc:Loc exportXml}" Command="{Binding ExportXmlCommand}" Margin="0,0,8,8" />
+                            <Button Content="{loc:Loc addBackup}" Command="{Binding AddBackupCommand}" Margin="0,0,8,8" />
+                            <Button Content="{loc:Loc runPlugins}" Command="{Binding RunPluginsCommand}" Margin="0,0,8,8" />
+                        </WrapPanel>
+                    </StackPanel>
+                </ScrollViewer>
+                <!-- Раздел: строки данных проекта (редакторы — этапы 6–7) -->
+                <Grid Visibility="{Binding IsOverviewActive, Converter={StaticResource InverseBoolToVisibility}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Margin="16,14,16,10">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding ActiveTab.Glyph}" Margin="0,0,8,0"
+                                       Foreground="{Binding ActiveTab.AccentHex, Converter={StaticResource HexBrush}}" />
+                            <TextBlock Text="{Binding ActiveTab.Label}" Style="{StaticResource TitleText}" />
+                            <TextBlock Text="{Binding ActiveTab.Hotkey}" Style="{StaticResource CaptionText}"
+                                       Margin="10,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Text="{loc:Loc tabStubHint}" Style="{StaticResource CaptionText}" Margin="0,2,0,0" />
+                    </StackPanel>
+
+                    <Grid Grid.Row="1" Margin="16,0,16,16">
+                        <ListBox ItemsSource="{Binding Rows}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Glyph}" Margin="0,0,8,0" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Label}" />
+                                        <TextBlock Grid.Column="2" Text="{Binding Detail}"
+                                                   Style="{StaticResource CaptionText}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <TextBlock Text="{loc:Loc noData}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                                   MaxWidth="420" TextAlignment="Center"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   Visibility="{Binding HasRows, Converter={StaticResource InverseBoolToVisibility}}" />
+                    </Grid>
+                </Grid>
+                <!-- Приветственный экран (`welcomeTitle`): проекты профиля и создание проекта -->
+                <Grid Background="{DynamicResource Scrim}"
+                      Visibility="{Binding IsWelcomeOpen, Converter={StaticResource BoolToVisibility}}">
+                    <Border Style="{StaticResource PanelBorder}" Width="640" Padding="22"
+                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <StackPanel>
+                            <TextBlock Text="{loc:Loc welcomeTitle}" Style="{StaticResource TitleText}" FontSize="22" />
+                            <TextBlock Text="{loc:Loc welcomeSub}" Foreground="{DynamicResource TextMuted}"
+                                       TextWrapping="Wrap" Margin="0,4,0,14" />
+
+                            <TextBlock Text="{loc:Loc noProjects}" Style="{StaticResource CaptionText}"
+                                       Visibility="{Binding HasProjects, Converter={StaticResource InverseBoolToVisibility}}" />
+                            <ListBox ItemsSource="{Binding Projects}"
+                                     SelectedItem="{Binding SelectedProject}" MaxHeight="220">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontFamily="{DynamicResource MonoFontFamily}" />
+                                                <TextBlock Text="{Binding UpdatedText}" Style="{StaticResource CaptionText}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button Content="{loc:Loc openProject}" Margin="0,0,6,0"
+                                                        Command="{Binding DataContext.OpenProjectCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding}" />
+                                                <Button Content="{loc:Loc deleteProject}" Style="{StaticResource DangerButton}"
+                                                        Command="{Binding DataContext.DeleteProjectCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding}" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="2" Text="{Binding CountText}"
+                                                       Style="{StaticResource CaptionText}" Margin="10,0,0,0"
+                                                       VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <Separator />
+
+                            <WrapPanel>
+                                <Button Content="{loc:Loc continue}" Style="{StaticResource AccentButton}"
+                                        Command="{Binding ContinueProjectCommand}" Margin="0,0,8,8" />
+                                <Button Content="{loc:Loc createProject}" Command="{Binding NewProjectCommand}"
+                                        Margin="0,0,8,8" />
+                                <Button Content="{loc:Loc importProject}" Command="{Binding ImportProjectCommand}"
+                                        Margin="0,0,8,8" />
+                                <Button Content="{loc:Loc demoGraph}" Command="{Binding LoadDemoGraphCommand}"
+                                        Margin="0,0,8,8" />
+                                <Button Content="{loc:Loc close}" Command="{Binding CloseWelcomeCommand}"
+                                        Margin="0,0,8,8" />
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!-- Статусная строка: сообщение, плитки, занятость, метки сохранения -->
+        <Border Grid.Row="2" Background="{DynamicResource SurfacePanel}" BorderBrush="{DynamicResource BorderBevel}"
+                BorderThickness="0,1,0,0" Padding="12,4">
+            <Grid>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding StatusText}" Style="{StaticResource MonoText}" />
+                    <ItemsControl ItemsSource="{Binding Chips}" Margin="12,0,0,0" VerticalAlignment="Center">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,10,0"
+                                            ToolTip="{Binding LabelKey, Converter={StaticResource LocKey}}">
+                                    <TextBlock Text="{Binding Glyph}" Margin="0,0,4,0" />
+                                    <TextBlock Text="{Binding CountText}" Style="{StaticResource MonoText}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <StackPanel Orientation="Horizontal" Margin="6,0,0,0"
+                                Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}">
+                        <Ellipse Width="8" Height="8" Fill="{DynamicResource StateWarn}" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding BusyText}" Style="{StaticResource CaptionText}" Margin="6,0,0,0" />
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding LastSavedText}" Style="{StaticResource CaptionText}" Margin="0,0,10,0" />
+                    <TextBlock Text="{Binding LastAutosaveText}" Style="{StaticResource CaptionText}" Margin="0,0,10,0" />
+                    <TextBlock Text="{Binding StatusDetail}" Style="{StaticResource CaptionText}"
+                               TextTrimming="CharacterEllipsis" MaxWidth="560" />
+                </StackPanel>
+            </Grid>
+        </Border>
     </Grid>
 </Window>

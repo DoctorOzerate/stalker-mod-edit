@@ -162,8 +162,12 @@ public sealed class AppDataService
             Data = Projects.ProjectSerializer.ToPersistable(project)
         });
         if (list.Count > ProjectSchema.BackupsLimit) list = list.Take(ProjectSchema.BackupsLimit).ToList();
-        WriteFile(BackupsFileName, JsonSerializer.Serialize(list, Json));
+        SaveBackups(list);
     }
+
+    /// <summary>Записать историю копий целиком (`saveBackups` без добавления — удаление снимка).</summary>
+    public void SaveBackups(List<StoredBackup>? list) =>
+        WriteFile(BackupsFileName, JsonSerializer.Serialize(list ?? new List<StoredBackup>(), Json));
 
     // --- снапшоты gamedata ---
 

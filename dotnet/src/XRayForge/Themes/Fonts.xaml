@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Шрифты интерфейса (этап 5). JetBrains Mono лежит в docs/ui-references/fonts
+  и подключается как Resource с логическим путём Fonts/ (см. XRayForge.csproj).
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Интерфейсные подписи -->
+    <FontFamily x:Key="UiFontFamily">Segoe UI</FontFamily>
+
+    <!-- Моноширинный шрифт: навигация, коды, HEX-значения; fallback на случай отсутствия файла -->
+    <FontFamily x:Key="MonoFontFamily">./Fonts/#JetBrains Mono, Consolas, Segoe UI</FontFamily>
+</ResourceDictionary>

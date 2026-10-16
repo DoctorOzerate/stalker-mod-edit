@@ -1,0 +1,65 @@
+<Window x:Class="XRayForge.Views.BackupsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:XRayForge.Localization"
+        Title="{loc:Loc backups}"
+        Width="640" Height="520" MinWidth="480" MinHeight="320"
+        WindowStyle="None" ResizeMode="CanResize" ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner">
+    <Border Background="{DynamicResource SurfacePanel}" BorderBrush="{DynamicResource BorderStrong}" BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Background="{DynamicResource SurfaceRaised}" BorderBrush="{DynamicResource BorderBevel}"
+                    BorderThickness="0,0,0,1" Padding="12,6" MouseLeftButtonDown="OnHeaderDrag">
+                <Grid>
+                    <TextBlock Text="{loc:Loc backups}" Style="{StaticResource TitleText}" VerticalAlignment="Center" />
+                    <Button Content="✕" Style="{StaticResource IconButton}" HorizontalAlignment="Right" IsCancel="True" />
+                </Grid>
+            </Border>
+
+            <!-- Новая точка сохранения (в профиле хранится не больше ProjectSchema.BackupsLimit) -->
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="14,12,14,8">
+                <Button Content="{loc:Loc addBackup}" Style="{StaticResource AccentButton}"
+                        Command="{Binding AddBackupCommand}" />
+                <TextBlock Text="{Binding Backups.Count}" Style="{StaticResource MonoText}" Margin="10,0,0,0"
+                           VerticalAlignment="Center" />
+            </StackPanel>
+
+            <ListBox Grid.Row="2" Margin="14,0,14,8" ItemsSource="{Binding Backups}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="2,3">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="{Binding Text}" FontFamily="{DynamicResource MonoFontFamily}" />
+                                <TextBlock Text="{Binding Detail}" Style="{StaticResource CaptionText}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Content="{loc:Loc restore}" Margin="0,0,6,0"
+                                        Command="{Binding DataContext.RestoreBackupCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}" />
+                                <Button Content="{loc:Loc delete}" Style="{StaticResource DangerButton}"
+                                        Command="{Binding DataContext.DeleteBackupCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}" />
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <Border Grid.Row="3" Background="{DynamicResource SurfacePanel}" BorderBrush="{DynamicResource BorderBevel}"
+                    BorderThickness="0,1,0,0" Padding="12,10">
+                <Button Content="{loc:Loc close}" HorizontalAlignment="Right" IsCancel="True" />
+            </Border>
+        </Grid>
+    </Border>
+</Window>
