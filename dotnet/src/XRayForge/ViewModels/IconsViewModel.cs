@@ -36,6 +36,9 @@ public sealed partial class IconsViewModel : ObservableObject
     private BitmapSource? _atlasBitmap;
     private bool _loading;
 
+    /// <summary>Атласы, скрытые крестиком на вкладке (сессионное состояние, не проект).</summary>
+    private readonly HashSet<string> _closedAtlasNames = new(StringComparer.OrdinalIgnoreCase);
+
     public IconsViewModel(ShellViewModel shell, IDialogService dialogs)
     {
         _shell = shell;
@@ -43,7 +46,7 @@ public sealed partial class IconsViewModel : ObservableObject
         Pinned = new ObservableCollection<PinnedIconViewModel>();
         Duplicates = new ObservableCollection<AtlasDuplicateCellViewModel>();
         Collections = new ObservableCollection<string>();
-        AtlasOptions = new ObservableCollection<ProjectTexture>();
+        AtlasTabs = new ObservableCollection<ProjectTexture>();
     }
 
     /// <summary>`ATLAS_PRESETS` с пустым первым пунктом «Выбрать…» (как `&lt;option value=""&gt;` в JS).</summary>
@@ -57,10 +60,10 @@ public sealed partial class IconsViewModel : ObservableObject
     public ObservableCollection<string> Collections { get; }
 
     /// <summary>
-    /// Все DDS-атласы проекта (`textures[]`): `ui_icon_equipment`, портреты `ui_npc`/
-    /// `ui_actor` и вручную загруженные файлы. Переключение не теряет остальные атласы.
+    /// Открытые вкладки атласов, как документы в Photoshop. Источник — `textures[]`;
+    /// закрытая вкладка остаётся в проекте и может быть возвращена кнопкой «↺».
     /// </summary>
-    public ObservableCollection<ProjectTexture> AtlasOptions { get; }
+    public ObservableCollection<ProjectTexture> AtlasTabs { get; }
 
     // --- состояние атласа ---
 
@@ -127,8 +130,14 @@ public sealed partial class IconsViewModel : ObservableObject
     /// <summary>Вычисленное число рядов для `AtlasCanvas`.</summary>
     public int GridRows => Math.Max(1, _grid.Rows);
 
-    /// <summary>Показать выбор атласа, когда gamedata загрузила несколько DDS.</summary>
-    public bool HasAtlasOptions => AtlasOptions.Count > 1;
+    /// <summary>Есть ли открытые вкладки атласов.</summary>
+    public bool HasAtlasTabs => AtlasTabs.Count > 0;
+
+    /// <summary>Показать выбор сравнения, когда открыто несколько атласов.</summary>
+    public bool HasMultipleAtlasTabs => AtlasTabs.Count > 1;
+
+    /// <summary>Есть ли атласы, скрытые крестиком (их можно вернуть одной кнопкой).</summary>
+    public bool HasClosedAtlasTabs => _closedAtlasNames.Count > 0;
 
     /// <summary>Размер холста по X: пиксели атласа × масштаб (без растяжения по одной оси).</summary>
     public double AtlasDisplayWidth => _atlasBitmap is { } bitmap ? bitmap.PixelWidth * Zoom : 0;
@@ -153,6 +162,7 @@ public sealed partial class IconsViewModel : ObservableObject
     {
         _project = project ?? ProjectMigration.Empty();
         _loading = true;
+        _closedAtlasNames.Clear();
         SelectedAtlas = null;
         SelectedCompare = null;
         CellWidth = _project.Atlas.CellSize > 0 ? _project.Atlas.CellSize : 50;
@@ -173,38 +183,52 @@ public sealed partial class IconsViewModel : ObservableObject
         _loading = false;
 
         RefreshCollections();
-        RefreshAtlasOptions();
+        RefreshAtlasTabs();
         ReloadAtlas();
         RefreshPinned();
         NotifyHistory();
     }
 
     /// <summary>
-    /// Пересобрать список атласов. Текущий выбор сохраняется, если текстура осталась
-    /// в проекте; иначе выбирается первый декодированный DDS.
+    /// Пересобрать открытые вкладки из `textures[]`. Закрытые крестиком атласы остаются
+    /// в проекте, но не попадают в полосу вкладок. Текущий выбор сохраняется, пока его
+    /// вкладка открыта; иначе выбирается первый декодированный DDS.
     /// </summary>
-    private void RefreshAtlasOptions(ProjectTexture? selectAtlas = null, ProjectTexture? selectCompare = null,
+    private void RefreshAtlasTabs(ProjectTexture? selectAtlas = null, ProjectTexture? selectCompare = null,
         bool preserveCompare = true)
     {
         var textures = _project.Textures ?? new List<ProjectTexture>();
-        _loading = true;
-        AtlasOptions.Clear();
-        foreach (var texture in textures) AtlasOptions.Add(texture);
+        var knownNames = textures
+            .Select(texture => TextureNameKey(texture.Name))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _closedAtlasNames.RemoveWhere(name => !knownNames.Contains(name));
 
+        // Запоминаем до Clear(): WPF-биндинг может обнулить SelectedItem при очистке списка.
         var current = selectAtlas ?? SelectedAtlas;
-        SelectedAtlas = current != null && textures.Contains(current)
-            ? current
-            : textures.FirstOrDefault(texture => string.IsNullOrWhiteSpace(texture.Error)) ??
-              textures.FirstOrDefault();
-
         var compare = selectCompare ?? SelectedCompare;
+
+        _loading = true;
+        AtlasTabs.Clear();
+        foreach (var texture in textures)
+        {
+            if (!_closedAtlasNames.Contains(TextureNameKey(texture.Name)))
+                AtlasTabs.Add(texture);
+        }
+
+        SelectedAtlas = current != null && AtlasTabs.Contains(current)
+            ? current
+            : AtlasTabs.FirstOrDefault(texture => string.IsNullOrWhiteSpace(texture.Error)) ??
+              AtlasTabs.FirstOrDefault();
+
         SelectedCompare = preserveCompare && compare != null &&
-                          !ReferenceEquals(compare, SelectedAtlas) && textures.Contains(compare)
+                          !ReferenceEquals(compare, SelectedAtlas) && AtlasTabs.Contains(compare)
             ? compare
             : null;
         _loading = false;
 
-        OnPropertyChanged(nameof(HasAtlasOptions));
+        OnPropertyChanged(nameof(HasAtlasTabs));
+        OnPropertyChanged(nameof(HasMultipleAtlasTabs));
+        OnPropertyChanged(nameof(HasClosedAtlasTabs));
     }
 
     partial void OnSelectedAtlasChanged(ProjectTexture? value)
@@ -589,7 +613,8 @@ public sealed partial class IconsViewModel : ObservableObject
             else textures.Add(texture);
 
             _project.Textures = textures;
-            RefreshAtlasOptions(SelectedAtlas, texture);
+            _closedAtlasNames.Remove(TextureNameKey(texture.Name));
+            RefreshAtlasTabs(SelectedAtlas, texture);
             LoadOverlay();
             _shell.OnSectionEdited(LocalizationSource.Get("iconCompareLoaded") + ": " + texture.Name);
         }
@@ -604,9 +629,46 @@ public sealed partial class IconsViewModel : ObservableObject
     {
         if (SelectedCompare == null) return;
         // Остальные атласы остаются в project.textures — убирается только наложение.
-        RefreshAtlasOptions(SelectedAtlas, null, preserveCompare: false);
+        RefreshAtlasTabs(SelectedAtlas, null, preserveCompare: false);
         LoadOverlay();
         _shell.OnSectionEdited(LocalizationSource.Get("iconCompareRemoved"));
+    }
+
+    /// <summary>
+    /// Закрыть вкладку атласа, как документ в Photoshop. Изображение остаётся в
+    /// `project.textures` (иначе сломаются портреты персонажей и иконки предметов),
+    /// поэтому сохранение проекта не меняется; кнопка «↺» возвращает все вкладки.
+    /// </summary>
+    [RelayCommand]
+    private void CloseAtlasTab(ProjectTexture? texture)
+    {
+        if (texture == null) return;
+        var tabs = AtlasTabs.ToList();
+        var index = tabs.IndexOf(texture);
+        if (index < 0) return;
+
+        _closedAtlasNames.Add(TextureNameKey(texture.Name));
+        var next = SelectedAtlas;
+        if (ReferenceEquals(next, texture))
+            next = tabs.Skip(index + 1).FirstOrDefault() ?? tabs.Take(index).LastOrDefault();
+        var compare = ReferenceEquals(SelectedCompare, texture) ? null : SelectedCompare;
+
+        RefreshAtlasTabs(next, compare);
+        ReloadAtlas();
+        _shell.StatusText = LocalizationSource.Get("iconAtlasClosed") + ": " + texture.Name;
+    }
+
+    /// <summary>Вернуть на полосу все атласы проекта, скрытые крестиком.</summary>
+    [RelayCommand]
+    private void ReopenClosedAtlases()
+    {
+        if (_closedAtlasNames.Count == 0) return;
+        var count = _closedAtlasNames.Count;
+        var current = SelectedAtlas;
+        _closedAtlasNames.Clear();
+        RefreshAtlasTabs(current);
+        ReloadAtlas();
+        _shell.StatusText = LocalizationSource.Get("iconAtlasesReopened") + ": " + count;
     }
 
     private static RgbaImage DecodeDds(string path)
@@ -623,8 +685,10 @@ public sealed partial class IconsViewModel : ObservableObject
         Height = image.Height
     };
 
+    private static string TextureNameKey(string? name) => (name ?? "").Trim();
+
     private static bool TextureNameEquals(string? left, string? right) =>
-        string.Equals((left ?? "").Trim(), (right ?? "").Trim(), StringComparison.OrdinalIgnoreCase);
+        string.Equals(TextureNameKey(left), TextureNameKey(right), StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Применить изображение к активному атласу. `addAsNew` добавляет новый DDS/пустой
@@ -658,7 +722,8 @@ public sealed partial class IconsViewModel : ObservableObject
 
         var compare = SelectedCompare;
         _project.Textures = textures;
-        RefreshAtlasOptions(texture, compare);
+        _closedAtlasNames.Remove(TextureNameKey(texture.Name));
+        RefreshAtlasTabs(texture, compare);
 
         _atlasPixels = image;
         _atlasBitmap = RgbaImageCodec.ToBitmap(image);

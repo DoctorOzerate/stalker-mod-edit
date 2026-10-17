@@ -124,6 +124,101 @@
             </Setter>
         </Style>
 
+        <!-- Полоса вкладок атласов над холстом (Photoshop-подобная) -->
+        <Style x:Key="AtlasTabList" TargetType="ListBox">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="MinHeight" Value="28" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBox">
+                        <ScrollViewer Focusable="False" CanContentScroll="False"
+                                      HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollBarVisibility="Disabled">
+                            <ItemsPresenter />
+                        </ScrollViewer>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="AtlasTabItem" TargetType="ListBoxItem">
+            <Setter Property="Background" Value="{DynamicResource SurfacePanel}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBevel}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
+            <Setter Property="Padding" Value="9,4,4,4" />
+            <Setter Property="Margin" Value="0,0,3,0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Chrome" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Stretch"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background"
+                                        Value="{DynamicResource SurfaceRaised}" />
+                                <Setter TargetName="Chrome" Property="BorderBrush"
+                                        Value="{DynamicResource BorderStrong}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Chrome" Property="Background"
+                                        Value="{DynamicResource AccentDim}" />
+                                <Setter TargetName="Chrome" Property="BorderBrush"
+                                        Value="{DynamicResource AccentMain}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="AtlasTabClose" TargetType="Button">
+            <Setter Property="Width" Value="16" />
+            <Setter Property="Height" Value="16" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="6,0,0,0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
+            <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Chrome" Background="{TemplateBinding Background}"
+                                CornerRadius="3">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background"
+                                        Value="{DynamicResource SurfaceRaised}" />
+                                <Setter Property="Foreground" Value="{StaticResource IconRed}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Chrome" Property="Background"
+                                        Value="{DynamicResource SurfaceSunken}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Карточка закреплённой иконки / дубликата -->
         <Style x:Key="IconListItem" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="HorizontalContentAlignment" Value="Left" />
@@ -146,21 +241,13 @@
                     <Button Content="{loc:Loc iconLoadDds}" Style="{StaticResource AccentButton}"
                             Command="{Binding Icons.LoadDdsCommand}" />
 
-                    <TextBlock Text="{loc:Loc iconAtlas}" Style="{StaticResource IconLabel}" Margin="0,10,0,3"
-                               Visibility="{Binding Icons.HasAtlasOptions, Converter={StaticResource BoolToVisibility}}" />
-                    <ComboBox ItemsSource="{Binding Icons.AtlasOptions}"
-                              SelectedItem="{Binding Icons.SelectedAtlas}"
-                              DisplayMemberPath="Name" Style="{StaticResource IconCombo}"
-                              Height="28" VerticalContentAlignment="Center"
-                              Visibility="{Binding Icons.HasAtlasOptions, Converter={StaticResource BoolToVisibility}}" />
-
-                    <TextBlock Text="{loc:Loc iconCompareAtlas}" Style="{StaticResource IconLabel}" Margin="0,8,0,3"
-                               Visibility="{Binding Icons.HasAtlasOptions, Converter={StaticResource BoolToVisibility}}" />
-                    <ComboBox ItemsSource="{Binding Icons.AtlasOptions}"
+                    <TextBlock Text="{loc:Loc iconCompareAtlas}" Style="{StaticResource IconLabel}" Margin="0,10,0,3"
+                               Visibility="{Binding Icons.HasMultipleAtlasTabs, Converter={StaticResource BoolToVisibility}}" />
+                    <ComboBox ItemsSource="{Binding Icons.AtlasTabs}"
                               SelectedItem="{Binding Icons.SelectedCompare}"
                               DisplayMemberPath="Name" Style="{StaticResource IconCombo}"
                               Height="28" VerticalContentAlignment="Center"
-                              Visibility="{Binding Icons.HasAtlasOptions, Converter={StaticResource BoolToVisibility}}" />
+                              Visibility="{Binding Icons.HasMultipleAtlasTabs, Converter={StaticResource BoolToVisibility}}" />
 
                     <Button Content="{loc:Loc iconLoadCompare}" Margin="0,6,0,0"
                             Command="{Binding Icons.LoadCompareCommand}"
@@ -339,10 +426,11 @@
         <Grid Grid.Column="1">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <StackPanel Grid.Row="0" Margin="16,14,16,10">
+            <StackPanel Grid.Row="0" Margin="16,14,16,8">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="{Binding ActiveTab.Glyph}" Margin="0,0,8,0"
                                Foreground="{Binding ActiveTab.AccentHex, Converter={StaticResource HexBrush}}" />
@@ -357,7 +445,61 @@
                            Visibility="{Binding Icons.HasAtlas, Converter={StaticResource BoolToVisibility}}" />
             </StackPanel>
 
-            <Grid Grid.Row="1" Margin="16,0,16,16">
+            <!-- Вкладки открытых атласов: выбор, закрытие крестиком, загрузка и возврат -->
+            <Grid Grid.Row="1" Margin="16,0,16,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <ListBox Grid.Column="0" x:Name="AtlasTabStrip"
+                         ItemsSource="{Binding Icons.AtlasTabs}"
+                         SelectedItem="{Binding Icons.SelectedAtlas, Mode=TwoWay}"
+                         Style="{StaticResource AtlasTabList}"
+                         ItemContainerStyle="{StaticResource AtlasTabItem}">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding Name}" MaxWidth="200"
+                                           FontFamily="{DynamicResource MonoFontFamily}" FontSize="11"
+                                           TextTrimming="CharacterEllipsis"
+                                           VerticalAlignment="Center" ToolTip="{Binding Name}" />
+                                <Button Grid.Column="1" Content="✕"
+                                        Style="{StaticResource AtlasTabClose}"
+                                        ToolTip="{loc:Loc iconCloseAtlas}"
+                                        Command="{Binding DataContext.Icons.CloseAtlasTabCommand,
+                                            RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                        CommandParameter="{Binding}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"
+                            Margin="6,0,0,0">
+                    <Button Content="↺" Style="{StaticResource ToolbarButton}"
+                            Width="30" Height="26" Padding="0" Margin="0,0,4,0"
+                            FontSize="14" ToolTip="{loc:Loc iconReopenAtlases}"
+                            Command="{Binding Icons.ReopenClosedAtlasesCommand}"
+                            Visibility="{Binding Icons.HasClosedAtlasTabs,
+                                Converter={StaticResource BoolToVisibility}}" />
+                    <Button Content="+" Style="{StaticResource ToolbarButton}"
+                            Width="30" Height="26" Padding="0" FontSize="16"
+                            ToolTip="{loc:Loc iconLoadDds}"
+                            Command="{Binding Icons.LoadDdsCommand}" />
+                </StackPanel>
+            </Grid>
+
+            <Grid Grid.Row="2" Margin="16,0,16,16">
                 <ScrollViewer x:Name="AtlasScroll" HorizontalScrollBarVisibility="Auto"
                               VerticalScrollBarVisibility="Auto"
                               HorizontalContentAlignment="Left" VerticalContentAlignment="Top"
