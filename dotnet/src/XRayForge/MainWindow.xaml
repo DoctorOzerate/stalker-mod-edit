@@ -104,7 +104,8 @@
                         <TextBlock Text="{Binding ProjectName}" Style="{StaticResource MonoText}" Margin="0,2,0,0"
                                    TextTrimming="CharacterEllipsis" />
                     </StackPanel>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  IsEnabled="{Binding IsProjectOpen}">
                         <ItemsControl ItemsSource="{Binding Tabs}" Margin="6,0,6,8">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -270,7 +271,9 @@
                                 <Button Content="{loc:Loc demoGraph}" Command="{Binding LoadDemoGraphCommand}"
                                         Margin="0,0,8,8" />
                                 <Button Content="{loc:Loc close}" Command="{Binding CloseWelcomeCommand}"
-                                        Margin="0,0,8,8" />
+                                        Margin="0,0,8,8"
+                                        Visibility="{Binding IsProjectOpen,
+                                            Converter={StaticResource BoolToVisibility}}" />
                             </WrapPanel>
                         </StackPanel>
                     </Border>

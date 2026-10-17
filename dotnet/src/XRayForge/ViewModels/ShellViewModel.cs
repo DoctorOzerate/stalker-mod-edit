@@ -69,7 +69,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
         _autosave = new AutosaveService(
             _store,
-            () => _project,
+            // Без открытого проекта таймер не должен перезаписывать current.project.json пустышкой.
+            () => IsProjectOpen ? _project : null,
             () => _settings,
             project =>
             {
@@ -80,27 +81,25 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         _autosave.Saved += OnAutosaveSaved;
         _autosave.ApplySettings();
 
-        _project = RestoreGamedata(_store.LoadCurrentProject());
-        _project.Series = GameSeriesCatalog.Normalize(_project.Series);
+        // Старт всегда пустой: сохранённый проект восстанавливается только кнопкой
+        // «Продолжить» или открытием из списка, а не молча при запуске.
+        _project = ProjectMigration.Empty();
         _statusText = LocalizationSource.Get("ready");
         _activeTab = Tabs[0];
         _activeTab.IsActive = true;
 
-        ProjectName = _project.ProjectName;
-        SeriesLabel = GameSeriesCatalog.Label(_project.Series);
-        GamedataPath = _project.GamedataPath;
+        ProjectName = "";
+        SeriesLabel = "";
+        GamedataPath = "";
         RefreshLocalization();
 
         LoadWelcomeList();
         LoadBackups();
         PublishSearch();
-        // Граф диалога (этап 6) строится из текущего проекта до пересборки обзора.
+        // Вкладки строятся из пустого проекта; содержимое появится после Adopt.
         DialogueGraph.Attach(_project);
-        // Вкладка «Персонажи» (этап 7.1) строится из того же проекта.
         Characters.Attach(_project);
-        // Вкладка «Предметы» (этап 7.2) читает `items.ltx` того же проекта.
         Items.Attach(_project);
-        // Вкладка «Иконки» (этап 7.3) берёт DDS-атласы из снапшота gamedata.
         Icons.Attach(_project);
 
         RefreshProjectView();
@@ -167,6 +166,13 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     /// <summary>Открыт ли welcome-экран поверх работы.</summary>
     [ObservableProperty]
     private bool _isWelcomeOpen = true;
+
+    /// <summary>
+    /// Есть открытый проект. До открытия/создания/импорта вкладки и их горячие клавиши
+    /// недоступны, а автосохранение не пишет пустой проект.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isProjectOpen;
 
     /// <summary>Длительная операция (сканирование gamedata) — индикатор занятости.</summary>
     [ObservableProperty]
@@ -273,9 +279,12 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         IsWelcomeOpen = true;
     }
 
-    /// <summary>Закрыть welcome-экран и вернуться к текущему проекту.</summary>
+    /// <summary>Закрыть welcome-экран и вернуться к текущему проекту (только если он открыт).</summary>
     [RelayCommand]
-    private void CloseWelcome() => IsWelcomeOpen = false;
+    private void CloseWelcome()
+    {
+        if (IsProjectOpen) IsWelcomeOpen = false;
+    }
 
     /// <summary>`continueProject`: продолжить сохранённый текущий проект.</summary>
     [RelayCommand]
@@ -366,7 +375,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
         _store.RemoveProject(name);
         _store.RemoveGamedataSnapshot(name);
-        if (string.Equals(_project.ProjectName, name, StringComparison.Ordinal)) Adopt(ProjectMigration.Empty(), dirty: false);
+        if (IsProjectOpen && string.Equals(_project.ProjectName, name, StringComparison.Ordinal))
+            CloseCurrentProject();
 
         LoadWelcomeList();
         StatusText = LocalizationSource.Get("deleteProject");
@@ -394,6 +404,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void Save()
     {
+        if (!IsProjectOpen) return;
         if (string.IsNullOrWhiteSpace(_project.ProjectName)) _project.ProjectName = ProjectSchema.DefaultProjectName;
         if (string.IsNullOrWhiteSpace(_project.DialogueId)) _project.DialogueId = _project.ProjectName;
 
@@ -460,6 +471,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         _project.Series = GameSeriesCatalog.Normalize(_project.Series);
         if (string.IsNullOrWhiteSpace(_project.ProjectName)) _project.ProjectName = ProjectSchema.DefaultProjectName;
         if (string.IsNullOrWhiteSpace(_project.DialogueId)) _project.DialogueId = _project.ProjectName;
+        IsProjectOpen = true;
 
         ProjectName = _project.ProjectName;
         SeriesLabel = GameSeriesCatalog.Label(_project.Series);
@@ -478,9 +490,32 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         RefreshProjectView();
     }
 
+    /// <summary>
+    /// Закрыть текущий проект и вернуть стартовое пустое состояние (удаление текущего
+    /// проекта, сброс профиля). Вкладки снова блокируются, welcome-экран открывается.
+    /// </summary>
+    private void CloseCurrentProject()
+    {
+        _project = ProjectMigration.Empty();
+        ProjectName = "";
+        SeriesLabel = "";
+        GamedataPath = "";
+        IsProjectOpen = false;
+        IsWelcomeOpen = true;
+        SetDirty(false);
+
+        DialogueGraph.Attach(_project);
+        Characters.Attach(_project);
+        Items.Attach(_project);
+        Icons.Attach(_project);
+        RefreshProjectView();
+    }
+
     /// <summary>Активировать вкладку по идентификатору (навигация, `Ctrl+1…9`, переход из поиска).</summary>
     public void ActivateTabById(string? id)
     {
+        // До открытия проекта вкладки недоступны (навигация и Ctrl+1…9 одинаково).
+        if (!IsProjectOpen) return;
         var tab = Tabs.FirstOrDefault(item => item.Id == id);
         if (tab != null) ActiveTab = tab;
     }
@@ -606,7 +641,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Characters.RefreshLocalization();
         Items.RefreshLocalization();
 
-        SeriesLabel = GameSeriesCatalog.Label(_project.Series);
+        // До открытия проекта серия не показывается (иначе в пустом старте висел бы «SoC · …»).
+        SeriesLabel = IsProjectOpen ? GameSeriesCatalog.Label(_project.Series) : "";
         OnPropertyChanged(nameof(ThemeLabel));
         OnPropertyChanged(nameof(DensityLabel));
         OnPropertyChanged(nameof(Title));
@@ -906,7 +942,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
         LoadWelcomeList();
         LoadBackups();
-        Adopt(ProjectMigration.Empty(), dirty: false);
+        CloseCurrentProject();
         StatusText = LocalizationSource.Get("resetData");
     }
 
@@ -1073,7 +1109,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             case "escape":
                 // Связь, ожидающая второй порт, отменяется первой (`setConnectFrom(null)` в App.js).
                 DialogueGraph.CancelConnect();
-                if (IsWelcomeOpen) IsWelcomeOpen = false;
+                if (IsWelcomeOpen && IsProjectOpen) IsWelcomeOpen = false;
                 else CloseHotkeyHint();
                 break;
             default:
