@@ -19,25 +19,75 @@ public sealed class DirectoryReadResult
 /// </summary>
 public static class FileSystemService
 {
-    /// <summary>Рекурсивно прочитать каталог: пути нормализуются в стиль `/`, как `normalizePath`.</summary>
+    /// <summary>
+    /// Рекурсивно перечислить каталог: пути нормализуются в стиль `/`, как `normalizePath`.
+    /// Содержимое файлов не читается — <see cref="GamedataFile"/> делает это лениво при
+    /// разборе. Иначе выбор реальной gamedata (6+ ГБ ассетов) забивал память ещё до скана.
+    /// </summary>
     public static DirectoryReadResult ReadDirectory(string? root)
     {
         var result = new DirectoryReadResult { TopName = DirectoryName(root) };
         if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root)) return result;
 
-        foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+        Walk(root, root, result);
+        return result;
+    }
+
+    /// <summary>Обход каталога с пропуском недоступных папок и символических ссылок (без циклов).</summary>
+    private static void Walk(string root, string directory, DirectoryReadResult result)
+    {
+        string[] files;
+        try
         {
-            var relative = Paths.Normalize(Path.GetRelativePath(root, file));
-            if (relative.Length == 0) continue;
-            try
-            {
-                result.Files.Add(new GamedataFile(Path.GetFileName(file), relative, File.ReadAllBytes(file)));
-            }
-            catch (IOException e) { result.Skipped.Add(new SkippedFile(relative, e.Message)); }
-            catch (UnauthorizedAccessException e) { result.Skipped.Add(new SkippedFile(relative, e.Message)); }
+            files = Directory.GetFiles(directory);
+        }
+        catch (Exception e) when (IsDirectoryError(e))
+        {
+            result.Skipped.Add(new SkippedFile(RelativePath(root, directory), e.Message));
+            return;
         }
 
-        return result;
+        foreach (var file in files)
+        {
+            var relative = RelativePath(root, file);
+            if (relative.Length == 0) continue;
+            result.Files.Add(new GamedataFile(Path.GetFileName(file), relative, file));
+        }
+
+        string[] directories;
+        try
+        {
+            directories = Directory.GetDirectories(directory);
+        }
+        catch (Exception e) when (IsDirectoryError(e))
+        {
+            result.Skipped.Add(new SkippedFile(RelativePath(root, directory), e.Message));
+            return;
+        }
+
+        foreach (var child in directories)
+        {
+            try
+            {
+                if ((File.GetAttributes(child) & FileAttributes.ReparsePoint) != 0) continue;
+            }
+            catch (Exception e) when (IsDirectoryError(e))
+            {
+                result.Skipped.Add(new SkippedFile(RelativePath(root, child), e.Message));
+                continue;
+            }
+
+            Walk(root, child, result);
+        }
+    }
+
+    private static bool IsDirectoryError(Exception error) =>
+        error is IOException or UnauthorizedAccessException;
+
+    private static string RelativePath(string root, string path)
+    {
+        var relative = Paths.Normalize(Path.GetRelativePath(root, path));
+        return relative == "." ? "" : relative;
     }
 
     /// <summary>Имя корневой папки (в JS — `handle.name`, идёт в `gamedataPath`).</summary>

@@ -228,6 +228,20 @@ public class GamedataScanTests : IDisposable
     }
 
     [Fact]
+    public void Read_directory_defers_file_reads_until_content_is_requested()
+    {
+        WriteText("config/system.ltx", "[system]\n");
+
+        var read = FileSystemService.ReadDirectory(_root);
+        var file = read.Files.Single(f => f.Path == "config/system.ltx");
+
+        File.Delete(Path.Combine(_root, "config", "system.ltx"));
+
+        var error = Record.Exception(() => _ = file.Content);
+        Assert.IsAssignableFrom<IOException>(error);
+    }
+
+    [Fact]
     public void Read_directory_normalizes_paths_and_keeps_top_name()
     {
         WriteText("config/misc/items.ltx", "x");

@@ -8,16 +8,31 @@ namespace XRayForge.Core.Gamedata;
 /// <summary>Файл gamedata: имя, нормализованный путь и содержимое (аналог `File` из браузера).</summary>
 public sealed class GamedataFile
 {
+    private readonly Func<byte[]>? _loader;
+    private byte[]? _content;
+
     public GamedataFile(string name, string path, byte[] content)
     {
-        Name = name;
-        Path = path;
-        Content = content;
+        Name = name ?? "";
+        Path = path ?? "";
+        _content = content ?? Array.Empty<byte>();
+    }
+
+    /// <summary>
+    /// Файл на диске: содержимое читается при первом обращении, как `file.arrayBuffer()`
+    /// в JS. Так сканирование не загружает в память гигабайты звуков/моделей/текстур,
+    /// которые всё равно не разбираются.
+    /// </summary>
+    public GamedataFile(string name, string path, string fullPath)
+    {
+        Name = name ?? "";
+        Path = path ?? "";
+        _loader = () => File.ReadAllBytes(fullPath);
     }
 
     public string Name { get; } = "";
     public string Path { get; } = "";
-    public byte[] Content { get; } = Array.Empty<byte>();
+    public byte[] Content => _content ??= _loader?.Invoke() ?? Array.Empty<byte>();
 }
 
 /// <summary>Файл, который не удалось разобрать (`skipped` в App.js).</summary>

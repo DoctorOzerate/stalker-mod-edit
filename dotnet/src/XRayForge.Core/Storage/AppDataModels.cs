@@ -28,4 +28,18 @@ public sealed class GamedataSnapshot
     [JsonPropertyName("scripts")] public List<ScriptFile>? Scripts { get; set; }
     [JsonPropertyName("itemFiles")] public Dictionary<string, string>? ItemFiles { get; set; }
     [JsonPropertyName("itemOrigins")] public Dictionary<string, string>? ItemOrigins { get; set; }
+
+    /// <summary>
+    /// Вернуть «тяжёлые» поля в проект (`Object.assign({}, proj, snap)` в JS).
+    /// null-поля снапшота не затирают уже загруженные данные.
+    /// </summary>
+    public void ApplyTo(Project project)
+    {
+        if (project == null) return;
+        if (LtxFiles != null) project.LtxFiles = LtxFiles;
+        if (Textures != null) project.Textures = Textures;
+        if (Scripts != null) project.Scripts = Scripts;
+        if (ItemFiles != null) project.ItemFiles = ItemFiles;
+        if (ItemOrigins != null) project.ItemOrigins = ItemOrigins;
+    }
 }

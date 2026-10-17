@@ -1,5 +1,4 @@
 using System.Text.RegularExpressions;
-using System.Xml;
 using System.Xml.Linq;
 using XRayForge.Core.Models;
 
@@ -11,10 +10,8 @@ public static class XmlParsers
     public static List<Character> ParseCharactersXml(string? text)
     {
         var cleaned = Regex.Replace(text ?? string.Empty, @"^\s*#include\b[^\n]*$", "", RegexOptions.Multiline);
-
-        XDocument doc;
-        try { doc = XDocument.Parse(cleaned); }
-        catch (XmlException) { return new List<Character>(); }
+        var doc = XmlHelpers.TryParse(cleaned);
+        if (doc == null) return new List<Character>();
 
         var result = new List<Character>();
         foreach (var x in doc.Descendants("specific_character"))
@@ -59,9 +56,8 @@ public static class XmlParsers
 
     public static List<DialogueGraph> ParseDialogueXml(string? text)
     {
-        XDocument doc;
-        try { doc = XDocument.Parse(text ?? string.Empty); }
-        catch (XmlException) { throw new InvalidOperationException("Некорректный XML диалогов"); }
+        var doc = XmlHelpers.TryParse(text);
+        if (doc == null) throw new InvalidOperationException("Некорректный XML диалогов");
 
         var root = doc.Root;
         List<XElement> dialogs;

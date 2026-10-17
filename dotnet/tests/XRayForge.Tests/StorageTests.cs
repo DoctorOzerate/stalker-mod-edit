@@ -188,6 +188,33 @@ public class StorageTests : IDisposable
     }
 
     [Fact]
+    public void Gamedata_snapshot_restores_heavy_fields_without_wiping_when_empty()
+    {
+        var store = new AppDataService(_root);
+        var source = NewProject("snap");
+        store.SaveGamedataSnapshot("snap", AppDataService.ToSnapshot(source));
+
+        var target = ProjectMigration.Empty();
+        target.ProjectName = "snap";
+        store.LoadGamedataSnapshot("snap")!.ApplyTo(target);
+
+        Assert.Equal("[system]\n", target.LtxFiles!["config/system.ltx"]);
+        Assert.Single(target.Scripts!);
+
+        new GamedataSnapshot().ApplyTo(target);
+        Assert.Single(target.LtxFiles!);
+        Assert.Single(target.Scripts!);
+
+        var blank = new Project { LtxFiles = null, Textures = null, Scripts = null, ItemFiles = null, ItemOrigins = null };
+        var snapshot = AppDataService.ToSnapshot(blank);
+        Assert.Empty(snapshot.LtxFiles!);
+        Assert.Empty(snapshot.Textures!);
+        Assert.Empty(snapshot.Scripts!);
+        Assert.Empty(snapshot.ItemFiles!);
+        Assert.Empty(snapshot.ItemOrigins!);
+    }
+
+    [Fact]
     public void Reset_removes_profile_files()
     {
         var store = new AppDataService(_root);

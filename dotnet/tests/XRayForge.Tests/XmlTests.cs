@@ -48,6 +48,20 @@ public class XmlTests
     }
 
     [Fact]
+    public void ParseCharactersXml_tolerates_invalid_xml_comments_like_real_gamedata()
+    {
+        const string xml = "<?xml version='1.0' encoding=\"windows-1251\"?>\r\n<xml>\r\n<!--- Jupiter A12 -->\r\n" +
+            "<specific_character id=\"aes_Monolit_rpg\"><name>GENERATE_NAME_stalker</name><community>monolith</community>" +
+            "<supplies>\r\n[spawn] \\n\r\n#include \"gameplay\\character_items.xml\"\r\n</supplies></specific_character>\r\n</xml>";
+
+        var characters = XmlParsers.ParseCharactersXml(xml);
+
+        var character = Assert.Single(characters);
+        Assert.Equal("aes_Monolit_rpg", character.Id);
+        Assert.Equal("monolith", character.Community);
+    }
+
+    [Fact]
     public void ParseStringTableXml_handles_fragment_without_root()
     {
         var lang = StringTableParser.Parse(

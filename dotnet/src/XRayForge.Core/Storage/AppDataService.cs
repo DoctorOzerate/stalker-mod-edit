@@ -200,11 +200,11 @@ public sealed class AppDataService
     /// <summary>Снапшот gamedata из полей проекта (`gamedataOf`).</summary>
     public static GamedataSnapshot ToSnapshot(Project? project) => new()
     {
-        LtxFiles = project?.LtxFiles,
-        Textures = project?.Textures,
-        Scripts = project?.Scripts,
-        ItemFiles = project?.ItemFiles,
-        ItemOrigins = project?.ItemOrigins
+        LtxFiles = project?.LtxFiles ?? new(StringComparer.Ordinal),
+        Textures = project?.Textures ?? new(),
+        Scripts = project?.Scripts ?? new(),
+        ItemFiles = project?.ItemFiles ?? new(StringComparer.Ordinal),
+        ItemOrigins = project?.ItemOrigins ?? new(StringComparer.Ordinal)
     };
 
     /// <summary>`resetStorage`: удалить все данные редактора.</summary>

@@ -79,7 +79,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         _autosave.Saved += OnAutosaveSaved;
         _autosave.ApplySettings();
 
-        _project = _store.LoadCurrentProject() ?? ProjectMigration.Empty();
+        _project = RestoreGamedata(_store.LoadCurrentProject());
         _project.Series = GameSeriesCatalog.Normalize(_project.Series);
         _statusText = LocalizationSource.Get("ready");
         _activeTab = Tabs[0];
@@ -282,7 +282,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             return;
         }
 
-        Adopt(project, dirty: false);
+        Adopt(RestoreGamedata(project), dirty: false);
         StatusText = LocalizationSource.Get("continue");
     }
 
@@ -327,7 +327,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             return;
         }
 
-        Adopt(stored.Data, dirty: false);
+        Adopt(RestoreGamedata(stored.Data), dirty: false);
         StatusText = LocalizationSource.Get("continue");
     }
 
@@ -432,6 +432,17 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     }
 
     // --- проект: принятие, вкладки, обзор, строки разделов ---
+
+    /// <summary>
+    /// Вернуть в проект «тяжёлые» поля из снапшота gamedata (`loadGamedataSnapshot` +
+    /// `Object.assign` на старте/продолжении/открытии проекта).
+    /// </summary>
+    private Project RestoreGamedata(Project? project)
+    {
+        if (project == null) return ProjectMigration.Empty();
+        _store.LoadGamedataSnapshot(project.ProjectName)?.ApplyTo(project);
+        return project;
+    }
 
     /// <summary>
     /// Принять проект как текущий (`openProject`/`createProject`/`importProject`):
@@ -769,10 +780,22 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             var skipped = result.Skipped.Concat(read.Skipped).ToList();
             _store.SaveGamedataSnapshot(_project.ProjectName, AppDataService.ToSnapshot(_project));
             SetDirty(true);
+            // Скан заменяет персонажей/диалоги/предметы и справочники — вкладки и подсказки
+            // пересобираются сразу, иначе до перезапуска показывался старый проект.
+            DialogueGraph.Attach(_project);
+            Characters.Attach(_project);
+            Items.Attach(_project);
             RefreshProjectView();
+            PublishSearch();
 
             StatusText = LocalizationSource.Get("scanGamedata");
             _dialogs.ShowMessage(LocalizationSource.Get("scanGamedata"), ScanReport(result.Stats, skipped));
+        }
+        catch (Exception e)
+        {
+            StatusText = LocalizationSource.Get("scanFailed");
+            StatusDetail = e.Message;
+            _dialogs.ShowMessage(LocalizationSource.Get("scanGamedata"), e.Message);
         }
         finally
         {

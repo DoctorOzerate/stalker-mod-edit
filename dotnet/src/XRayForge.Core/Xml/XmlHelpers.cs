@@ -12,6 +12,15 @@ public static class XmlHelpers
 {
     private const char Q = '"';
 
+    private static readonly Regex Comments = new(@"<!--.*?-->", RegexOptions.Singleline | RegexOptions.Compiled);
+
+    /// <summary>
+    /// Убрать XML-комментарии. Реальные файлы X-Ray часто содержат `&lt;!--- ... --&gt;`
+    /// (двойной дефис внутри комментария), что строгий .NET-парсер считает ошибкой,
+    /// а `@xmldom/xmldom` в JS пропускает. Комментарии для разбора не нужны.
+    /// </summary>
+    internal static string CleanXml(string? xml) => Comments.Replace(xml ?? string.Empty, "");
+
     /// <summary>Достать значение атрибута из сырой строки атрибутов (в двойных кавычках).</summary>
     public static string XmlAttr(string? attrs, string name)
     {
@@ -83,7 +92,7 @@ public static class XmlHelpers
 
     internal static XDocument? TryParse(string? xml)
     {
-        try { return XDocument.Parse(xml ?? string.Empty); }
+        try { return XDocument.Parse(CleanXml(xml)); }
         catch (XmlException) { return null; }
     }
 
