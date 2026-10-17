@@ -64,6 +64,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Backups = new ObservableCollection<BackupItemViewModel>();
         DialogueGraph = new DialogueGraphViewModel(this, _dialogs);
         Characters = new CharactersViewModel(this);
+        Items = new ItemsViewModel(this, _dialogs);
 
         _autosave = new AutosaveService(
             _store,
@@ -96,6 +97,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         DialogueGraph.Attach(_project);
         // Вкладка «Персонажи» (этап 7.1) строится из того же проекта.
         Characters.Attach(_project);
+        // Вкладка «Предметы» (этап 7.2) читает `items.ltx` того же проекта.
+        Items.Attach(_project);
 
         RefreshProjectView();
     }
@@ -132,6 +135,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
     /// <summary>Вкладка «Персонажи» (этап 7.1): редактор `specific_character` (`CharactersTab.js`).</summary>
     public CharactersViewModel Characters { get; }
+
+    /// <summary>Вкладка «Предметы» (этап 7.2): редактор `items.ltx` (`ItemsTab.js`).</summary>
+    public ItemsViewModel Items { get; }
 
     public Project Project => _project;
 
@@ -447,6 +453,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         DialogueGraph.Attach(_project);
         // Персонажи пересобираются вместе с проектом (выбор сбрасывается, как `setSelChar(null)`).
         Characters.Attach(_project);
+        // Предметы пересобираются вместе с проектом (выбор и история сбрасываются).
+        Items.Attach(_project);
 
         RefreshProjectView();
     }
@@ -577,6 +585,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     {
         foreach (var tab in Tabs) tab.Label = LocalizationSource.Get(tab.LabelKey);
         Characters.RefreshLocalization();
+        Items.RefreshLocalization();
 
         SeriesLabel = GameSeriesCatalog.Label(_project.Series);
         OnPropertyChanged(nameof(ThemeLabel));

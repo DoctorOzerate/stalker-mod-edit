@@ -25,6 +25,9 @@
         <DataTemplate x:Key="CharactersTemplate">
             <views:CharactersView />
         </DataTemplate>
+        <DataTemplate x:Key="ItemsTemplate">
+            <views:ItemsView />
+        </DataTemplate>
     </Window.Resources>
 
     <Grid>
@@ -198,6 +201,9 @@
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding ActiveTab.Id}" Value="characters">
                                     <Setter Property="ContentTemplate" Value="{StaticResource CharactersTemplate}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding ActiveTab.Id}" Value="items">
+                                    <Setter Property="ContentTemplate" Value="{StaticResource ItemsTemplate}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
