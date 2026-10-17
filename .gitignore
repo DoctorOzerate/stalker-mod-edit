@@ -19,3 +19,4 @@ Thumbs.db
 dotnet/**/bin/
 dotnet/**/obj/
 .vscode/settings.json
+ebaniy-link.txt
