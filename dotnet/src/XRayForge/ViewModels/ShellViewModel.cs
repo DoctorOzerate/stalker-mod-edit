@@ -63,8 +63,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         SearchHits = new ObservableCollection<ProjectSearchHit>();
         Backups = new ObservableCollection<BackupItemViewModel>();
         DialogueGraph = new DialogueGraphViewModel(this, _dialogs);
-
-
+        Characters = new CharactersViewModel(this);
 
         _autosave = new AutosaveService(
             _store,
@@ -95,6 +94,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         PublishSearch();
         // Граф диалога (этап 6) строится из текущего проекта до пересборки обзора.
         DialogueGraph.Attach(_project);
+        // Вкладка «Персонажи» (этап 7.1) строится из того же проекта.
+        Characters.Attach(_project);
 
         RefreshProjectView();
     }
@@ -129,6 +130,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     /// <summary>Вкладка «Диалоги» (этап 6): редактор графа диалога (`DialoguesTab.js`).</summary>
     public DialogueGraphViewModel DialogueGraph { get; }
 
+    /// <summary>Вкладка «Персонажи» (этап 7.1): редактор `specific_character` (`CharactersTab.js`).</summary>
+    public CharactersViewModel Characters { get; }
 
     public Project Project => _project;
 
@@ -442,6 +445,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         SetDirty(dirty);
         // Граф вкладки «Диалоги» пересобирается из принятого проекта (как `patch` в JS).
         DialogueGraph.Attach(_project);
+        // Персонажи пересобираются вместе с проектом (выбор сбрасывается, как `setSelChar(null)`).
+        Characters.Attach(_project);
 
         RefreshProjectView();
     }
@@ -571,6 +576,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     public void RefreshLocalization()
     {
         foreach (var tab in Tabs) tab.Label = LocalizationSource.Get(tab.LabelKey);
+        Characters.RefreshLocalization();
 
         SeriesLabel = GameSeriesCatalog.Label(_project.Series);
         OnPropertyChanged(nameof(ThemeLabel));
@@ -965,6 +971,12 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         if (statusDetail != null) StatusDetail = statusDetail;
     }
 
+    /// <summary>
+    /// Правка в неграфовой вкладке (персонажи и следующие разделы): тот же путь, что
+    /// <see cref="OnGraphEdited"/> — флаг изменений, обзор и строки разделов.
+    /// </summary>
+    public void OnSectionEdited(string? statusText = null, string? statusDetail = null) =>
+        OnGraphEdited(statusText, statusDetail);
 
     /// <summary>Флаг изменений: оболочка (`dirty`) и автосохранение (`AutosaveService.Dirty`).</summary>
     private void SetDirty(bool value)

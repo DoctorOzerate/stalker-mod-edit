@@ -22,6 +22,9 @@
         <DataTemplate x:Key="DialoguesTemplate">
             <views:DialoguesView />
         </DataTemplate>
+        <DataTemplate x:Key="CharactersTemplate">
+            <views:CharactersView />
+        </DataTemplate>
     </Window.Resources>
 
     <Grid>
@@ -192,6 +195,9 @@
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding ActiveTab.Id}" Value="dialogues">
                                     <Setter Property="ContentTemplate" Value="{StaticResource DialoguesTemplate}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding ActiveTab.Id}" Value="characters">
+                                    <Setter Property="ContentTemplate" Value="{StaticResource CharactersTemplate}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>

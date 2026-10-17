@@ -1,0 +1,639 @@
+<UserControl x:Class="XRayForge.Views.CharactersView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:XRayForge.Localization">
+    <!--
+      Вкладка «Персонажи» (этап 7.1, порт `CharactersTab.js`): слева поиск, сортировка и
+      группы по community, справа карточка `game_relations`, редактор `specific_character`,
+      предупреждения, иконка/визуал, связанные диалоги, diff с оригиналом и исходный XML.
+    -->
+    <UserControl.Resources>
+        <!-- `bg-slate-200 dark:bg-zinc-800` чипов группировок -->
+        <SolidColorBrush x:Key="CharChip" Color="#2A2A2A" />
+        <!-- `bg-amber-50 / border-amber-300` блока предупреждений -->
+        <SolidColorBrush x:Key="CharWarnTint" Color="#1AFFB020" />
+        <SolidColorBrush x:Key="CharWarnBorder" Color="#806B4A" />
+        <SolidColorBrush x:Key="CharRed" Color="#F87171" />
+        <SolidColorBrush x:Key="CharGreen" Color="#4ADE80" />
+        <SolidColorBrush x:Key="CharPlaceholder" Color="#262626" />
+
+        <!-- Подпись поля редактора (`text-xs`) -->
+        <Style x:Key="CharLabel" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="0,0,0,3" />
+        </Style>
+
+        <!-- Заголовок карточки (`text-[10px] uppercase tracking-widest font-bold`) -->
+        <Style x:Key="CharCardTitle" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+        </Style>
+
+        <!-- Многострочное поле (`textarea`): био и снаряжение -->
+        <Style x:Key="CharArea" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="AcceptsReturn" Value="True" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="VerticalContentAlignment" Value="Top" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+        </Style>
+
+        <!-- Карточка списка (`rounded-xl border p-3 ui.card ui.hover`). -->
+        <Style x:Key="CharCardButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Card" CornerRadius="10" Padding="8" BorderThickness="1"
+                                Background="{DynamicResource SurfaceRaised}"
+                                BorderBrush="{DynamicResource BorderBevel}">
+                            <ContentPresenter HorizontalAlignment="Stretch" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Card" Property="BorderBrush"
+                                        Value="{DynamicResource BorderStrong}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Card" Property="Background"
+                                        Value="{DynamicResource SurfaceSunken}" />
+                            </Trigger>
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                <Setter TargetName="Card" Property="BorderBrush"
+                                        Value="{DynamicResource AccentMain}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsDuplicate}" Value="True">
+                                <Setter TargetName="Card" Property="BorderBrush"
+                                        Value="{StaticResource CharRed}" />
+                            </DataTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Вторая строка карточки: при дубликате id текст красный, как `text-red-400` -->
+        <Style x:Key="CharCardSubtitle" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsDuplicate}" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource CharRed}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Выпадающий список в тёмной теме (системный шаблон иначе оставляет белый фон) -->
+        <Style x:Key="CharComboItem" TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="{DynamicResource SurfacePanel}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="Chrome" Background="{TemplateBinding Background}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Chrome" Property="Background"
+                                        Value="{DynamicResource SurfaceRaised}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Chrome" Property="Background"
+                                        Value="{DynamicResource AccentDim}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CharCombo" TargetType="ComboBox">
+            <Setter Property="Background" Value="{DynamicResource SurfaceSunken}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBevel}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="8,0" />
+            <Setter Property="ItemContainerStyle" Value="{StaticResource CharComboItem}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <Border x:Name="Frame" Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}" />
+                            <Grid Margin="{TemplateBinding Padding}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="22" />
+                                </Grid.ColumnDefinitions>
+                                <ContentPresenter x:Name="Selection" Grid.Column="0"
+                                                  Content="{TemplateBinding SelectionBoxItem}"
+                                                  ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                  ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
+                                                  HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                  IsHitTestVisible="False" />
+                                <TextBox x:Name="PART_EditableTextBox" Grid.Column="0" Visibility="Collapsed"
+                                         Background="Transparent" BorderThickness="0"
+                                         Foreground="{TemplateBinding Foreground}"
+                                         VerticalContentAlignment="Center"
+                                         IsReadOnly="{TemplateBinding IsReadOnly}" />
+                                <ToggleButton Grid.Column="1" Focusable="False" ClickMode="Press"
+                                              IsChecked="{Binding IsDropDownOpen, Mode=TwoWay,
+                                                  RelativeSource={RelativeSource TemplatedParent}}">
+                                    <ToggleButton.Template>
+                                        <ControlTemplate TargetType="ToggleButton">
+                                            <Border Background="Transparent">
+                                                <TextBlock Text="▾" FontSize="10" HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource TextMuted}" />
+                                            </Border>
+                                        </ControlTemplate>
+                                    </ToggleButton.Template>
+                                </ToggleButton>
+                            </Grid>
+                            <Popup x:Name="PART_Popup" Placement="Bottom" AllowsTransparency="True"
+                                   Focusable="False" PopupAnimation="Fade"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}">
+                                <Border Background="{DynamicResource SurfacePanel}"
+                                        BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
+                                        MinWidth="{TemplateBinding ActualWidth}"
+                                        MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <ScrollViewer>
+                                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEditable" Value="True">
+                                <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible" />
+                                <Setter TargetName="Selection" Property="Visibility" Value="Hidden" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Frame" Property="BorderBrush"
+                                        Value="{DynamicResource BorderStrong}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Setter TargetName="Frame" Property="BorderBrush"
+                                        Value="{DynamicResource AccentMain}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.55" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Кнопка связанного диалога: `btn text-left` -->
+        <Style x:Key="CharLinkButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Padding" Value="6,4" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+        </Style>
+
+        <!-- Кнопка `×` в шапке XML (`text-red-400`) -->
+        <Style x:Key="CharCloseButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
+            <Setter Property="Foreground" Value="{StaticResource CharRed}" />
+            <Setter Property="Padding" Value="4,0" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <!-- Шапка вкладки: глиф, название и горячая клавиша -->
+        <StackPanel Grid.Row="0" Margin="16,14,16,10">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding ActiveTab.Glyph}" Margin="0,0,8,0"
+                           Foreground="{Binding ActiveTab.AccentHex, Converter={StaticResource HexBrush}}" />
+                <TextBlock Text="{Binding ActiveTab.Label}" Style="{StaticResource TitleText}" />
+                <TextBlock Text="{Binding ActiveTab.Hotkey}" Style="{StaticResource CaptionText}"
+                           Margin="10,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+            <TextBlock Text="{loc:Loc tabCharactersHint}" Style="{StaticResource CaptionText}" Margin="0,2,0,0" />
+        </StackPanel>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="288" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <!-- Левая панель (`aside w-72 border-r p-4 overflow-auto`) -->
+            <Border Grid.Column="0" Background="{DynamicResource SurfacePanel}"
+                    BorderBrush="{DynamicResource BorderBevel}" BorderThickness="0,1,1,0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="12">
+                        <Button Content="{loc:Loc charCreate}" Style="{StaticResource AccentButton}"
+                                Command="{Binding Characters.CreateCommand}" />
+                        <Button Content="{loc:Loc charAutofill}" Style="{StaticResource ToolbarButton}"
+                                Margin="0,8,0,0" Command="{Binding Characters.AutofillCommand}" />
+                        <TextBlock Text="{Binding Characters.CountText}" Style="{StaticResource CaptionText}"
+                                   Margin="0,8,0,0" />
+                        <Grid Margin="0,12,0,0">
+                            <TextBox Text="{Binding Characters.Search, UpdateSourceTrigger=PropertyChanged}"
+                                     ToolTip="{loc:Loc charSearchHint}" />
+                            <TextBlock Text="{loc:Loc charSearch}" IsHitTestVisible="False"
+                                       VerticalAlignment="Center" Margin="9,0"
+                                       Foreground="{DynamicResource TextMuted}" FontSize="11">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Characters.Search}" Value="">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+                        <ComboBox SelectedValue="{Binding Characters.SortMode}" Height="28"
+                                  Style="{StaticResource CharCombo}"
+                                  VerticalContentAlignment="Center"
+                                  SelectedValuePath="Tag" Margin="0,8,0,0"
+                                  ToolTip="{loc:Loc charSortHint}">
+                            <ComboBoxItem Content="{loc:Loc charSortName}" Tag="name" />
+                            <ComboBoxItem Content="{loc:Loc charSortDefault}" Tag="default" />
+                        </ComboBox>
+
+                        <ItemsControl ItemsSource="{Binding Characters.Groups}" Margin="0,8,0,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Header}" Style="{StaticResource CharCardTitle}"
+                                                   Margin="0,6,0,4" />
+                                        <ItemsControl ItemsSource="{Binding Items}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button Style="{StaticResource CharCardButton}"
+                                                            AutomationProperties.Name="{Binding ListTitle}"
+                                                            Command="{Binding DataContext.Characters.SelectCommand,
+                                                                RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}">
+                                                        <StackPanel>
+                                                            <TextBlock Text="{Binding ListTitle}" FontWeight="Bold"
+                                                                       FontSize="11" TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Text="{Binding ListSubtitle}"
+                                                                       Style="{StaticResource CharCardSubtitle}"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Text="{loc:Loc charNoCharacters}" Style="{StaticResource CaptionText}"
+                                   TextWrapping="Wrap" Margin="0,8,0,0"
+                                   Visibility="{Binding Characters.HasCharacters,
+                                       Converter={StaticResource InverseBoolToVisibility}}" />
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <ScrollViewer x:Name="DetailsScroll" Grid.Column="1" VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Margin="20" MaxWidth="768" HorizontalAlignment="Stretch">
+                    <!-- `game_relations`: чипы community, матрица отношений и монстры -->
+                    <Border Style="{StaticResource PanelBorder}" CornerRadius="10" Margin="0,0,0,16"
+                            Visibility="{Binding Characters.HasGroups, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel>
+                            <TextBlock Text="{Binding Characters.CommunitiesTitle}" Style="{StaticResource CharCardTitle}" />
+                            <ItemsControl ItemsSource="{Binding Characters.CommunityChips}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{StaticResource CharChip}" CornerRadius="3"
+                                                Padding="7,2" Margin="0,0,4,4" ToolTip="{Binding Tooltip}">
+                                            <TextBlock Text="{Binding Text}" Style="{StaticResource MonoText}"
+                                                       FontSize="11" />
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <StackPanel Margin="0,6,0,0"
+                                        Visibility="{Binding Characters.HasRelations, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="{loc:Loc charRelationsTitle}" Style="{StaticResource CharCardTitle}" />
+                                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                              VerticalScrollBarVisibility="Disabled">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                                            <Border Width="120" />
+                                            <ItemsControl ItemsSource="{Binding Characters.RelationColumns}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <StackPanel Orientation="Horizontal" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding Short}" Width="58" TextAlignment="Center"
+                                                                   ToolTip="{Binding Community}"
+                                                                   Style="{StaticResource MonoText}" FontSize="10"
+                                                                   Foreground="{DynamicResource TextMuted}" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                        <ItemsControl ItemsSource="{Binding Characters.RelationRows}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal" Margin="0,1">
+                                                        <TextBlock Text="{Binding Short}" Width="120"
+                                                                   ToolTip="{Binding Community}"
+                                                                   Style="{StaticResource MonoText}" FontSize="10"
+                                                                   Foreground="{DynamicResource TextMuted}"
+                                                                   VerticalAlignment="Center" />
+                                                        <ItemsControl ItemsSource="{Binding Cells}">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate>
+                                                                    <StackPanel Orientation="Horizontal" />
+                                                                </ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                                                             Width="54" Height="24" MinHeight="0"
+                                                                             Padding="0" Margin="2,0"
+                                                                             TextAlignment="Center" FontSize="10" />
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </StackPanel>
+
+                            <StackPanel Margin="0,8,0,0"
+                                        Visibility="{Binding Characters.HasMonsterChips, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="{Binding Characters.MonstersTitle}" Style="{StaticResource CharCardTitle}" />
+                                <ItemsControl ItemsSource="{Binding Characters.MonsterChips}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="{StaticResource CharChip}" CornerRadius="3"
+                                                    Padding="7,2" Margin="0,0,4,4" ToolTip="{Binding Tooltip}">
+                                                <TextBlock Text="{Binding Text}" Style="{StaticResource MonoText}"
+                                                           FontSize="11" />
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+
+                        </StackPanel>
+                    </Border>
+
+
+                    <!-- Подсказка при пустом проекте (`Персонажей нет…`) -->
+                    <TextBlock Text="{loc:Loc charEmpty}" Style="{StaticResource CaptionText}"
+                               TextWrapping="Wrap" FontSize="13" Margin="0,8,0,0"
+                               Visibility="{Binding Characters.HasCharacters,
+                                   Converter={StaticResource InverseBoolToVisibility}}" />
+
+                    <!-- Редактор выбранного персонажа (`max-w-2xl grid gap-3`) -->
+                    <StackPanel Visibility="{Binding Characters.HasSelection,
+                                                Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="{loc:Loc charEditorTitle}" FontWeight="Bold" FontSize="15"
+                                   Margin="0,0,0,10" />
+
+                        <!-- Предупреждения `validateCharacter` -->
+                        <Border Background="{StaticResource CharWarnTint}" BorderBrush="{StaticResource CharWarnBorder}"
+                                BorderThickness="1" CornerRadius="8" Padding="8" Margin="0,0,0,10"
+                                Visibility="{Binding Characters.Selected.HasWarnings,
+                                    Converter={StaticResource BoolToVisibility}}">
+                            <ItemsControl ItemsSource="{Binding Characters.Selected.Warnings}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="11"
+                                                   Foreground="{DynamicResource StateWarn}" Margin="0,1" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Border>
+
+                        <StackPanel Margin="0,0,0,8">
+                            <TextBlock Text="ID" Style="{StaticResource CharLabel}" />
+                            <TextBox Text="{Binding Characters.Selected.Id, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+                        <StackPanel Margin="0,0,0,8">
+                            <TextBlock Text="{loc:Loc charFieldName}" Style="{StaticResource CharLabel}" />
+                            <TextBox Text="{Binding Characters.Selected.Name, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+                        <StackPanel Margin="0,0,0,8">
+                            <TextBlock Text="{loc:Loc charFieldCommunity}" Style="{StaticResource CharLabel}" />
+                            <ComboBox IsEditable="True" Style="{StaticResource CharCombo}"
+                                      Text="{Binding Characters.Selected.Community, UpdateSourceTrigger=PropertyChanged}"
+                                      ItemsSource="{Binding Characters.CommunityOptions}"
+                                      ToolTip="{loc:Loc charCommunityHint}" />
+                        </StackPanel>
+                        <StackPanel Margin="0,0,0,8">
+                            <TextBlock Text="{loc:Loc charFieldRank}" Style="{StaticResource CharLabel}" />
+                            <TextBox Text="{Binding Characters.Selected.Rank, UpdateSourceTrigger=PropertyChanged}" />
+                            <ItemsControl ItemsSource="{Binding Characters.RankMarks}" Margin="0,4,0,0"
+                                          Visibility="{Binding Characters.HasRankMarks,
+                                              Converter={StaticResource BoolToVisibility}}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{StaticResource CharChip}" CornerRadius="3"
+                                                Padding="5,1" Margin="0,0,4,4" ToolTip="{Binding Tooltip}">
+                                            <TextBlock Text="{Binding Text}" Style="{StaticResource MonoText}"
+                                                       FontSize="10" />
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,0,8">
+                            <TextBlock Text="{loc:Loc charFieldReputation}" Style="{StaticResource CharLabel}" />
+                            <TextBox Text="{Binding Characters.Selected.Reputation, UpdateSourceTrigger=PropertyChanged}" />
+                            <ItemsControl ItemsSource="{Binding Characters.ReputationMarks}" Margin="0,4,0,0"
+                                          Visibility="{Binding Characters.HasReputationMarks,
+                                              Converter={StaticResource BoolToVisibility}}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{StaticResource CharChip}" CornerRadius="3"
+                                                Padding="5,1" Margin="0,0,4,4" ToolTip="{Binding Tooltip}">
+                                            <TextBlock Text="{Binding Text}" Style="{StaticResource MonoText}"
+                                                       FontSize="10" />
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,0,8">
+                            <TextBlock Text="{loc:Loc charFieldNpcRank}" Style="{StaticResource CharLabel}" />
+                            <TextBox Text="{Binding Characters.Selected.NpcRank, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+                        <StackPanel Margin="0,0,0,8">
+                            <TextBlock Text="{loc:Loc charFieldBio}" Style="{StaticResource CharLabel}" />
+                            <TextBox Style="{StaticResource CharArea}" Height="62"
+                                     Text="{Binding Characters.Selected.Bio, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+                        <StackPanel Margin="0,0,0,8">
+                            <TextBlock Text="{loc:Loc charFieldSupplies}" Style="{StaticResource CharLabel}" />
+                            <TextBox Style="{StaticResource CharArea}" Height="78" FontSize="11"
+                                     Text="{Binding Characters.Selected.Supplies, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+                        <StackPanel Margin="0,0,0,8">
+                            <TextBlock Text="{loc:Loc charFieldIcon}" Style="{StaticResource CharLabel}" />
+                            <TextBox Text="{Binding Characters.Selected.Icon, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+                        <StackPanel Margin="0,0,0,8">
+                            <TextBlock Text="{loc:Loc charFieldVisual}" Style="{StaticResource CharLabel}" />
+                            <TextBox Text="{Binding Characters.Selected.Visual, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+
+                        <!-- «Иконка и визуал»: вырезка `textureMap[icon]` или заглушка 👤 -->
+                        <Border Style="{StaticResource PanelBorder}" CornerRadius="10" Margin="0,2,0,10">
+                            <StackPanel>
+                                <TextBlock Text="{loc:Loc charIconTitle}" Style="{StaticResource CharCardTitle}" />
+                                <StackPanel Orientation="Horizontal">
+                                    <Border Width="66" Height="{Binding Characters.IconPreviewHeight}"
+                                            CornerRadius="4" BorderThickness="1"
+                                            BorderBrush="{DynamicResource BorderStrong}"
+                                            Background="{StaticResource CharPlaceholder}"
+                                            Visibility="{Binding Characters.HasIconPreview,
+                                                Converter={StaticResource BoolToVisibility}}">
+                                        <Image Source="{Binding Characters.IconPreview}" Stretch="Fill"
+                                               RenderOptions.BitmapScalingMode="NearestNeighbor" />
+                                    </Border>
+                                    <Border Width="40" Height="40" CornerRadius="4" BorderThickness="1"
+                                            BorderBrush="{DynamicResource BorderStrong}"
+                                            Background="{StaticResource CharPlaceholder}"
+                                            Visibility="{Binding Characters.HasIconPreview,
+                                                Converter={StaticResource InverseBoolToVisibility}}">
+                                        <TextBlock Text="👤" FontSize="20" HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Characters.Selected.IconText}"
+                                                   Style="{StaticResource MonoText}" FontSize="11"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Characters.Selected.VisualText}"
+                                                   Style="{StaticResource MonoText}" FontSize="11"
+                                                   TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <StackPanel Margin="0,0,0,10">
+                            <TextBlock Text="{loc:Loc charFieldStartDialog}" Style="{StaticResource CharLabel}" />
+                            <TextBox Text="{Binding Characters.Selected.StartDialogText,
+                                                UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+
+                        <!-- «Диалоги персонажа»: `start_dialog` + `actor_dialog` -->
+                        <Border Style="{StaticResource PanelBorder}" CornerRadius="10" Margin="0,0,0,10">
+                            <StackPanel>
+                                <TextBlock Text="{loc:Loc charRelatedTitle}" Style="{StaticResource CharCardTitle}" />
+                                <ItemsControl ItemsSource="{Binding Characters.Related}"
+                                              Visibility="{Binding Characters.HasRelated,
+                                                  Converter={StaticResource BoolToVisibility}}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Content="{Binding Title}" Style="{StaticResource CharLinkButton}"
+                                                    Command="{Binding DataContext.Characters.OpenRelatedCommand,
+                                                        RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <TextBlock Text="{loc:Loc charNoRelated}" Style="{StaticResource CaptionText}"
+                                           TextWrapping="Wrap"
+                                           Visibility="{Binding Characters.HasRelated,
+                                               Converter={StaticResource InverseBoolToVisibility}}" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- «Изменения от оригинала» (`c.original` и непустой diff) -->
+                        <Border Style="{StaticResource PanelBorder}" CornerRadius="10" Margin="0,0,0,10"
+                                Visibility="{Binding Characters.HasDiff, Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel>
+                                <TextBlock Text="{loc:Loc charDiffTitle}" Style="{StaticResource CharCardTitle}" />
+                                <ItemsControl ItemsSource="{Binding Characters.DiffRows}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,1">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="90" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0"
+                                                           Text="{Binding LabelKey, Converter={StaticResource LocKey}}"
+                                                           Style="{StaticResource CaptionText}"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="1" Text="{Binding BeforeText}"
+                                                           TextDecorations="Strikethrough" FontSize="11"
+                                                           Foreground="{StaticResource CharRed}"
+                                                           TextTrimming="CharacterEllipsis" Margin="0,0,6,0" />
+                                                <TextBlock Grid.Column="2" Text="{Binding AfterText}" FontSize="11"
+                                                           Foreground="{StaticResource CharGreen}"
+                                                           TextTrimming="CharacterEllipsis" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Исходный XML из `ltxFiles` (`extractCharacterXml`) -->
+                        <Button Content="{loc:Loc charXmlShow}" Style="{StaticResource ToolbarButton}"
+                                HorizontalAlignment="Left" Command="{Binding Characters.ShowXmlCommand}" />
+                        <Border Style="{StaticResource PanelBorder}" CornerRadius="10" Margin="0,10,0,0"
+                                Visibility="{Binding Characters.IsXmlOpen, Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,6">
+                                    <TextBlock Text="{loc:Loc charXmlTitle}" Style="{StaticResource CharCardTitle}"
+                                               Margin="0" VerticalAlignment="Center" />
+                                    <Button Content="×" Style="{StaticResource CharCloseButton}"
+                                            HorizontalAlignment="Right"
+                                            Command="{Binding Characters.CloseXmlCommand}" />
+                                </Grid>
+                                <TextBox Text="{Binding Characters.XmlText, Mode=OneWay}" IsReadOnly="True"
+                                         Style="{StaticResource CharArea}" Height="210" FontSize="11" />
+                            </StackPanel>
+                        </Border>
+
+                        <Button Content="{loc:Loc charDelete}" Style="{StaticResource DangerButton}"
+                                HorizontalAlignment="Left" Margin="0,12,0,0"
+                                Command="{Binding Characters.DeleteCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>
