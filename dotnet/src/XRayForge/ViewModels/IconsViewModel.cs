@@ -43,19 +43,32 @@ public sealed partial class IconsViewModel : ObservableObject
         Pinned = new ObservableCollection<PinnedIconViewModel>();
         Duplicates = new ObservableCollection<AtlasDuplicateCellViewModel>();
         Collections = new ObservableCollection<string>();
+        AtlasOptions = new ObservableCollection<ProjectTexture>();
     }
 
     /// <summary>`ATLAS_PRESETS` с пустым первым пунктом «Выбрать…» (как `&lt;option value=""&gt;` в JS).</summary>
     public IReadOnlyList<AtlasPreset> PresetOptions { get; } = new[]
     {
-        new AtlasPreset { Label = LocalizationSource.Get("iconChoosePreset"), Columns = 0, CellW = 0, CellH = 0 }
+        new AtlasPreset { Label = LocalizationSource.Get("iconChoosePreset"), CellW = 0, CellH = 0 }
     }.Concat(IconGrid.AtlasPresets).ToList();
 
     public ObservableCollection<PinnedIconViewModel> Pinned { get; }
     public ObservableCollection<AtlasDuplicateCellViewModel> Duplicates { get; }
     public ObservableCollection<string> Collections { get; }
 
+    /// <summary>
+    /// Все DDS-атласы проекта (`textures[]`): `ui_icon_equipment`, портреты `ui_npc`/
+    /// `ui_actor` и вручную загруженные файлы. Переключение не теряет остальные атласы.
+    /// </summary>
+    public ObservableCollection<ProjectTexture> AtlasOptions { get; }
+
     // --- состояние атласа ---
+
+    /// <summary>Активный атлас (`textures[0]` раньше выбирался жёстко).</summary>
+    [ObservableProperty] private ProjectTexture? _selectedAtlas;
+
+    /// <summary>Атлас для наложения-сравнения; null — сравнение выключено.</summary>
+    [ObservableProperty] private ProjectTexture? _selectedCompare;
 
     [ObservableProperty] private ImageSource? _atlasImage;
     [ObservableProperty] private ImageSource? _overlayImage;
@@ -75,9 +88,6 @@ public sealed partial class IconsViewModel : ObservableObject
 
     /// <summary>Прозрачность второго атласа при сравнении (`compareOpacity`).</summary>
     [ObservableProperty] private double _compareOpacity = 0.5;
-
-    /// <summary>Число колонок из `project.atlas.columns`.</summary>
-    [ObservableProperty] private double _atlasColumns = 5;
 
     /// <summary>Ширина ячейки (`atlas.cellSize`).</summary>
     [ObservableProperty] private double _cellWidth = 50;
@@ -108,11 +118,23 @@ public sealed partial class IconsViewModel : ObservableObject
     /// <summary>Строка состояния сетки: имя файла, размер и число ячеек.</summary>
     public string GridInfo => AtlasInfo;
 
-    /// <summary>Целое число колонок для `AtlasCanvas`.</summary>
-    public int GridColumns => Math.Max(1, (int)Math.Round(AtlasColumns));
+    /// <summary>
+    /// Число колонок всегда вычисляется по ширине атласа и ширине ячейки.
+    /// Отдельного пользовательского значения колонок нет.
+    /// </summary>
+    public int GridColumns => Math.Max(1, _grid.Columns);
 
     /// <summary>Вычисленное число рядов для `AtlasCanvas`.</summary>
     public int GridRows => Math.Max(1, _grid.Rows);
+
+    /// <summary>Показать выбор атласа, когда gamedata загрузила несколько DDS.</summary>
+    public bool HasAtlasOptions => AtlasOptions.Count > 1;
+
+    /// <summary>Размер холста по X: пиксели атласа × масштаб (без растяжения по одной оси).</summary>
+    public double AtlasDisplayWidth => _atlasBitmap is { } bitmap ? bitmap.PixelWidth * Zoom : 0;
+
+    /// <summary>Размер холста по Y: пиксели атласа × масштаб.</summary>
+    public double AtlasDisplayHeight => _atlasBitmap is { } bitmap ? bitmap.PixelHeight * Zoom : 0;
 
     /// <summary>Показать подсказку «загрузите DDS», когда атласа ещё нет и ошибки нет.</summary>
     public bool IsEmptyAtlas => !HasAtlas && !HasAtlasError;
@@ -131,7 +153,8 @@ public sealed partial class IconsViewModel : ObservableObject
     {
         _project = project ?? ProjectMigration.Empty();
         _loading = true;
-        AtlasColumns = _project.Atlas.Columns > 0 ? _project.Atlas.Columns : 5;
+        SelectedAtlas = null;
+        SelectedCompare = null;
         CellWidth = _project.Atlas.CellSize > 0 ? _project.Atlas.CellSize : 50;
         CellHeight = _project.Atlas.CellHeight > 0 ? _project.Atlas.CellHeight : CellWidth;
         Zoom = 1;
@@ -150,9 +173,56 @@ public sealed partial class IconsViewModel : ObservableObject
         _loading = false;
 
         RefreshCollections();
+        RefreshAtlasOptions();
         ReloadAtlas();
         RefreshPinned();
         NotifyHistory();
+    }
+
+    /// <summary>
+    /// Пересобрать список атласов. Текущий выбор сохраняется, если текстура осталась
+    /// в проекте; иначе выбирается первый декодированный DDS.
+    /// </summary>
+    private void RefreshAtlasOptions(ProjectTexture? selectAtlas = null, ProjectTexture? selectCompare = null,
+        bool preserveCompare = true)
+    {
+        var textures = _project.Textures ?? new List<ProjectTexture>();
+        _loading = true;
+        AtlasOptions.Clear();
+        foreach (var texture in textures) AtlasOptions.Add(texture);
+
+        var current = selectAtlas ?? SelectedAtlas;
+        SelectedAtlas = current != null && textures.Contains(current)
+            ? current
+            : textures.FirstOrDefault(texture => string.IsNullOrWhiteSpace(texture.Error)) ??
+              textures.FirstOrDefault();
+
+        var compare = selectCompare ?? SelectedCompare;
+        SelectedCompare = preserveCompare && compare != null &&
+                          !ReferenceEquals(compare, SelectedAtlas) && textures.Contains(compare)
+            ? compare
+            : null;
+        _loading = false;
+
+        OnPropertyChanged(nameof(HasAtlasOptions));
+    }
+
+    partial void OnSelectedAtlasChanged(ProjectTexture? value)
+    {
+        if (_loading) return;
+        if (ReferenceEquals(SelectedCompare, value))
+        {
+            _loading = true;
+            SelectedCompare = null;
+            _loading = false;
+        }
+
+        ReloadAtlas();
+    }
+
+    partial void OnSelectedCompareChanged(ProjectTexture? value)
+    {
+        if (!_loading) LoadOverlay();
     }
 
     private void RefreshCollections()
@@ -176,7 +246,7 @@ public sealed partial class IconsViewModel : ObservableObject
     {
         _atlasBitmap = null;
         _atlasPixels = null;
-        _grid = AtlasGrid.Create(0, 0, CellWidth, CellHeight, AtlasColumns);
+        _grid = AtlasGrid.Create(0, 0, CellWidth, CellHeight, 1);
         AtlasImage = null;
         OverlayImage = null;
         HasOverlay = false;
@@ -187,10 +257,10 @@ public sealed partial class IconsViewModel : ObservableObject
         UpdateSelectionText();
         UpdateMagnifier();
 
-        var textures = _project.Textures ?? new List<ProjectTexture>();
-        var texture = textures.FirstOrDefault();
+        var texture = SelectedAtlas;
         if (texture == null)
         {
+            NotifyAtlasDisplaySize();
             OnPropertyChanged(nameof(GridInfo));
             return;
         }
@@ -214,14 +284,7 @@ public sealed partial class IconsViewModel : ObservableObject
         AtlasImage = bitmap;
         HasAtlas = true;
         HasAtlasError = false;
-        AutoFitDefaultColumns(pixels.Width);
-
-        var compare = textures.Skip(1).FirstOrDefault();
-        if (compare != null && string.IsNullOrWhiteSpace(compare.Error))
-        {
-            OverlayImage = TexturePreview.Load(compare.DataUrl);
-            HasOverlay = OverlayImage != null;
-        }
+        NotifyAtlasDisplaySize();
 
         RefreshLayout(texture.Name);
         LoadOverlay();
@@ -229,8 +292,10 @@ public sealed partial class IconsViewModel : ObservableObject
 
     private void LoadOverlay()
     {
-        var compare = (_project.Textures ?? new List<ProjectTexture>()).Skip(1).FirstOrDefault();
-        OverlayImage = compare != null && string.IsNullOrWhiteSpace(compare.Error)
+        var compare = SelectedCompare;
+        OverlayImage = compare != null &&
+                       !ReferenceEquals(compare, SelectedAtlas) &&
+                       string.IsNullOrWhiteSpace(compare.Error)
             ? TexturePreview.Load(compare.DataUrl)
             : null;
         HasOverlay = OverlayImage != null;
@@ -243,7 +308,14 @@ public sealed partial class IconsViewModel : ObservableObject
         HasOverlay = false;
         AtlasError = message;
         AtlasInfo = "";
+        NotifyAtlasDisplaySize();
         OnPropertyChanged(nameof(GridInfo));
+    }
+
+    private void NotifyAtlasDisplaySize()
+    {
+        OnPropertyChanged(nameof(AtlasDisplayWidth));
+        OnPropertyChanged(nameof(AtlasDisplayHeight));
     }
 
     /// <summary>Пересчитать сетку, строку состояния и ограничить выделение.</summary>
@@ -255,7 +327,12 @@ public sealed partial class IconsViewModel : ObservableObject
             return;
         }
 
-        _grid = AtlasGrid.Create(_atlasPixels.Width, _atlasPixels.Height, CellWidth, CellHeight, AtlasColumns);
+        var columns = Math.Max(1,
+            _atlasPixels.Width / Math.Max(1, (int)Math.Round(CellWidth > 0 ? CellWidth : 50)));
+        _grid = AtlasGrid.Create(_atlasPixels.Width, _atlasPixels.Height, CellWidth, CellHeight, columns);
+        // В проекте колонки остаются только как производное значение для совместимости схемы.
+        _project.Atlas.Columns = _grid.Columns;
+
         var selection = _grid.ClampSelection(new AtlasRegion(
             SelectionX, SelectionY,
             SelectionWidth <= 0 ? 1 : SelectionWidth,
@@ -263,7 +340,7 @@ public sealed partial class IconsViewModel : ObservableObject
         ApplySelection(selection.X, selection.Y, selection.W, selection.H);
         UpdateSelectionText();
 
-        var fileName = name ?? (_project.Textures?.FirstOrDefault()?.Name ?? "");
+        var fileName = name ?? SelectedAtlas?.Name ?? "";
         AtlasInfo = fileName + " · " + _atlasPixels.Width + "×" + _atlasPixels.Height +
             " · " + LocalizationSource.Get("iconGrid") + " " + _grid.Columns + "×" + _grid.Rows +
             " " + LocalizationSource.Get("iconCells");
@@ -272,23 +349,6 @@ public sealed partial class IconsViewModel : ObservableObject
         OnPropertyChanged(nameof(GridRows));
         OnPropertyChanged(nameof(SelectionPixels));
         UpdateMagnifier();
-    }
-
-    /// <summary>
-    /// Для дефолтной сетки 50×50 (5 колонок) подобрать колонки по ширине атласа:
-    /// у `ui_icon_equipment.dds` (1024×2048) это 20 ячеек, иначе выделение было бы
-    /// ограничено левыми пятью.
-    /// </summary>
-    private void AutoFitDefaultColumns(int imageWidth)
-    {
-        if (Math.Abs(AtlasColumns - 5) > 0.001 || Math.Abs(CellWidth - 50) > 0.001) return;
-        var actual = Math.Max(1, imageWidth / Math.Max(1, (int)Math.Round(CellWidth)));
-        if (actual <= AtlasColumns) return;
-
-        _loading = true;
-        AtlasColumns = actual;
-        _project.Atlas.Columns = actual;
-        _loading = false;
     }
 
     private void ApplySelection(int x, int y, int w, int h)
@@ -343,23 +403,13 @@ public sealed partial class IconsViewModel : ObservableObject
     partial void OnZoomChanged(double value)
     {
         var clamped = Math.Round(Math.Clamp(value, 0.25, 3.0), 2);
-        if (Math.Abs(clamped - value) > 0.0001) Zoom = clamped;
-    }
-
-    partial void OnAtlasColumnsChanged(double value)
-    {
-        if (_loading) return;
-        if (value < 1)
+        if (Math.Abs(clamped - value) > 0.0001)
         {
-            _loading = true;
-            AtlasColumns = 1;
-            _loading = false;
-            value = 1;
+            Zoom = clamped;
+            return;
         }
 
-        _project.Atlas.Columns = value;
-        RefreshLayout();
-        _shell.OnSectionEdited();
+        NotifyAtlasDisplaySize();
     }
 
     partial void OnCellWidthChanged(double value)
@@ -397,13 +447,11 @@ public sealed partial class IconsViewModel : ObservableObject
 
     partial void OnSelectedPresetChanged(AtlasPreset? value)
     {
-        if (_loading || value == null || value.Columns <= 0) return;
+        if (_loading || value == null || value.CellW <= 0) return;
 
         _loading = true;
-        AtlasColumns = Math.Max(1, value.Columns);
         CellWidth = Math.Max(1, value.CellW);
         CellHeight = Math.Max(1, value.CellH);
-        _project.Atlas.Columns = AtlasColumns;
         _project.Atlas.CellSize = CellWidth;
         _project.Atlas.CellHeight = CellHeight;
         _loading = false;
@@ -513,7 +561,7 @@ public sealed partial class IconsViewModel : ObservableObject
         try
         {
             var image = DecodeDds(path);
-            ApplyAtlasImage(image, Path.GetFileName(path), replaceAll: true,
+            ApplyAtlasImage(image, Path.GetFileName(path), addAsNew: true,
                 LocalizationSource.Get("iconLoaded") + ": " + Path.GetFileName(path) +
                 " (" + image.Width + "x" + image.Height + ")");
         }
@@ -534,11 +582,16 @@ public sealed partial class IconsViewModel : ObservableObject
         try
         {
             var image = DecodeDds(path);
-            var textures = (_project.Textures ?? new List<ProjectTexture>()).Take(1).ToList();
-            textures.Add(CreateTexture(image, Path.GetFileName(path)));
+            var texture = CreateTexture(image, Path.GetFileName(path));
+            var textures = (_project.Textures ?? new List<ProjectTexture>()).ToList();
+            var index = textures.FindIndex(item => TextureNameEquals(item.Name, texture.Name));
+            if (index >= 0) textures[index] = texture;
+            else textures.Add(texture);
+
             _project.Textures = textures;
+            RefreshAtlasOptions(SelectedAtlas, texture);
             LoadOverlay();
-            _shell.OnSectionEdited(LocalizationSource.Get("iconCompareLoaded") + ": " + Path.GetFileName(path));
+            _shell.OnSectionEdited(LocalizationSource.Get("iconCompareLoaded") + ": " + texture.Name);
         }
         catch (Exception e)
         {
@@ -549,8 +602,9 @@ public sealed partial class IconsViewModel : ObservableObject
     [RelayCommand]
     private void RemoveCompare()
     {
-        if (!HasOverlay) return;
-        _project.Textures = (_project.Textures ?? new List<ProjectTexture>()).Take(1).ToList();
+        if (SelectedCompare == null) return;
+        // Остальные атласы остаются в project.textures — убирается только наложение.
+        RefreshAtlasOptions(SelectedAtlas, null, preserveCompare: false);
         LoadOverlay();
         _shell.OnSectionEdited(LocalizationSource.Get("iconCompareRemoved"));
     }
@@ -569,7 +623,14 @@ public sealed partial class IconsViewModel : ObservableObject
         Height = image.Height
     };
 
-    private void ApplyAtlasImage(RgbaImage image, string name, bool replaceAll, string status)
+    private static bool TextureNameEquals(string? left, string? right) =>
+        string.Equals((left ?? "").Trim(), (right ?? "").Trim(), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Применить изображение к активному атласу. `addAsNew` добавляет новый DDS/пустой
+    /// атлас, не удаляя остальные; иначе заменяется только выбранный атлас.
+    /// </summary>
+    private void ApplyAtlasImage(RgbaImage image, string name, bool addAsNew, string status)
     {
         if (image.IsEmpty)
         {
@@ -579,11 +640,25 @@ public sealed partial class IconsViewModel : ObservableObject
 
         var texture = CreateTexture(image, name);
         var textures = (_project.Textures ?? new List<ProjectTexture>()).ToList();
-        if (replaceAll || textures.Count == 0)
-            textures = new List<ProjectTexture> { texture };
+        var sameName = textures.FindIndex(item => TextureNameEquals(item.Name, texture.Name));
+        if (sameName >= 0)
+        {
+            textures[sameName] = texture;
+        }
+        else if (addAsNew || textures.Count == 0)
+        {
+            textures.Add(texture);
+        }
         else
-            textures[0] = texture;
+        {
+            var selectedIndex = SelectedAtlas != null ? textures.IndexOf(SelectedAtlas) : -1;
+            if (selectedIndex >= 0) textures[selectedIndex] = texture;
+            else textures.Add(texture);
+        }
+
+        var compare = SelectedCompare;
         _project.Textures = textures;
+        RefreshAtlasOptions(texture, compare);
 
         _atlasPixels = image;
         _atlasBitmap = RgbaImageCodec.ToBitmap(image);
@@ -591,7 +666,7 @@ public sealed partial class IconsViewModel : ObservableObject
         HasAtlas = true;
         HasAtlasError = false;
         AtlasError = "";
-        if (replaceAll) AutoFitDefaultColumns(image.Width);
+        NotifyAtlasDisplaySize();
         RefreshLayout(name);
         LoadOverlay();
         _shell.OnSectionEdited(status);
@@ -610,7 +685,7 @@ public sealed partial class IconsViewModel : ObservableObject
     {
         if (_atlasPixels == null) return;
         ExportPngImage(_atlasPixels, LocalizationSource.Get("iconExportPng"),
-            (Path.GetFileNameWithoutExtension(_project.Textures?.FirstOrDefault()?.Name ?? "atlas")) + ".png");
+            Path.GetFileNameWithoutExtension(SelectedAtlas?.Name ?? "atlas") + ".png");
     }
 
     [RelayCommand]
@@ -696,22 +771,37 @@ public sealed partial class IconsViewModel : ObservableObject
     {
         if (_atlasPixels == null || _clipboard == null || _clipboard.IsEmpty) return;
         AtlasPixels.Paste(_atlasPixels, _clipboard, SelectionX * _grid.CellWidth, SelectionY * _grid.CellHeight);
-        ApplyAtlasImage(_atlasPixels, CurrentName(), replaceAll: false,
+        ApplyAtlasImage(_atlasPixels, CurrentName(), addAsNew: false,
             LocalizationSource.Get("iconPasted") + " " + SelectionX + "×" + SelectionY);
     }
 
     [RelayCommand]
     private void NewAtlas()
     {
-        var columns = ParseInt(_dialogs.Prompt(
-            LocalizationSource.Get("iconNewAtlas"), LocalizationSource.Get("iconColumnsPrompt"), "5"), 5);
-        var rows = ParseInt(_dialogs.Prompt(
-            LocalizationSource.Get("iconNewAtlas"), LocalizationSource.Get("iconRowsPrompt"), "5"), 5);
-        var image = AtlasPixels.Transparent(
-            (int)(Math.Max(1, columns) * _grid.CellWidth),
-            (int)(Math.Max(1, rows) * _grid.CellHeight));
-        ApplyAtlasImage(image, "new_atlas.png", replaceAll: true,
-            LocalizationSource.Get("iconNewCreated") + ": " + columns + "×" + rows);
+        // Размер задаётся в пикселях; колонки/ряды вкладка вычисляет сама по ячейке.
+        var defaultWidth = Math.Max(1, (int)Math.Round(CellWidth)) * 20;
+        var defaultHeight = Math.Max(1, (int)Math.Round(CellHeight)) * 20;
+        var widthText = _dialogs.Prompt(
+            LocalizationSource.Get("iconNewAtlas"), LocalizationSource.Get("iconAtlasWidthPrompt"),
+            defaultWidth.ToString(CultureInfo.InvariantCulture));
+        if (widthText == null) return;
+
+        var heightText = _dialogs.Prompt(
+            LocalizationSource.Get("iconNewAtlas"), LocalizationSource.Get("iconAtlasHeightPrompt"),
+            defaultHeight.ToString(CultureInfo.InvariantCulture));
+        if (heightText == null) return;
+
+        if (!int.TryParse(widthText.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var width) ||
+            !int.TryParse(heightText.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var height) ||
+            width <= 0 || height <= 0)
+        {
+            ShowError(LocalizationSource.Get("iconSizeInvalid"));
+            return;
+        }
+
+        var image = AtlasPixels.Transparent(width, height);
+        ApplyAtlasImage(image, "new_atlas.png", addAsNew: true,
+            LocalizationSource.Get("iconNewCreated") + ": " + width + "×" + height + " px");
     }
 
     [RelayCommand]
@@ -721,7 +811,7 @@ public sealed partial class IconsViewModel : ObservableObject
         var cropped = AtlasPixels.Crop(_atlasPixels, CurrentPixelRegion());
         if (cropped.IsEmpty) return;
         ApplyAtlasImage(cropped, "crop_" + cropped.Width + "x" + cropped.Height + ".png",
-            replaceAll: true, LocalizationSource.Get("iconCropped") + " (" + cropped.Width + "×" + cropped.Height + ")");
+            addAsNew: false, LocalizationSource.Get("iconCropped") + " (" + cropped.Width + "×" + cropped.Height + ")");
     }
 
     [RelayCommand]
@@ -738,7 +828,7 @@ public sealed partial class IconsViewModel : ObservableObject
         }
 
         AtlasPixels.Fill(_atlasPixels, CurrentPixelRegion(), color);
-        ApplyAtlasImage(_atlasPixels, CurrentName(), replaceAll: false,
+        ApplyAtlasImage(_atlasPixels, CurrentName(), addAsNew: false,
             LocalizationSource.Get("iconFilled") + ": " + raw);
     }
 
@@ -751,7 +841,7 @@ public sealed partial class IconsViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(raw)) return;
         var alpha = Math.Clamp(ParseInt(raw, 128), 0, 255);
         AtlasPixels.SetAlpha(_atlasPixels, CurrentPixelRegion(), (byte)alpha);
-        ApplyAtlasImage(_atlasPixels, CurrentName(), replaceAll: false,
+        ApplyAtlasImage(_atlasPixels, CurrentName(), addAsNew: false,
             LocalizationSource.Get("iconAlphaSet") + ": " + alpha);
     }
 
@@ -765,7 +855,7 @@ public sealed partial class IconsViewModel : ObservableObject
     {
         if (_atlasPixels == null) return;
         AtlasPixels.Flip(_atlasPixels, CurrentPixelRegion(), horizontal);
-        ApplyAtlasImage(_atlasPixels, CurrentName(), replaceAll: false,
+        ApplyAtlasImage(_atlasPixels, CurrentName(), addAsNew: false,
             LocalizationSource.Get(horizontal ? "iconFlippedX" : "iconFlippedY"));
     }
 
@@ -787,11 +877,11 @@ public sealed partial class IconsViewModel : ObservableObject
         }
 
         AtlasPixels.Rotate90(_atlasPixels, region, clockwise);
-        ApplyAtlasImage(_atlasPixels, CurrentName(), replaceAll: false,
+        ApplyAtlasImage(_atlasPixels, CurrentName(), addAsNew: false,
             LocalizationSource.Get(clockwise ? "iconRotatedClockwise" : "iconRotatedCounterClockwise"));
     }
 
-    private string CurrentName() => _project.Textures?.FirstOrDefault()?.Name ?? "atlas.png";
+    private string CurrentName() => SelectedAtlas?.Name ?? "atlas.png";
 
     private static int ParseInt(string? value, int fallback) =>
         int.TryParse((value ?? "").Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var number)

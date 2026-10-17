@@ -3,11 +3,10 @@ using System.Text.RegularExpressions;
 
 namespace XRayForge.Core.Ltx;
 
-/// <summary>Пресет атласа иконок (label/columns/cellW/cellH) — порт ATLAS_PRESETS.</summary>
+/// <summary>Пресет атласа иконок: только размер ячейки, без фиксированного числа колонок.</summary>
 public sealed class AtlasPreset
 {
     public string Label { get; set; } = "";
-    public int Columns { get; set; }
     public int CellW { get; set; }
     public int CellH { get; set; }
 
@@ -20,10 +19,10 @@ public static class IconGrid
 {
     public static readonly List<AtlasPreset> AtlasPresets = new()
     {
-        new() { Label = "50×50 · 5 колонок", Columns = 5, CellW = 50, CellH = 50 },
-        new() { Label = "50×50 · 10 колонок", Columns = 10, CellW = 50, CellH = 50 },
-        new() { Label = "32×32 · 8 колонок", Columns = 8, CellW = 32, CellH = 32 },
-        new() { Label = "64×64 · 4 колонки", Columns = 4, CellW = 64, CellH = 64 }
+        new() { Label = "Ячейка 50×50", CellW = 50, CellH = 50 },
+        new() { Label = "Ячейка 32×32", CellW = 32, CellH = 32 },
+        new() { Label = "Ячейка 64×64", CellW = 64, CellH = 64 },
+        new() { Label = "Ячейка 128×128", CellW = 128, CellH = 128 }
     };
 
     /// <summary>isValidGridValue: целое неотрицательное (позиция иконки).</summary>

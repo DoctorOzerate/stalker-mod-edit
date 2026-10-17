@@ -75,8 +75,8 @@ public class LtxUtilsTests
     public void AtlasPresets_contains_four_variants()
     {
         Assert.Equal(4, IconGrid.AtlasPresets.Count);
-        Assert.Equal(5, IconGrid.AtlasPresets[0].Columns);
-        Assert.Equal(64, IconGrid.AtlasPresets[^1].CellW);
+        Assert.Equal(50, IconGrid.AtlasPresets[0].CellW);
+        Assert.Equal(128, IconGrid.AtlasPresets[^1].CellW);
     }
 
     [Fact]

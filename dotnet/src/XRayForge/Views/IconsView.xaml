@@ -145,6 +145,23 @@
                 <StackPanel Margin="12">
                     <Button Content="{loc:Loc iconLoadDds}" Style="{StaticResource AccentButton}"
                             Command="{Binding Icons.LoadDdsCommand}" />
+
+                    <TextBlock Text="{loc:Loc iconAtlas}" Style="{StaticResource IconLabel}" Margin="0,10,0,3"
+                               Visibility="{Binding Icons.HasAtlasOptions, Converter={StaticResource BoolToVisibility}}" />
+                    <ComboBox ItemsSource="{Binding Icons.AtlasOptions}"
+                              SelectedItem="{Binding Icons.SelectedAtlas}"
+                              DisplayMemberPath="Name" Style="{StaticResource IconCombo}"
+                              Height="28" VerticalContentAlignment="Center"
+                              Visibility="{Binding Icons.HasAtlasOptions, Converter={StaticResource BoolToVisibility}}" />
+
+                    <TextBlock Text="{loc:Loc iconCompareAtlas}" Style="{StaticResource IconLabel}" Margin="0,8,0,3"
+                               Visibility="{Binding Icons.HasAtlasOptions, Converter={StaticResource BoolToVisibility}}" />
+                    <ComboBox ItemsSource="{Binding Icons.AtlasOptions}"
+                              SelectedItem="{Binding Icons.SelectedCompare}"
+                              DisplayMemberPath="Name" Style="{StaticResource IconCombo}"
+                              Height="28" VerticalContentAlignment="Center"
+                              Visibility="{Binding Icons.HasAtlasOptions, Converter={StaticResource BoolToVisibility}}" />
+
                     <Button Content="{loc:Loc iconLoadCompare}" Margin="0,6,0,0"
                             Command="{Binding Icons.LoadCompareCommand}"
                             Visibility="{Binding Icons.HasAtlas, Converter={StaticResource BoolToVisibility}}" />
@@ -158,23 +175,12 @@
                               DisplayMemberPath="Label" Style="{StaticResource IconCombo}"
                               Height="28" VerticalContentAlignment="Center" />
 
-                    <Grid Margin="0,10,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" Margin="0,0,5,0">
-                            <TextBlock Text="{loc:Loc iconColumns}" Style="{StaticResource IconLabel}" />
-                            <TextBox Text="{Binding Icons.AtlasColumns, UpdateSourceTrigger=LostFocus}"
-                                     Style="{StaticResource IconInput}" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" Margin="5,0,0,0">
-                            <TextBlock Text="{loc:Loc iconZoom}" Style="{StaticResource IconLabel}" />
-                            <Slider Minimum="0.25" Maximum="3" SmallChange="0.25" LargeChange="0.25"
-                                    TickFrequency="0.25" IsSnapToTickEnabled="True"
-                                    Value="{Binding Icons.Zoom}" VerticalAlignment="Center" Height="26" />
-                        </StackPanel>
-                    </Grid>
+                    <StackPanel Margin="0,10,0,0">
+                        <TextBlock Text="{loc:Loc iconZoom}" Style="{StaticResource IconLabel}" />
+                        <Slider Minimum="0.25" Maximum="3" SmallChange="0.25" LargeChange="0.25"
+                                TickFrequency="0.25" IsSnapToTickEnabled="True"
+                                Value="{Binding Icons.Zoom}" VerticalAlignment="Center" Height="26" />
+                    </StackPanel>
 
                     <Grid Margin="0,8,0,0">
                         <Grid.ColumnDefinitions>
@@ -358,6 +364,8 @@
                               Background="{DynamicResource SurfaceSunken}"
                               Visibility="{Binding Icons.HasAtlas, Converter={StaticResource BoolToVisibility}}">
                     <controls:AtlasCanvas x:Name="AtlasViewer" Cursor="Cross"
+                                          Width="{Binding Icons.AtlasDisplayWidth}"
+                                          Height="{Binding Icons.AtlasDisplayHeight}"
                                           Texture="{Binding Icons.AtlasImage}"
                                           Overlay="{Binding Icons.OverlayImage}"
                                           OverlayOpacity="{Binding Icons.CompareOpacity}"

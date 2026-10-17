@@ -128,6 +128,25 @@ public sealed partial class ItemsViewModel : ObservableObject
     [ObservableProperty] private string _atlasTitle = "";
     [ObservableProperty] private string _gridCoordsText = "";
 
+    /// <summary>Вырезанная иконка выбранного предмета по `inv_grid_*`.</summary>
+    [ObservableProperty] private ImageSource? _selectedItemIcon;
+
+    /// <summary>Сетка атласа раскрыта кнопкой «Выбрать иконку».</summary>
+    [ObservableProperty] private bool _isIconPickerOpen;
+
+    public bool HasSelectedItemIcon => SelectedItemIcon != null;
+
+    partial void OnSelectedItemIconChanged(ImageSource? value) =>
+        OnPropertyChanged(nameof(HasSelectedItemIcon));
+
+    partial void OnIsIconPickerOpenChanged(bool value)
+    {
+        if (value) RefreshAtlasCells(_selectedSection);
+    }
+
+    [RelayCommand]
+    private void ToggleIconPicker() => IsIconPickerOpen = !IsIconPickerOpen;
+
     /// <summary>Число колонок сетки атласа — для `UniformGrid` предпросмотра.</summary>
     [ObservableProperty] private int _atlasColumns;
 
@@ -167,6 +186,7 @@ public sealed partial class ItemsViewModel : ObservableObject
         {
             _selectedSection = section;
             Selected = new ItemSectionViewModel(this, section);
+            IsIconPickerOpen = false;
             UpdateListSelection();
             RefreshDetails();
             return;
@@ -174,6 +194,7 @@ public sealed partial class ItemsViewModel : ObservableObject
 
         _selectedSection = null;
         Selected = null;
+        IsIconPickerOpen = false;
         UpdateListSelection();
         RefreshDetails();
     }
@@ -262,6 +283,8 @@ public sealed partial class ItemsViewModel : ObservableObject
             ReferencesTitle = "";
             AtlasTitle = "";
             GridCoordsText = "";
+            SelectedItemIcon = null;
+            IsIconPickerOpen = false;
             _atlasTexture = null;
             _atlasBitmap = null;
             NotifyDetails();
@@ -377,8 +400,8 @@ public sealed partial class ItemsViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Сетка атласа: первая текстура проекта (`textures[0]`) растягивается на `cols×rows`
-    /// ячеек 16×16, как `background-size`/`background-position` в JS. Клик задаёт inv_grid_x/y.
+    /// Иконка предмета: `inv_grid_x/y` + размер `inv_grid_width/height` вырезаются из
+    /// первого атласа проекта. Полная сетка строится только при открытии выбора иконки.
     /// </summary>
     private void RefreshAtlas(LtxSection section)
     {
@@ -388,40 +411,81 @@ public sealed partial class ItemsViewModel : ObservableObject
         AtlasTitle = "";
         GridCoordsText = "";
         AtlasColumns = 0;
+        SelectedItemIcon = null;
 
         var cellSize = _project.Atlas.CellSize > 0 ? _project.Atlas.CellSize : 50;
         var cellHeight = _project.Atlas.CellHeight > 0 ? _project.Atlas.CellHeight : cellSize;
-        var gx = section.Entries.FirstOrDefault(entry => entry.Key == "inv_grid_x");
-        var gy = section.Entries.FirstOrDefault(entry => entry.Key == "inv_grid_y");
-        var curX = gx != null && IconGrid.IsValidGridValue(gx.Value) ? ParseGrid(gx.Value) : -1;
-        var curY = gy != null && IconGrid.IsValidGridValue(gy.Value) ? ParseGrid(gy.Value) : -1;
-        GridCoordsText = "inv_grid_x=" + curX + " · inv_grid_y=" + curY;
+        var curX = GridValue(section, "inv_grid_x");
+        var curY = GridValue(section, "inv_grid_y");
+        var iconWidth = GridSize(section, "inv_grid_width");
+        var iconHeight = GridSize(section, "inv_grid_height");
+        GridCoordsText = "inv_grid_x=" + curX + " · inv_grid_y=" + curY +
+                         " · " + iconWidth + "×" + iconHeight;
 
-        if (_atlasTexture == null || _atlasTexture.Width is not > 0 || _atlasTexture.Height is not > 0) return;
+        if (_atlasTexture == null || _atlasTexture.Width is not > 0 || _atlasTexture.Height is not > 0)
+        {
+            IsIconPickerOpen = false;
+            return;
+        }
 
         var width = _atlasTexture.Width.Value;
         var height = _atlasTexture.Height.Value;
         var cols = Math.Max(1, (int)Math.Floor(width / cellSize));
         var rows = Math.Max(1, (int)Math.Floor(height / cellHeight));
         AtlasColumns = cols;
-        AtlasTitle = LocalizationSource.Get("itemAtlasTitle") + " (" + cols + "×" + rows + ")";
+        AtlasTitle = LocalizationSource.Get("itemAtlasTitle") + " · " + _atlasTexture.Name +
+                     " (" + cols + "×" + rows + ")";
 
         _atlasBitmap = TexturePreview.Load(_atlasTexture.DataUrl);
-        var cellWidth = _atlasBitmap != null ? _atlasBitmap.PixelWidth / (double)cols : 0;
-        var cellHeightPx = _atlasBitmap != null ? _atlasBitmap.PixelHeight / (double)rows : 0;
+        if (_atlasBitmap != null && curX >= 0 && curY >= 0)
+        {
+            SelectedItemIcon = TexturePreview.Crop(
+                _atlasBitmap, curX * cellSize, curY * cellHeight,
+                iconWidth * cellSize, iconHeight * cellHeight,
+                _atlasBitmap.PixelWidth, _atlasBitmap.PixelHeight);
+        }
+
+        if (IsIconPickerOpen) RefreshAtlasCells(section);
+    }
+
+    /// <summary>Построить сетку ячеек для раскрытого выбора иконки.</summary>
+    private void RefreshAtlasCells(LtxSection? section)
+    {
+        AtlasCells.Clear();
+        if (section == null || _atlasBitmap == null || AtlasColumns <= 0) return;
+
+        var cellSize = _project.Atlas.CellSize > 0 ? _project.Atlas.CellSize : 50;
+        var cellHeight = _project.Atlas.CellHeight > 0 ? _project.Atlas.CellHeight : cellSize;
+        var rows = Math.Max(1, (int)Math.Floor(_atlasBitmap.PixelHeight / cellHeight));
+        var cellWidth = _atlasBitmap.PixelWidth / (double)AtlasColumns;
+        var cellHeightPx = _atlasBitmap.PixelHeight / (double)rows;
+        var curX = GridValue(section, "inv_grid_x");
+        var curY = GridValue(section, "inv_grid_y");
 
         for (var y = 0; y < rows; y++)
         {
-            for (var x = 0; x < cols; x++)
+            for (var x = 0; x < AtlasColumns; x++)
             {
-                var image = _atlasBitmap == null
-                    ? null
-                    : TexturePreview.Crop(
-                        _atlasBitmap, x * cellWidth, y * cellHeightPx, cellWidth, cellHeightPx,
-                        _atlasBitmap.PixelWidth, _atlasBitmap.PixelHeight);
+                var image = TexturePreview.Crop(
+                    _atlasBitmap, x * cellWidth, y * cellHeightPx, cellWidth, cellHeightPx,
+                    _atlasBitmap.PixelWidth, _atlasBitmap.PixelHeight);
                 AtlasCells.Add(new AtlasCellViewModel(this, x, y, image, x == curX && y == curY));
             }
         }
+    }
+
+    private static int GridValue(LtxSection section, string key)
+    {
+        var entry = section.Entries.FirstOrDefault(item => item.Key == key);
+        return entry != null && IconGrid.IsValidGridValue(entry.Value) ? (int)ParseGrid(entry.Value) : -1;
+    }
+
+    private static int GridSize(LtxSection section, string key)
+    {
+        var entry = section.Entries.FirstOrDefault(item => item.Key == key);
+        return entry != null && IconGrid.IsValidGridWH(entry.Value)
+            ? Math.Max(1, (int)ParseGrid(entry.Value))
+            : 1;
     }
 
     /// <summary>Слоты `weapon`/`armor` (+`helmet` для ЗП) с вырезкой иконки из атласа.</summary>
@@ -644,6 +708,7 @@ public sealed partial class ItemsViewModel : ObservableObject
         var text = ApplyGridField(_project.ItemsLtx, section.Name, "inv_grid_x", x);
         text = ApplyGridField(text, section.Name, "inv_grid_y", y);
         Mutate(text, section.Name, LocalizationSource.Get("itemGridSet"));
+        IsIconPickerOpen = false;
     }
 
     /// <summary>

@@ -84,6 +84,9 @@ public sealed class ProjectTexture
 
     /// <summary>Поля вне модели (сохраняются как есть).</summary>
     [JsonExtensionData] public Dictionary<string, JsonElement>? Extra { get; set; }
+
+    /// <summary>WPF `ComboBox` в кастомном шаблоне показывает элемент через `ToString`.</summary>
+    public override string ToString() => Name;
 }
 
 /// <summary>Закреплённая иконка атласа (`pinnedIcons[]`, значения `pinCollections{}`).</summary>

@@ -466,7 +466,7 @@
                                                Converter={StaticResource BoolToVisibility}}" />
                             </StackPanel>
                         </Border>
-                        <!-- Атлас: превью текстуры и сетка ячеек, клик задаёт inv_grid_x/y -->
+                        <!-- Иконка предмета: превью, кнопка выбора и раскрываемая сетка атласа -->
                         <Border Background="{DynamicResource SurfacePanel}"
                                 BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
                                 CornerRadius="10" Padding="10" Margin="0,0,0,10"
@@ -477,41 +477,66 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <Border Grid.Column="0" Width="88" Height="88" CornerRadius="6"
                                             Background="{DynamicResource SurfaceSunken}"
                                             BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1">
-                                        <Image Source="{Binding AtlasImage}" Stretch="Uniform"
-                                               Margin="3" RenderOptions.BitmapScalingMode="HighQuality" />
+                                        <Grid>
+                                            <Image Source="{Binding SelectedItemIcon}" Stretch="Uniform"
+                                                   Margin="4" RenderOptions.BitmapScalingMode="HighQuality" />
+                                            <TextBlock Text="{loc:Loc itemIconEmpty}"
+                                                       Style="{StaticResource CaptionText}"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                       TextAlignment="Center" TextWrapping="Wrap" Margin="4"
+                                                       Visibility="{Binding HasSelectedItemIcon,
+                                                           Converter={StaticResource InverseBoolToVisibility}}" />
+                                        </Grid>
                                     </Border>
-                                    <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding AtlasTitle}" FontWeight="Bold" FontSize="12" />
+                                    <StackPanel Grid.Column="1" Margin="10,0,8,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{loc:Loc itemIcon}" FontWeight="Bold" FontSize="12" />
+                                        <TextBlock Text="{Binding AtlasTitle}" Style="{StaticResource CaptionText}"
+                                                   TextWrapping="Wrap" Margin="0,2,0,0" />
                                         <TextBlock Text="{Binding GridCoordsText}" FontFamily="Consolas"
                                                    FontSize="11" Margin="0,3,0,0"
                                                    Foreground="{DynamicResource AccentMain}" />
-                                        <TextBlock Text="{loc:Loc itemAtlasHint}"
+                                        <TextBlock Text="{loc:Loc itemIconHint}"
                                                    Style="{StaticResource CaptionText}"
                                                    TextWrapping="Wrap" Margin="0,2,0,0" />
                                     </StackPanel>
+                                    <Button Grid.Column="2" Content="{loc:Loc itemIconChoose}"
+                                            Style="{StaticResource ToolbarButton}"
+                                            Command="{Binding ToggleIconPickerCommand}"
+                                            VerticalAlignment="Center" />
                                 </Grid>
-                                <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                                              VerticalScrollBarVisibility="Auto" MaxHeight="360"
-                                              Margin="0,8,0,0">
-                                    <ItemsControl ItemsSource="{Binding AtlasCells}" HorizontalAlignment="Left">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <UniformGrid Columns="{Binding AtlasColumns}" />
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Button Style="{StaticResource ItemAtlasCell}"
-                                                        Command="{Binding PickCommand}"
-                                                        ToolTip="{Binding Tooltip}" />
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </ScrollViewer>
+
+                                <Border Background="{DynamicResource SurfaceSunken}"
+                                        BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
+                                        CornerRadius="8" Padding="8" Margin="0,8,0,0"
+                                        Visibility="{Binding IsIconPickerOpen,
+                                            Converter={StaticResource BoolToVisibility}}">
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Loc itemIconPicker}"
+                                                   Style="{StaticResource ItemCardTitle}" />
+                                        <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                                      VerticalScrollBarVisibility="Auto" MaxHeight="360">
+                                            <ItemsControl ItemsSource="{Binding AtlasCells}" HorizontalAlignment="Left">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <UniformGrid Columns="{Binding AtlasColumns}" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Button Style="{StaticResource ItemAtlasCell}"
+                                                                Command="{Binding PickCommand}"
+                                                                ToolTip="{Binding Tooltip}" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
                         </Border>
                         <!-- Защита корневой секции: предупреждение и разблокировка -->
