@@ -263,13 +263,6 @@
             </Setter>
         </Style>
 
-        <!-- Плитка слота экипировки (`rounded-xl border p-3`) -->
-        <Style x:Key="ItemSlotButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="Padding" Value="8" />
-            <Setter Property="Margin" Value="0,0,8,8" />
-            <Setter Property="MinWidth" Value="150" />
-        </Style>
     </UserControl.Resources>
 
 
@@ -479,12 +472,21 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <Border Grid.Column="0" Width="88" Height="88" CornerRadius="6"
+                                    <Border Grid.Column="0"
+                                            Width="{Binding IconPreviewWidth}"
+                                            Height="{Binding IconPreviewHeight}"
+                                            MinWidth="88" MinHeight="88" CornerRadius="6"
                                             Background="{DynamicResource SurfaceSunken}"
                                             BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1">
                                         <Grid>
-                                            <Image Source="{Binding SelectedItemIcon}" Stretch="Uniform"
-                                                   Margin="4" RenderOptions.BitmapScalingMode="HighQuality" />
+                                            <!-- Размер картинки = число ячеек × размер ячейки атласа (1:1):
+                                                 2×1 шире 1×1, а 2×2 больше по обеим осям, без квадратной подгонки. -->
+                                            <Image Width="{Binding IconPreviewWidth}"
+                                                   Height="{Binding IconPreviewHeight}"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   Source="{Binding SelectedItemIcon}" Stretch="Uniform"
+                                                   RenderOptions.BitmapScalingMode="HighQuality"
+                                                   ToolTip="{Binding GridCoordsText}" />
                                             <TextBlock Text="{loc:Loc itemIconEmpty}"
                                                        Style="{StaticResource CaptionText}"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -499,7 +501,9 @@
                                                    TextWrapping="Wrap" Margin="0,2,0,0" />
                                         <TextBlock Text="{Binding GridCoordsText}" FontFamily="Consolas"
                                                    FontSize="11" Margin="0,3,0,0"
-                                                   Foreground="{DynamicResource AccentMain}" />
+                                                   Foreground="{DynamicResource AccentMain}"
+                                                   Visibility="{Binding HasGridCoords,
+                                                       Converter={StaticResource BoolToVisibility}}" />
                                         <TextBlock Text="{loc:Loc itemIconHint}"
                                                    Style="{StaticResource CaptionText}"
                                                    TextWrapping="Wrap" Margin="0,2,0,0" />
@@ -703,66 +707,88 @@
                                                Converter={StaticResource InverseBoolToVisibility}}" />
                             </StackPanel>
                         </Border>
-                        <!-- Слоты экипировки ЗП: назначить текущую секцию в weapon/armor/helmet -->
+                        <!-- Раскладка слотов экипировки: общий прямоугольник + настройка -->
                         <Border Background="{DynamicResource SurfacePanel}"
                                 BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
-                                CornerRadius="10" Padding="10" Margin="0,0,0,10"
-                                Visibility="{Binding HasEquipSlots,
-                                    Converter={StaticResource BoolToVisibility}}">
+                                CornerRadius="10" Padding="10" Margin="0,0,0,10">
                             <StackPanel>
-                                <TextBlock Text="{Binding EquipCaption}"
-                                           Style="{StaticResource ItemCardTitle}" />
-                                <ItemsControl ItemsSource="{Binding EquipSlots}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <WrapPanel />
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Button Style="{StaticResource ItemSlotButton}"
-                                                    Command="{Binding AssignCommand}"
-                                                    ToolTip="{Binding Name}">
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto" />
-                                                        <ColumnDefinition Width="*" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <Border Grid.Column="0" Width="38" Height="38"
-                                                            CornerRadius="6"
-                                                            Background="{DynamicResource SurfaceSunken}"
-                                                            BorderBrush="{DynamicResource BorderBevel}"
-                                                            BorderThickness="1">
+                                <Grid Margin="0,0,0,6">
+                                    <TextBlock Text="{Binding EquipCaption}"
+                                               Style="{StaticResource ItemCardTitle}" Margin="0" />
+                                    <Button Content="{loc:Loc itemSlotSettings}"
+                                            Style="{StaticResource ToolbarButton}"
+                                            HorizontalAlignment="Right" VerticalAlignment="Center"
+                                            Command="{Binding OpenEquipSlotSettingsCommand}" />
+                                </Grid>
+
+                                <Border Background="{DynamicResource SurfaceSunken}"
+                                        BorderBrush="{DynamicResource BorderStrong}" BorderThickness="1"
+                                        CornerRadius="6" Padding="4">
+                                    <Viewbox Stretch="Uniform" StretchDirection="DownOnly"
+                                             MaxHeight="460" HorizontalAlignment="Left"
+                                             VerticalAlignment="Top">
+                                        <ItemsControl ItemsSource="{Binding EquipSlots}"
+                                                      Width="{Binding SlotCanvasWidth}"
+                                                      Height="{Binding SlotCanvasHeight}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <Canvas Width="{Binding SlotCanvasWidth}"
+                                                            Height="{Binding SlotCanvasHeight}" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemContainerStyle>
+                                                <Style TargetType="ContentPresenter">
+                                                    <Setter Property="Canvas.Left" Value="{Binding X}" />
+                                                    <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                                                    <Setter Property="Width" Value="{Binding Width}" />
+                                                    <Setter Property="Height" Value="{Binding Height}" />
+                                                </Style>
+                                            </ItemsControl.ItemContainerStyle>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button Style="{StaticResource EquipSlotTile}"
+                                                            Command="{Binding AssignCommand}"
+                                                            ToolTip="{Binding DisplayName}">
                                                         <Grid>
                                                             <Image Source="{Binding Icon}" Stretch="Uniform"
-                                                                   Margin="2"
+                                                                   Margin="6"
                                                                    RenderOptions.BitmapScalingMode="HighQuality"
                                                                    Visibility="{Binding HasIcon,
                                                                        Converter={StaticResource BoolToVisibility}}" />
-                                                            <TextBlock Text="—" FontSize="12"
-                                                                       HorizontalAlignment="Center"
-                                                                       VerticalAlignment="Center"
-                                                                       Foreground="{DynamicResource TextMuted}"
-                                                                       Visibility="{Binding HasIcon,
-                                                                           Converter={StaticResource InverseBoolToVisibility}}" />
+                                                            <Border HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                                    Margin="3" Padding="3,1" CornerRadius="2"
+                                                                    Background="{DynamicResource SurfacePanel}"
+                                                                    Opacity="0.92">
+                                                                <TextBlock Text="{Binding Label}" FontSize="9"
+                                                                           FontWeight="Bold"
+                                                                           Foreground="{DynamicResource TextAccent}"
+                                                                           TextTrimming="CharacterEllipsis" />
+                                                            </Border>
+                                                            <Border HorizontalAlignment="Stretch"
+                                                                    VerticalAlignment="Bottom" Margin="3"
+                                                                    Padding="3,1" CornerRadius="2"
+                                                                    Background="{DynamicResource SurfacePanel}"
+                                                                    Opacity="0.92">
+                                                                <TextBlock Text="{Binding DisplayName}" FontSize="9"
+                                                                           HorizontalAlignment="Center"
+                                                                           TextTrimming="CharacterEllipsis" />
+                                                            </Border>
                                                         </Grid>
-                                                    </Border>
-                                                    <StackPanel Grid.Column="1" Margin="8,0,0,0"
-                                                                VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding Label}"
-                                                                   Style="{StaticResource CaptionText}"
-                                                                   FontSize="10" />
-                                                        <TextBlock Text="{Binding DisplayName}"
-                                                                   FontSize="11" FontWeight="Bold"
-                                                                   TextTrimming="CharacterEllipsis" />
-                                                    </StackPanel>
-                                                </Grid>
-                                            </Button>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Viewbox>
+                                </Border>
+
+                                <TextBlock Text="{loc:Loc itemSlotEmptyHint}"
+                                           Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                                           Margin="0,6,0,0"
+                                           Visibility="{Binding HasEquipSlots,
+                                               Converter={StaticResource InverseBoolToVisibility}}" />
                             </StackPanel>
                         </Border>
+
                     </StackPanel>
                 </Grid>
             </ScrollViewer>

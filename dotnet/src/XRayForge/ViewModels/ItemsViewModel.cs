@@ -14,6 +14,7 @@ using XRayForge.Core.Suggestions;
 using XRayForge.Core.Text;
 using XRayForge.Localization;
 using XRayForge.Services;
+using XRayForge.Views;
 
 namespace XRayForge.ViewModels;
 
@@ -38,6 +39,7 @@ public sealed partial class ItemsViewModel : ObservableObject
     private LtxSection? _selectedSection;
     private BitmapImage? _atlasBitmap;
     private ProjectTexture? _atlasTexture;
+    private List<EquipSlotLayout> _slotLayout = new();
 
     public ItemsViewModel(ShellViewModel shell, IDialogService dialogs)
     {
@@ -131,8 +133,21 @@ public sealed partial class ItemsViewModel : ObservableObject
     /// <summary>Вырезанная иконка выбранного предмета по `inv_grid_*`.</summary>
     [ObservableProperty] private ImageSource? _selectedItemIcon;
 
+    /// <summary>
+    /// Размер превью иконки 1:1 с атласом: `inv_grid_width/height` × размер ячейки.
+    /// Поэтому 2×1 шире 1×1, а 2×2 больше по обеим осям, без подгонки под квадрат.
+    /// </summary>
+    [ObservableProperty] private double _iconPreviewWidth = ItemsViewModel.DefaultPreviewCellPx;
+
+    [ObservableProperty] private double _iconPreviewHeight = ItemsViewModel.DefaultPreviewCellPx;
+
+    /// <summary>`inv_grid_x/y` заданы — координаты можно показать рядом с превью.</summary>
+    [ObservableProperty] private bool _hasGridCoords;
+
     /// <summary>Сетка атласа раскрыта кнопкой «Выбрать иконку».</summary>
     [ObservableProperty] private bool _isIconPickerOpen;
+
+    private const double DefaultPreviewCellPx = 50;
 
     public bool HasSelectedItemIcon => SelectedItemIcon != null;
 
@@ -151,6 +166,21 @@ public sealed partial class ItemsViewModel : ObservableObject
     [ObservableProperty] private int _atlasColumns;
 
     public bool HasEquipSlots => EquipSlots.Count > 0;
+
+    /// <summary>В редакторе раскладки выбран слот (поля справа доступны).</summary>
+    public bool HasSelectedEquipSlot => SelectedEquipSlot != null;
+
+    /// <summary>Размер виртуального поля слотов (общий прямоугольник раскладки).</summary>
+    [ObservableProperty] private double _slotCanvasWidth = EquipSlotCatalog.EmptyCanvasWidth;
+
+    [ObservableProperty] private double _slotCanvasHeight = EquipSlotCatalog.EmptyCanvasHeight;
+
+    /// <summary>Слот, выбранный в окне «Настройка слотов».</summary>
+    [ObservableProperty] private ItemEquipSlotViewModel? _selectedEquipSlot;
+
+    partial void OnSelectedEquipSlotChanged(ItemEquipSlotViewModel? value) =>
+        OnPropertyChanged(nameof(HasSelectedEquipSlot));
+
     public bool IsCopSeries => string.Equals(_project.Series, "cop", StringComparison.Ordinal);
 
     // --- проект и список ---
@@ -163,6 +193,10 @@ public sealed partial class ItemsViewModel : ObservableObject
         _historyState = HistoryState<string>.Empty;
         _selectedSection = null;
         Selected = null;
+        // null — раскладка ещё не менялась: показываем дефолт серии, не записывая его в проект.
+        _slotLayout = EquipSlotCatalog.Clone(
+            _project.EquipSlotLayout ?? EquipSlotCatalog.DefaultLayout(_project.Series));
+        SelectedEquipSlot = null;
         RefreshFromText(null);
     }
 
@@ -273,6 +307,7 @@ public sealed partial class ItemsViewModel : ObservableObject
         References.Clear();
         AtlasCells.Clear();
         EquipSlots.Clear();
+        SelectedEquipSlot = null;
 
         var section = _selectedSection;
         if (section == null)
@@ -283,10 +318,14 @@ public sealed partial class ItemsViewModel : ObservableObject
             ReferencesTitle = "";
             AtlasTitle = "";
             GridCoordsText = "";
+            HasGridCoords = false;
+            IconPreviewWidth = DefaultPreviewCellPx;
+            IconPreviewHeight = DefaultPreviewCellPx;
             SelectedItemIcon = null;
             IsIconPickerOpen = false;
             _atlasTexture = null;
             _atlasBitmap = null;
+            RefreshSlotCanvas();
             NotifyDetails();
             return;
         }
@@ -415,12 +454,19 @@ public sealed partial class ItemsViewModel : ObservableObject
 
         var cellSize = _project.Atlas.CellSize > 0 ? _project.Atlas.CellSize : 50;
         var cellHeight = _project.Atlas.CellHeight > 0 ? _project.Atlas.CellHeight : cellSize;
-        var curX = GridValue(section, "inv_grid_x");
-        var curY = GridValue(section, "inv_grid_y");
-        var iconWidth = GridSize(section, "inv_grid_width");
-        var iconHeight = GridSize(section, "inv_grid_height");
-        GridCoordsText = "inv_grid_x=" + curX + " · inv_grid_y=" + curY +
-                         " · " + iconWidth + "×" + iconHeight;
+        var placement = IconGrid.ResolvePlacement(section, _itemsByName);
+        var iconWidth = Math.Max(1, placement.Width);
+        var iconHeight = Math.Max(1, placement.Height);
+
+        HasGridCoords = placement.HasPosition;
+        GridCoordsText = placement.HasPosition
+            ? "inv_grid_x=" + placement.X + " · inv_grid_y=" + placement.Y +
+              " · " + iconWidth + "×" + iconHeight
+            : "";
+
+        var preview = IconPreviewSize(iconWidth, iconHeight, cellSize, cellHeight);
+        IconPreviewWidth = preview.Width;
+        IconPreviewHeight = preview.Height;
 
         if (_atlasTexture == null || _atlasTexture.Width is not > 0 || _atlasTexture.Height is not > 0)
         {
@@ -437,15 +483,38 @@ public sealed partial class ItemsViewModel : ObservableObject
                      " (" + cols + "×" + rows + ")";
 
         _atlasBitmap = TexturePreview.Load(_atlasTexture.DataUrl);
-        if (_atlasBitmap != null && curX >= 0 && curY >= 0)
+        if (_atlasBitmap != null && placement.HasPosition)
         {
             SelectedItemIcon = TexturePreview.Crop(
-                _atlasBitmap, curX * cellSize, curY * cellHeight,
+                _atlasBitmap, placement.X * cellSize, placement.Y * cellHeight,
                 iconWidth * cellSize, iconHeight * cellHeight,
                 _atlasBitmap.PixelWidth, _atlasBitmap.PixelHeight);
         }
 
         if (IsIconPickerOpen) RefreshAtlasCells(section);
+    }
+
+    /// <summary>
+    /// Размер превью 1:1 с атласом: число ячеек × размер ячейки. Пропорции
+    /// прямоугольных ячеек (`cellSize` ≠ `cellHeight`) сохраняются. Ограничение
+    /// 400 px нужно только для аномально больших иконок, чтобы не раздувать панель.
+    /// </summary>
+    private static (double Width, double Height) IconPreviewSize(
+        int iconWidth, int iconHeight, double cellWidth, double cellHeight)
+    {
+        const double maxPreview = 400;
+        var width = iconWidth * Math.Max(1, cellWidth);
+        var height = iconHeight * Math.Max(1, cellHeight);
+
+        var largest = Math.Max(width, height);
+        if (largest > maxPreview)
+        {
+            var fit = maxPreview / largest;
+            width *= fit;
+            height *= fit;
+        }
+
+        return (Math.Round(width, 1), Math.Round(height, 1));
     }
 
     /// <summary>Построить сетку ячеек для раскрытого выбора иконки.</summary>
@@ -459,8 +528,7 @@ public sealed partial class ItemsViewModel : ObservableObject
         var rows = Math.Max(1, (int)Math.Floor(_atlasBitmap.PixelHeight / cellHeight));
         var cellWidth = _atlasBitmap.PixelWidth / (double)AtlasColumns;
         var cellHeightPx = _atlasBitmap.PixelHeight / (double)rows;
-        var curX = GridValue(section, "inv_grid_x");
-        var curY = GridValue(section, "inv_grid_y");
+        var placement = IconGrid.ResolvePlacement(section, _itemsByName);
 
         for (var y = 0; y < rows; y++)
         {
@@ -469,64 +537,79 @@ public sealed partial class ItemsViewModel : ObservableObject
                 var image = TexturePreview.Crop(
                     _atlasBitmap, x * cellWidth, y * cellHeightPx, cellWidth, cellHeightPx,
                     _atlasBitmap.PixelWidth, _atlasBitmap.PixelHeight);
-                AtlasCells.Add(new AtlasCellViewModel(this, x, y, image, x == curX && y == curY));
+                var active = placement.HasPosition && x == placement.X && y == placement.Y;
+                AtlasCells.Add(new AtlasCellViewModel(this, x, y, image, active));
             }
         }
     }
 
-    private static int GridValue(LtxSection section, string key)
-    {
-        var entry = section.Entries.FirstOrDefault(item => item.Key == key);
-        return entry != null && IconGrid.IsValidGridValue(entry.Value) ? (int)ParseGrid(entry.Value) : -1;
-    }
-
-    private static int GridSize(LtxSection section, string key)
-    {
-        var entry = section.Entries.FirstOrDefault(item => item.Key == key);
-        return entry != null && IconGrid.IsValidGridWH(entry.Value)
-            ? Math.Max(1, (int)ParseGrid(entry.Value))
-            : 1;
-    }
-
-    /// <summary>Слоты `weapon`/`armor` (+`helmet` для ЗП) с вырезкой иконки из атласа.</summary>
+    /// <summary>
+    /// Собрать слоты по пользовательской раскладке (`equipSlotLayout`), с подписями,
+    /// назначенными секциями и вырезанными из атласа иконками.
+    /// </summary>
     private void RefreshEquipSlots()
     {
+        var selectedKey = SelectedEquipSlot?.Key;
         EquipSlots.Clear();
-        var slots = new List<(string Key, string Label)>
-        {
-            ("weapon", LocalizationSource.Get("itemSlotWeapon")),
-            ("armor", LocalizationSource.Get("itemSlotArmor"))
-        };
-        if (IsCopSeries) slots.Add(("helmet", LocalizationSource.Get("itemSlotHelmet")));
 
         var cellSize = _project.Atlas.CellSize > 0 ? _project.Atlas.CellSize : 50;
-        foreach (var (key, label) in slots)
+        var cellHeight = _project.Atlas.CellHeight > 0 ? _project.Atlas.CellHeight : cellSize;
+        foreach (var slot in _slotLayout)
         {
+            var key = slot.Key;
             var name = _project.EquipSlots.TryGetValue(key, out var value) ? value : "";
             ImageSource? icon = null;
             if (!string.IsNullOrEmpty(name) && _itemsByName.TryGetValue(name.ToLowerInvariant(), out var section))
             {
-                var gx = section.Entries.FirstOrDefault(entry => entry.Key == "inv_grid_x");
-                var gy = section.Entries.FirstOrDefault(entry => entry.Key == "inv_grid_y");
+                var placement = IconGrid.ResolvePlacement(section, _itemsByName);
                 if (_atlasTexture?.DataUrl is { Length: > 0 } dataUrl &&
                     _atlasTexture.Width is > 0 && _atlasTexture.Height is > 0 &&
-                    gx != null && gy != null &&
-                    IconGrid.IsValidGridValue(gx.Value) && IconGrid.IsValidGridValue(gy.Value))
+                    placement.HasPosition)
                 {
-                    var x = ParseGrid(gx.Value) * cellSize;
-                    var y = ParseGrid(gy.Value) * cellSize;
                     icon = TexturePreview.Crop(
-                        dataUrl, x, y, cellSize, cellSize,
+                        dataUrl,
+                        placement.X * cellSize, placement.Y * cellHeight,
+                        Math.Max(1, placement.Width) * cellSize,
+                        Math.Max(1, placement.Height) * cellHeight,
                         _atlasTexture.Width.Value, _atlasTexture.Height.Value);
                 }
             }
 
-            EquipSlots.Add(new ItemEquipSlotViewModel(this, key, label, name, icon, cellSize));
+            var label = string.IsNullOrWhiteSpace(slot.Label) ? DefaultSlotLabel(key) : slot.Label;
+            EquipSlots.Add(new ItemEquipSlotViewModel(
+                this, key, label, name, icon, slot.X, slot.Y, slot.Width, slot.Height));
         }
+
+        SelectedEquipSlot = selectedKey != null
+            ? EquipSlots.FirstOrDefault(slot => string.Equals(slot.Key, selectedKey, StringComparison.Ordinal))
+            : null;
+        RefreshSlotCanvas();
+        OnPropertyChanged(nameof(HasEquipSlots));
     }
 
-    private static double ParseGrid(string value) =>
-        double.TryParse(value.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var number) ? number : -1;
+    /// <summary>Локализованная подпись для ключа слота по умолчанию.</summary>
+    private static string DefaultSlotLabel(string key) => key.ToLowerInvariant() switch
+    {
+        "knife" => LocalizationSource.Get("itemSlotKnife"),
+        "pistol" => LocalizationSource.Get("itemSlotPistol"),
+        "weapon" => LocalizationSource.Get("itemSlotWeapon"),
+        "armor" => LocalizationSource.Get("itemSlotArmor"),
+        "helmet" => LocalizationSource.Get("itemSlotHelmet"),
+        "device" => LocalizationSource.Get("itemSlotDevice"),
+        "detector" => LocalizationSource.Get("itemSlotDetector"),
+        _ => key
+    };
+
+    /// <summary>Пересчитать общий прямоугольник раскладки после правки геометрии слота.</summary>
+    private void RefreshSlotCanvas()
+    {
+        var (width, height) = EquipSlotCatalog.CanvasSize(EquipSlots.Select(slot => slot.ToLayout()));
+        SlotCanvasWidth = width;
+        SlotCanvasHeight = height;
+    }
+
+    /// <summary>Слот изменился в окне настройки — обновить габариты общего прямоугольника.</summary>
+    internal void OnEquipSlotChanged() => RefreshSlotCanvas();
 
     // --- правки LTX и история ---
 
@@ -723,6 +806,69 @@ public sealed partial class ItemsViewModel : ObservableObject
         return entry != null
             ? LtxTextTools.UpdateLine(text, entry.Line, key + " = " + value.ToString(CultureInfo.InvariantCulture))
             : LtxTextTools.AddFieldToSection(text, sectionName, key, value.ToString(CultureInfo.InvariantCulture));
+    }
+
+    /// <summary>
+    /// Окно «Настройка слотов»: правки идут во временные view-models; «Отмена» возвращает
+    /// снимок раскладки, «ОК» пишет `equipSlotLayout[]` в проект и отмечает его изменённым.
+    /// </summary>
+    [RelayCommand]
+    private void OpenEquipSlotSettings()
+    {
+        var snapshot = EquipSlotCatalog.Clone(_slotLayout);
+        SelectedEquipSlot ??= EquipSlots.FirstOrDefault();
+
+        var window = new EquipSlotsWindow(this) { Owner = _shell.ActiveWindow };
+        if (window.ShowDialog() != true)
+        {
+            _slotLayout = snapshot;
+            RefreshEquipSlots();
+            return;
+        }
+
+        _slotLayout = EquipSlotCatalog.Normalize(EquipSlots.Select(slot => slot.ToLayout()), _project.Series);
+        _project.EquipSlotLayout = EquipSlotCatalog.Clone(_slotLayout);
+
+        // Удалённые в редакторе слоты больше не должны хранить назначения предметов.
+        // Скрытые/legacy-ключи, которых не было в раскладке, не трогаем.
+        var keys = _slotLayout.Select(slot => slot.Key).ToHashSet(StringComparer.Ordinal);
+        var removed = snapshot.Select(slot => slot.Key)
+            .Where(key => !keys.Contains(key))
+            .ToList();
+        foreach (var key in removed) _project.EquipSlots.Remove(key);
+
+        RefreshEquipSlots();
+        _shell.OnSectionEdited(LocalizationSource.Get("itemSlotSaved"));
+    }
+
+    /// <summary>Добавить слот справа от текущей раскладки (дальше двигается в редакторе).</summary>
+    [RelayCommand]
+    private void AddEquipSlot()
+    {
+        var key = EquipSlotCatalog.NextKey(EquipSlots.Select(slot => slot.Key));
+        var x = EquipSlots.Count == 0 ? 10 : EquipSlots.Max(slot => slot.X + slot.Width) + 10;
+        var slot = new ItemEquipSlotViewModel(
+            this, key, LocalizationSource.Get("itemSlotNew"), "", null, x, 10, 80, 80);
+        EquipSlots.Add(slot);
+        SelectedEquipSlot = slot;
+        RefreshSlotCanvas();
+        OnPropertyChanged(nameof(HasEquipSlots));
+    }
+
+    /// <summary>Удалить выбранный слот (назначение убирается при «ОК»).</summary>
+    [RelayCommand]
+    private void RemoveEquipSlot()
+    {
+        var slot = SelectedEquipSlot;
+        if (slot == null) return;
+
+        var index = EquipSlots.IndexOf(slot);
+        EquipSlots.Remove(slot);
+        SelectedEquipSlot = EquipSlots.Count == 0
+            ? null
+            : EquipSlots[Math.Min(index, EquipSlots.Count - 1)];
+        RefreshSlotCanvas();
+        OnPropertyChanged(nameof(HasEquipSlots));
     }
 
     /// <summary>`patch({equipSlots})`: назначить выбранную секцию слоту экипировки.</summary>

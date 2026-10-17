@@ -4,6 +4,7 @@ using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using XRayForge.Core.Ltx;
+using XRayForge.Core.Projects;
 using XRayForge.Core.Suggestions;
 using XRayForge.Localization;
 
@@ -253,29 +254,75 @@ public sealed partial class AtlasCellViewModel : ObservableObject
     private void Pick() => _owner.SetGrid(X, Y);
 }
 
-/// <summary>Слот экипировки (`weapon`/`armor`/`helmet` для ЗП).</summary>
+/// <summary>
+/// Слот экипировки: назначение текущей секции плюс редактируемая геометрия раскладки
+/// (координаты/размер/подпись). Геометрия меняется в окне «Настройка слотов» и сохраняется
+/// в проект только по «ОК».
+/// </summary>
 public sealed partial class ItemEquipSlotViewModel : ObservableObject
 {
     private readonly ItemsViewModel _owner;
+    private bool _loading;
 
     public ItemEquipSlotViewModel(
-        ItemsViewModel owner, string key, string label, string name, ImageSource? icon, double size)
+        ItemsViewModel owner, string key, string label, string name, ImageSource? icon,
+        double x, double y, double width, double height)
     {
         _owner = owner;
         Key = key;
-        Label = label;
         Name = name;
         Icon = icon;
-        Size = size;
+        _loading = true;
+        _label = label;
+        _x = x;
+        _y = y;
+        _width = width;
+        _height = height;
+        _loading = false;
     }
 
+    /// <summary>Ключ слота (`weapon`, `armor`, `helmet`, а также `knife`/`pistol`/…).</summary>
     public string Key { get; }
-    public string Label { get; }
+
     public string Name { get; }
     public string DisplayName => string.IsNullOrEmpty(Name) ? LocalizationSource.Get("itemSlotEmpty") : Name;
     public ImageSource? Icon { get; }
-    public double Size { get; }
     public bool HasIcon => Icon != null;
+
+    /// <summary>Подпись над слотом; правится в окне настройки.</summary>
+    [ObservableProperty] private string _label;
+
+    [ObservableProperty] private double _x;
+    [ObservableProperty] private double _y;
+    [ObservableProperty] private double _width;
+    [ObservableProperty] private double _height;
+
+    partial void OnLabelChanged(string value) => GeometryChanged();
+
+    partial void OnXChanged(double value) => GeometryChanged();
+
+    partial void OnYChanged(double value) => GeometryChanged();
+
+    partial void OnWidthChanged(double value) => GeometryChanged();
+
+    partial void OnHeightChanged(double value) => GeometryChanged();
+
+    /// <summary>Снимок для сохранения в `equipSlotLayout[]`.</summary>
+    public EquipSlotLayout ToLayout() => new()
+    {
+        Key = Key,
+        Label = Label,
+        X = X,
+        Y = Y,
+        Width = Width,
+        Height = Height
+    };
+
+    private void GeometryChanged()
+    {
+        if (_loading) return;
+        _owner.OnEquipSlotChanged();
+    }
 
     [RelayCommand]
     private void Assign() => _owner.AssignSlot(Key);

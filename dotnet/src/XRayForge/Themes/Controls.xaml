@@ -25,6 +25,35 @@
     </Style>
 
     <!-- Строка навигации: контент от левого края, активная вкладка подсвечена -->
+    <!-- Слот экипировки: рамка-прямоугольник, содержимое растянуто по заданной геометрии.
+         Используется и в списке предметов, и в окне «Настройка слотов». -->
+    <Style x:Key="EquipSlotTile" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Stretch" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Tile" Background="{DynamicResource SurfaceSunken}"
+                            BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
+                            CornerRadius="4" ClipToBounds="True">
+                        <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Tile" Property="BorderBrush"
+                                    Value="{DynamicResource AccentMain}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Tile" Property="Background"
+                                    Value="{DynamicResource SurfaceRaised}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderBrush" Value="Transparent" />

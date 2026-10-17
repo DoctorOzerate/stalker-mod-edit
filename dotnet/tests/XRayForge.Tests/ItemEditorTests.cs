@@ -66,6 +66,35 @@ public class ItemEditorTests
     }
 
     [Fact]
+    public void IconPlacement_uses_inherited_grid_fields_and_requires_both_coordinates()
+    {
+        const string text = "[base]\ninv_grid_x = 4\ninv_grid_y = 5\n" +
+                            "inv_grid_width = 2\ninv_grid_height = 3\n\n" +
+                            "[child]:base\ninv_name = child\n\n" +
+                            "[override]:base\ninv_grid_width = 1\ninv_grid_height = 2\n\n" +
+                            "[bad]\ninv_grid_x = -1\ninv_grid_y = 7\ninv_grid_width = 0\n";
+        var sections = LtxParser.Parse(text).Sections;
+        var map = ItemEditor.MapByName(sections);
+
+        var child = IconGrid.ResolvePlacement(map["child"], map);
+        Assert.True(child.HasPosition);
+        Assert.Equal(4, child.X);
+        Assert.Equal(5, child.Y);
+        Assert.Equal(2, child.Width);
+        Assert.Equal(3, child.Height);
+
+        var overridden = IconGrid.ResolvePlacement(map["override"], map);
+        Assert.Equal(4, overridden.X);
+        Assert.Equal(1, overridden.Width);
+        Assert.Equal(2, overridden.Height);
+
+        var bad = IconGrid.ResolvePlacement(map["bad"], map);
+        Assert.False(bad.HasPosition);
+        Assert.Equal(1, bad.Width);
+        Assert.Equal(1, bad.Height);
+    }
+
+    [Fact]
     public void ReferencingSections_matches_only_reference_fields_and_skips_self()
     {
         const string text = "[target]\ncost = 1\n\n" +

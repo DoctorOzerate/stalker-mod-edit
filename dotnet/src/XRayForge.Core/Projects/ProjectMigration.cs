@@ -52,6 +52,7 @@ public static class ProjectMigration
         p.ItemFiles = r.StringMap("itemFiles") ?? new(StringComparer.Ordinal);
         p.ItemOrigins = r.StringMap("itemOrigins") ?? new(StringComparer.Ordinal);
         p.EquipSlots = r.StringMap("equipSlots") ?? p.EquipSlots;
+        p.EquipSlotLayout = r.Objects<EquipSlotLayout>("equipSlotLayout");
         p.PinnedIcons = r.Objects<PinnedIcon>("pinnedIcons") ?? new();
         p.PinCollections = r.PinCollections(p.PinnedIcons);
 

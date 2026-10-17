@@ -166,6 +166,15 @@ public sealed class Project
     public Dictionary<string, string>? ItemOrigins { get; set; } = new(StringComparer.Ordinal);
 
     [JsonPropertyName("equipSlots")] public Dictionary<string, string> EquipSlots { get; set; } = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Пользовательская раскладка слотов (`equipSlotLayout[]`): подписи, позиции и размеры.
+    /// `null` — раскладка ещё не менялась, берутся дефолты серии из <see cref="EquipSlotCatalog"/>.
+    /// </summary>
+    [JsonPropertyName("equipSlotLayout")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<EquipSlotLayout>? EquipSlotLayout { get; set; }
+
     [JsonPropertyName("pinnedIcons")] public List<PinnedIcon> PinnedIcons { get; set; } = new();
 
     [JsonPropertyName("pinCollections")]
