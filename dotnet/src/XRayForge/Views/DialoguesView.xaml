@@ -19,26 +19,6 @@
       шаг 6.8 — импорт диалогов из файла `game_dialogs*.xml`.
     -->
     <UserControl.Resources>
-        <!-- Холст: `radial-gradient(ui.grid 1px, transparent 1px)` с шагом 20px.
-             Плитка залита фоном холста, поэтому клик по пустому месту попадает в неё. -->
-        <DrawingBrush x:Key="GraphDotGrid" TileMode="Tile" Stretch="Fill"
-                      Viewport="0,0,20,20" ViewportUnits="Absolute">
-            <DrawingBrush.Drawing>
-                <DrawingGroup>
-                    <GeometryDrawing Brush="{DynamicResource SurfaceDisplay}">
-                        <GeometryDrawing.Geometry>
-                            <RectangleGeometry Rect="0,0,20,20" />
-                        </GeometryDrawing.Geometry>
-                    </GeometryDrawing>
-                    <GeometryDrawing Brush="{DynamicResource GridLine}">
-                        <GeometryDrawing.Geometry>
-                            <EllipseGeometry Center="1,1" RadiusX="1" RadiusY="1" />
-                        </GeometryDrawing.Geometry>
-                    </GeometryDrawing>
-                </DrawingGroup>
-            </DrawingBrush.Drawing>
-        </DrawingBrush>
-
         <!-- `bg-slate-400` порта и `hover:bg-green-400` (палитра Tailwind в JS) -->
         <SolidColorBrush x:Key="GraphPortHover" Color="#4ADE80" />
 
@@ -374,6 +354,20 @@
             <Border x:Name="CanvasHost" Grid.Column="1" Style="{StaticResource PanelBorder}" Padding="0"
                     ClipToBounds="True" SizeChanged="OnCanvasSizeChanged">
                 <Grid>
+                    <!-- Бесконечный фон холста: сетка живёт в viewport и не заканчивается квадратом.
+                         Он же ловит панораму, когда все карточки уехали за пределы экрана. -->
+                    <controls:GraphCanvasBackground x:Name="CanvasBackground"
+                                                    SurfaceBrush="{DynamicResource SurfaceDisplay}"
+                                                    DotBrush="{DynamicResource GridLine}"
+                                                    Zoom="{Binding DialogueGraph.Zoom}"
+                                                    PanX="{Binding DialogueGraph.PanX}"
+                                                    PanY="{Binding DialogueGraph.PanY}"
+                                                    PreviewMouseDown="OnCanvasMouseDown"
+                                                    PreviewMouseMove="OnCanvasMouseMove"
+                                                    PreviewMouseUp="OnCanvasMouseUp"
+                                                    PreviewMouseWheel="OnCanvasMouseWheel"
+                                                    LostMouseCapture="OnCanvasLostCapture" />
+
                     <!-- Взаимодействие холста (шаг 6.3): Shift+drag — рамка выделения, иначе — перенос узла
                          или панорама. Мышь захватывается при нажатии (`dragRef` + window-слушатели в JS),
                          поэтому move/up доходят и за пределами холста. -->
@@ -391,11 +385,6 @@
                                                     Y="{Binding DialogueGraph.PanY}" />
                             </TransformGroup>
                         </Grid.RenderTransform>
-
-                        <!-- Фон холста с точками сетки: поверхность для клика по пустому месту -->
-                        <Border Width="20000" Height="20000" Margin="-10000,-10000,0,0"
-                                HorizontalAlignment="Left" VerticalAlignment="Top"
-                                Background="{StaticResource GraphDotGrid}" />
 
                         <!-- Связи узлов: `edges.map` → `<path d=…>` -->
                         <ItemsControl ItemsSource="{Binding DialogueGraph.Edges}">

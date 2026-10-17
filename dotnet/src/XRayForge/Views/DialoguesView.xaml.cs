@@ -62,7 +62,10 @@ public partial class DialoguesView : UserControl
                 Keyboard.Modifiers.HasFlag(ModifierKeys.Shift), screen.X, screen.Y, point.X, point.Y);
         }
 
-        GraphLayer.CaptureMouse();
+        // Захватываем именно тот слой, по которому нажали: пустая область вне уехавшего
+        // графа — это GraphCanvasBackground, а карточки/связи — GraphLayer.
+        if (sender is UIElement element) element.CaptureMouse();
+        else GraphLayer.CaptureMouse();
         e.Handled = true;
     }
 
@@ -86,7 +89,8 @@ public partial class DialoguesView : UserControl
         if (DataContext is not ShellViewModel shell) return;
 
         shell.DialogueGraph.EndDrag();
-        if (GraphLayer.IsMouseCaptured) GraphLayer.ReleaseMouseCapture();
+        if (sender is UIElement element && element.IsMouseCaptured) element.ReleaseMouseCapture();
+        else if (GraphLayer.IsMouseCaptured) GraphLayer.ReleaseMouseCapture();
         e.Handled = true;
     }
 
