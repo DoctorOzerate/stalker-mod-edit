@@ -59,7 +59,7 @@ internal static class TexturePreview
     /// картинки и заявленных `textureWidth/Height` (в JS `background-size` растягивает атлас).
     /// </summary>
     public static ImageSource? Crop(
-        BitmapImage? bitmap, double x, double y, double width, double height,
+        BitmapSource? bitmap, double x, double y, double width, double height,
         int textureWidth, int textureHeight)
     {
         if (bitmap == null || width <= 0 || height <= 0) return null;

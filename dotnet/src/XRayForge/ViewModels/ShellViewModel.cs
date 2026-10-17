@@ -65,6 +65,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         DialogueGraph = new DialogueGraphViewModel(this, _dialogs);
         Characters = new CharactersViewModel(this);
         Items = new ItemsViewModel(this, _dialogs);
+        Icons = new IconsViewModel(this, _dialogs);
 
         _autosave = new AutosaveService(
             _store,
@@ -99,6 +100,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Characters.Attach(_project);
         // Вкладка «Предметы» (этап 7.2) читает `items.ltx` того же проекта.
         Items.Attach(_project);
+        // Вкладка «Иконки» (этап 7.3) берёт DDS-атласы из снапшота gamedata.
+        Icons.Attach(_project);
 
         RefreshProjectView();
     }
@@ -138,6 +141,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
     /// <summary>Вкладка «Предметы» (этап 7.2): редактор `items.ltx` (`ItemsTab.js`).</summary>
     public ItemsViewModel Items { get; }
+
+    /// <summary>Вкладка «Иконки» (этап 7.3): DDS-атлас (`IconsTab.js`).</summary>
+    public IconsViewModel Icons { get; }
 
     public Project Project => _project;
 
@@ -466,6 +472,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Characters.Attach(_project);
         // Предметы пересобираются вместе с проектом (выбор и история сбрасываются).
         Items.Attach(_project);
+        // Атласы и коллекции иконок пересобираются вместе с проектом.
+        Icons.Attach(_project);
 
         RefreshProjectView();
     }
@@ -785,6 +793,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             DialogueGraph.Attach(_project);
             Characters.Attach(_project);
             Items.Attach(_project);
+            Icons.Attach(_project);
             RefreshProjectView();
             PublishSearch();
 

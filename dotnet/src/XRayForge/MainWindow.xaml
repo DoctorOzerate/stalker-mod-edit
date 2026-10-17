@@ -28,6 +28,9 @@
         <DataTemplate x:Key="ItemsTemplate">
             <views:ItemsView />
         </DataTemplate>
+        <DataTemplate x:Key="IconsTemplate">
+            <views:IconsView />
+        </DataTemplate>
     </Window.Resources>
 
     <Grid>
@@ -204,6 +207,9 @@
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding ActiveTab.Id}" Value="items">
                                     <Setter Property="ContentTemplate" Value="{StaticResource ItemsTemplate}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding ActiveTab.Id}" Value="icons">
+                                    <Setter Property="ContentTemplate" Value="{StaticResource IconsTemplate}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>

@@ -10,6 +10,9 @@ public sealed class AtlasPreset
     public int Columns { get; set; }
     public int CellW { get; set; }
     public int CellH { get; set; }
+
+    /// <summary>WPF `ComboBox` в кастомном шаблоне показывает элемент через `ToString`.</summary>
+    public override string ToString() => Label;
 }
 
 /// <summary>Сетка иконок предметов в атласе — порт `isValidGridValue`, `isValidGridWH`, `iconCoords`, `ATLAS_PRESETS`.</summary>

@@ -1,0 +1,410 @@
+<UserControl x:Class="XRayForge.Views.IconsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:XRayForge.Localization"
+             xmlns:controls="clr-namespace:XRayForge.Controls">
+    <!--
+      Вкладка «Иконки» (этап 7.3, порт `IconsTab.js`): загрузка DDS, холст атласа с сеткой,
+      выделением, зумом, панорамой и сравнением, лупа, пресеты, коллекции, дубликаты,
+      пиксельные операции и экспорт PNG/DDS/спрайт-листа.
+    -->
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="IconRed" Color="#F87171" />
+
+        <Style x:Key="IconLabel" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="0,0,0,3" />
+        </Style>
+
+        <Style x:Key="IconCardTitle" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Margin" Value="0,2,0,6" />
+        </Style>
+
+        <Style x:Key="IconInput" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Padding" Value="6,0" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <!-- Выпадающий список в тёмной теме (системный ComboBox оставлял светлый фон) -->
+        <Style x:Key="IconComboItem" TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="{DynamicResource SurfacePanel}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="Chrome" Background="{TemplateBinding Background}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Chrome" Property="Background"
+                                        Value="{DynamicResource SurfaceRaised}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Chrome" Property="Background"
+                                        Value="{DynamicResource AccentDim}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="IconCombo" TargetType="ComboBox">
+            <Setter Property="Background" Value="{DynamicResource SurfaceSunken}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBevel}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="8,0" />
+            <Setter Property="ItemContainerStyle" Value="{StaticResource IconComboItem}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <Border x:Name="Frame" Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}" />
+                            <Grid Margin="{TemplateBinding Padding}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="22" />
+                                </Grid.ColumnDefinitions>
+                                <ContentPresenter x:Name="Selection" Grid.Column="0"
+                                                  Content="{TemplateBinding SelectionBoxItem}"
+                                                  ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                  ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
+                                                  HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                  IsHitTestVisible="False" />
+                                <ToggleButton Grid.Column="1" Focusable="False" ClickMode="Press"
+                                              IsChecked="{Binding IsDropDownOpen, Mode=TwoWay,
+                                                  RelativeSource={RelativeSource TemplatedParent}}">
+                                    <ToggleButton.Template>
+                                        <ControlTemplate TargetType="ToggleButton">
+                                            <Border Background="Transparent">
+                                                <TextBlock Text="▾" FontSize="10" HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource TextMuted}" />
+                                            </Border>
+                                        </ControlTemplate>
+                                    </ToggleButton.Template>
+                                </ToggleButton>
+                            </Grid>
+                            <Popup x:Name="PART_Popup" Placement="Bottom" AllowsTransparency="True"
+                                   Focusable="False" PopupAnimation="Fade"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}">
+                                <Border Background="{DynamicResource SurfacePanel}"
+                                        BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
+                                        MinWidth="{TemplateBinding ActualWidth}"
+                                        MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <ScrollViewer>
+                                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Frame" Property="BorderBrush"
+                                        Value="{DynamicResource BorderStrong}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Setter TargetName="Frame" Property="BorderBrush"
+                                        Value="{DynamicResource AccentMain}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Карточка закреплённой иконки / дубликата -->
+        <Style x:Key="IconListItem" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Padding" Value="6,3" />
+            <Setter Property="Margin" Value="0,0,0,3" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="320" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" Background="{DynamicResource SurfacePanel}"
+                BorderBrush="{DynamicResource BorderBevel}" BorderThickness="0,0,1,0">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Margin="12">
+                    <Button Content="{loc:Loc iconLoadDds}" Style="{StaticResource AccentButton}"
+                            Command="{Binding Icons.LoadDdsCommand}" />
+                    <Button Content="{loc:Loc iconLoadCompare}" Margin="0,6,0,0"
+                            Command="{Binding Icons.LoadCompareCommand}"
+                            Visibility="{Binding Icons.HasAtlas, Converter={StaticResource BoolToVisibility}}" />
+                    <Button Content="{loc:Loc iconRemoveCompare}" Margin="0,6,0,0"
+                            Command="{Binding Icons.RemoveCompareCommand}"
+                            Visibility="{Binding Icons.HasOverlay, Converter={StaticResource BoolToVisibility}}" />
+
+                    <TextBlock Text="{loc:Loc iconPreset}" Style="{StaticResource IconLabel}" Margin="0,12,0,3" />
+                    <ComboBox ItemsSource="{Binding Icons.PresetOptions}"
+                              SelectedItem="{Binding Icons.SelectedPreset}"
+                              DisplayMemberPath="Label" Style="{StaticResource IconCombo}"
+                              Height="28" VerticalContentAlignment="Center" />
+
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Margin="0,0,5,0">
+                            <TextBlock Text="{loc:Loc iconColumns}" Style="{StaticResource IconLabel}" />
+                            <TextBox Text="{Binding Icons.AtlasColumns, UpdateSourceTrigger=LostFocus}"
+                                     Style="{StaticResource IconInput}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="5,0,0,0">
+                            <TextBlock Text="{loc:Loc iconZoom}" Style="{StaticResource IconLabel}" />
+                            <Slider Minimum="0.25" Maximum="3" SmallChange="0.25" LargeChange="0.25"
+                                    TickFrequency="0.25" IsSnapToTickEnabled="True"
+                                    Value="{Binding Icons.Zoom}" VerticalAlignment="Center" Height="26" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Margin="0,0,5,0">
+                            <TextBlock Text="{loc:Loc iconCellWidth}" Style="{StaticResource IconLabel}" />
+                            <TextBox Text="{Binding Icons.CellWidth, UpdateSourceTrigger=LostFocus}"
+                                     Style="{StaticResource IconInput}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="5,0,0,0">
+                            <TextBlock Text="{loc:Loc iconCellHeight}" Style="{StaticResource IconLabel}" />
+                            <TextBox Text="{Binding Icons.CellHeight, UpdateSourceTrigger=LostFocus}"
+                                     Style="{StaticResource IconInput}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Content="↶" Style="{StaticResource ToolbarButton}" Margin="0,0,4,0"
+                                Command="{Binding Icons.UndoCommand}"
+                                IsEnabled="{Binding Icons.CanUndo}" />
+                        <Button Content="↷" Style="{StaticResource ToolbarButton}"
+                                Command="{Binding Icons.RedoCommand}"
+                                IsEnabled="{Binding Icons.CanRedo}" />
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding Icons.HoverText}" Style="{StaticResource CaptionText}"
+                               Margin="0,6,0,0" />
+                    <TextBlock Text="{Binding Icons.SelectionText}" Style="{StaticResource CaptionText}"
+                               Margin="0,2,0,0" TextWrapping="Wrap" />
+
+                    <!-- Экспорт и DDS-кодеки -->
+                    <StackPanel Visibility="{Binding Icons.HasAtlas, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="{loc:Loc iconExportTitle}" Style="{StaticResource IconCardTitle}"
+                                   Margin="0,12,0,4" />
+                        <WrapPanel>
+                            <Button Content="{loc:Loc iconExportPng}" Style="{StaticResource ToolbarButton}"
+                                    Command="{Binding Icons.ExportPngCommand}" Margin="0,0,4,4" />
+                            <Button Content="{loc:Loc iconExportSelected}" Style="{StaticResource ToolbarButton}"
+                                    Command="{Binding Icons.ExportSelectedCommand}" Margin="0,0,4,4" />
+                            <Button Content="{loc:Loc iconExportSheet}" Style="{StaticResource ToolbarButton}"
+                                    Command="{Binding Icons.ExportSpritesheetCommand}" Margin="0,0,4,4" />
+                            <Button Content="{loc:Loc iconDxt1}" Style="{StaticResource ToolbarButton}"
+                                    Command="{Binding Icons.ExportDxt1Command}" Margin="0,0,4,4" />
+                            <Button Content="{loc:Loc iconDxt3}" Style="{StaticResource ToolbarButton}"
+                                    Command="{Binding Icons.ExportDxt3Command}" Margin="0,0,4,4" />
+                            <Button Content="{loc:Loc iconDxt5}" Style="{StaticResource ToolbarButton}"
+                                    Command="{Binding Icons.ExportDxt5Command}" Margin="0,0,4,4" />
+                            <Button Content="{loc:Loc iconDxt1Mip}" Style="{StaticResource ToolbarButton}"
+                                    Command="{Binding Icons.ExportDxt1MipCommand}" Margin="0,0,4,4" />
+                        </WrapPanel>
+
+                        <TextBlock Text="{loc:Loc iconEditorTitle}" Style="{StaticResource IconCardTitle}"
+                                   Margin="0,10,0,4" />
+                        <WrapPanel>
+                            <Button Content="{loc:Loc iconCopy}" Style="{StaticResource ToolbarButton}"
+                                    Command="{Binding Icons.CopyCommand}" Margin="0,0,4,4" />
+                            <Button Content="{loc:Loc iconPaste}" Style="{StaticResource ToolbarButton}"
+                                    Command="{Binding Icons.PasteCommand}" Margin="0,0,4,4" />
+                            <Button Content="{loc:Loc iconCrop}" Style="{StaticResource ToolbarButton}"
+                                    Command="{Binding Icons.CropCommand}" Margin="0,0,4,4" />
+                            <Button Content="{loc:Loc iconFill}" Style="{StaticResource ToolbarButton}"
+                                    Command="{Binding Icons.FillCommand}" Margin="0,0,4,4" />
+                            <Button Content="{loc:Loc iconAlpha}" Style="{StaticResource ToolbarButton}"
+                                    Command="{Binding Icons.AlphaCommand}" Margin="0,0,4,4" />
+                            <Button Content="{loc:Loc iconFlipX}" Style="{StaticResource ToolbarButton}"
+                                    Command="{Binding Icons.FlipXCommand}" Margin="0,0,4,4" />
+                            <Button Content="{loc:Loc iconFlipY}" Style="{StaticResource ToolbarButton}"
+                                    Command="{Binding Icons.FlipYCommand}" Margin="0,0,4,4" />
+                            <Button Content="{loc:Loc iconRotate}" Style="{StaticResource ToolbarButton}"
+                                    Command="{Binding Icons.RotateClockwiseCommand}" Margin="0,0,4,4" />
+                            <Button Content="{loc:Loc iconRotateCounter}" Style="{StaticResource ToolbarButton}"
+                                    Command="{Binding Icons.RotateCounterClockwiseCommand}" Margin="0,0,4,4" />
+                            <Button Content="{loc:Loc iconNewAtlas}" Style="{StaticResource ToolbarButton}"
+                                    Command="{Binding Icons.NewAtlasCommand}" Margin="0,0,4,4" />
+                            <Button Content="{loc:Loc iconPin}" Style="{StaticResource ToolbarButton}"
+                                    Command="{Binding Icons.PinCommand}" Margin="0,0,4,4" />
+                        </WrapPanel>
+                    </StackPanel>
+
+                    <!-- Сравнение со вторым атласом -->
+                    <StackPanel Visibility="{Binding Icons.HasOverlay, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="{loc:Loc iconCompareOpacity}" Style="{StaticResource IconLabel}"
+                                   Margin="0,10,0,3" />
+                        <Slider Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
+                                Value="{Binding Icons.CompareOpacity}" />
+                        <Button Content="{loc:Loc iconRemoveCompare}" Style="{StaticResource ToolbarButton}"
+                                Command="{Binding Icons.RemoveCompareCommand}" Margin="0,4,0,0" />
+                    </StackPanel>
+
+                    <!-- Коллекции закреплённых иконок -->
+                    <TextBlock Text="{loc:Loc iconCollections}" Style="{StaticResource IconCardTitle}"
+                               Margin="0,10,0,4" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ComboBox Grid.Column="0" ItemsSource="{Binding Icons.Collections}"
+                                  SelectedItem="{Binding Icons.CollectionName}"
+                                  Style="{StaticResource IconCombo}" Height="28"
+                                  VerticalContentAlignment="Center" />
+                        <Button Grid.Column="1" Content="＋" Style="{StaticResource ToolbarButton}"
+                                Margin="4,0,0,0" Command="{Binding Icons.AddCollectionCommand}" />
+                    </Grid>
+                    <Button Content="{loc:Loc iconFindDuplicates}" Style="{StaticResource ToolbarButton}"
+                            Command="{Binding Icons.FindDuplicatesCommand}" Margin="0,6,0,0"
+                            HorizontalAlignment="Left" />
+
+                    <StackPanel Margin="0,8,0,0"
+                                Visibility="{Binding Icons.HasPinned, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="{Binding Icons.PinnedTitle}" Style="{StaticResource IconCardTitle}" />
+                        <ItemsControl ItemsSource="{Binding Icons.Pinned}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,3">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0" Content="{Binding Display}"
+                                                Style="{StaticResource IconListItem}"
+                                                Command="{Binding SelectCommand}"
+                                                ToolTip="{Binding Display}" />
+                                        <Button Grid.Column="1" Content="×" Style="{StaticResource ToolbarButton}"
+                                                Command="{Binding RemoveCommand}" Foreground="{StaticResource IconRed}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <StackPanel Margin="0,8,0,0"
+                                Visibility="{Binding Icons.HasDuplicates, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="{Binding Icons.DuplicatesTitle}" Style="{StaticResource IconCardTitle}" />
+                        <ItemsControl ItemsSource="{Binding Icons.Duplicates}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Content="{Binding Display}" Style="{StaticResource ToolbarButton}"
+                                            Command="{Binding SelectCommand}" Margin="0,0,3,3" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <!-- Основная область: холст атласа, пустое состояние/ошибка и лупа -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Margin="16,14,16,10">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="{Binding ActiveTab.Glyph}" Margin="0,0,8,0"
+                               Foreground="{Binding ActiveTab.AccentHex, Converter={StaticResource HexBrush}}" />
+                    <TextBlock Text="{Binding ActiveTab.Label}" Style="{StaticResource TitleText}" />
+                    <TextBlock Text="{Binding ActiveTab.Hotkey}" Style="{StaticResource CaptionText}"
+                               Margin="10,0,0,0" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock Text="{loc:Loc iconSelectHint}" Style="{StaticResource CaptionText}"
+                           Margin="0,2,0,0" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Icons.AtlasInfo}" Style="{StaticResource CaptionText}"
+                           Margin="0,4,0,0" TextWrapping="Wrap"
+                           Visibility="{Binding Icons.HasAtlas, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+
+            <Grid Grid.Row="1" Margin="16,0,16,16">
+                <ScrollViewer x:Name="AtlasScroll" HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalContentAlignment="Left" VerticalContentAlignment="Top"
+                              Background="{DynamicResource SurfaceSunken}"
+                              Visibility="{Binding Icons.HasAtlas, Converter={StaticResource BoolToVisibility}}">
+                    <controls:AtlasCanvas x:Name="AtlasViewer" Cursor="Cross"
+                                          Texture="{Binding Icons.AtlasImage}"
+                                          Overlay="{Binding Icons.OverlayImage}"
+                                          OverlayOpacity="{Binding Icons.CompareOpacity}"
+                                          Zoom="{Binding Icons.Zoom}"
+                                          CellWidth="{Binding Icons.CellWidth}"
+                                          CellHeight="{Binding Icons.CellHeight}"
+                                          Columns="{Binding Icons.GridColumns}"
+                                          Rows="{Binding Icons.GridRows}"
+                                          SelectionX="{Binding Icons.SelectionX}"
+                                          SelectionY="{Binding Icons.SelectionY}"
+                                          SelectionWidth="{Binding Icons.SelectionWidth}"
+                                          SelectionHeight="{Binding Icons.SelectionHeight}"
+                                          HoverX="{Binding Icons.HoverX}"
+                                          HoverY="{Binding Icons.HoverY}"
+                                          HasHover="{Binding Icons.HasHover}"
+                                          SelectionChanged="OnAtlasSelectionChanged"
+                                          SelectionCommitted="OnAtlasSelectionCommitted"
+                                          HoverChanged="OnAtlasHoverChanged"
+                                          ZoomRequested="OnAtlasZoomRequested" />
+                </ScrollViewer>
+
+                <TextBlock Text="{loc:Loc iconNoAtlas}" Style="{StaticResource CaptionText}"
+                           TextWrapping="Wrap" MaxWidth="460" TextAlignment="Center"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Visibility="{Binding Icons.IsEmptyAtlas, Converter={StaticResource BoolToVisibility}}" />
+
+                <TextBlock Text="{Binding Icons.AtlasError}" Foreground="{StaticResource IconRed}"
+                           TextWrapping="Wrap" MaxWidth="520" TextAlignment="Center"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Visibility="{Binding Icons.HasAtlasError, Converter={StaticResource BoolToVisibility}}" />
+
+                <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,12,12"
+                        Padding="8" CornerRadius="8"
+                        Background="{DynamicResource SurfacePanel}"
+                        BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
+                        Visibility="{Binding Icons.HasHover, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding Icons.HoverText}" Style="{StaticResource IconCardTitle}" />
+                        <Border BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
+                                Width="{Binding Icons.MagnifierWidth}"
+                                Height="{Binding Icons.MagnifierHeight}">
+                            <Image Source="{Binding Icons.MagnifierImage}" Stretch="Fill"
+                                   RenderOptions.BitmapScalingMode="NearestNeighbor" />
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>
