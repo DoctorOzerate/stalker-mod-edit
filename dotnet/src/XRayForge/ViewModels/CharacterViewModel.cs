@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using XRayForge.Core.Characters;
 using XRayForge.Core.Models;
+using XRayForge.Core.Suggestions;
 using XRayForge.Localization;
 
 namespace XRayForge.ViewModels;
@@ -61,6 +62,18 @@ public sealed partial class CharacterViewModel : ObservableObject
     /// <summary>`visual: …` в блоке «Иконка и визуал».</summary>
     public string VisualText => "visual: " + (string.IsNullOrWhiteSpace(Visual) ? "—" : Visual);
 
+    public IReadOnlyList<SuggestionEntry> RankSuggestions => _owner.SuggestionsFor("rank");
+
+    public IReadOnlyList<SuggestionEntry> ReputationSuggestions => _owner.SuggestionsFor("reputation");
+
+    public IReadOnlyList<SuggestionEntry> NpcRankSuggestions => _owner.SuggestionsFor("npc_rank");
+
+    public IReadOnlyList<SuggestionEntry> IconSuggestions => _owner.SuggestionsFor("icon");
+
+    public IReadOnlyList<SuggestionEntry> VisualSuggestions => _owner.SuggestionsFor("visual");
+
+    public IReadOnlyList<SuggestionEntry> StartDialogSuggestions => _owner.SuggestionsFor("start_dialog");
+
     /// <summary>Есть снимок `original` — в JS панель diff показывается только для него.</summary>
     public bool HasOriginal => Model.Original != null;
 
@@ -101,6 +114,12 @@ public sealed partial class CharacterViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(ListTitle));
         OnPropertyChanged(nameof(ListSubtitle));
+        OnPropertyChanged(nameof(RankSuggestions));
+        OnPropertyChanged(nameof(ReputationSuggestions));
+        OnPropertyChanged(nameof(NpcRankSuggestions));
+        OnPropertyChanged(nameof(IconSuggestions));
+        OnPropertyChanged(nameof(VisualSuggestions));
+        OnPropertyChanged(nameof(StartDialogSuggestions));
     }
 
     /// <summary>Заменить список предупреждений (тексты уже локализованы).</summary>

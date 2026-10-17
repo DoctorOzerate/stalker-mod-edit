@@ -9,6 +9,7 @@ using XRayForge.Core.Graph;
 using XRayForge.Core.History;
 using XRayForge.Core.Models;
 using XRayForge.Core.Projects;
+using XRayForge.Core.Suggestions;
 using XRayForge.Core.Text;
 using XRayForge.Core.Xml;
 using XRayForge.Localization;
@@ -42,6 +43,7 @@ public sealed partial class DialogueGraphViewModel : ObservableObject
     private readonly Dictionary<string, GraphNodeViewModel> _index = new(StringComparer.Ordinal);
 
     private Project _project = ProjectMigration.Empty();
+    private SuggestionLibrary _suggestions = SuggestionLibrary.Empty;
     private HistoryState<GraphSnapshot> _hist = HistoryState<GraphSnapshot>.Empty;
     private string? _selectedId;
 
@@ -520,6 +522,7 @@ public sealed partial class DialogueGraphViewModel : ObservableObject
     public void Attach(Project project)
     {
         _project = project ?? ProjectMigration.Empty();
+        _suggestions = SuggestionLibrary.Build(_project);
         _hist = HistoryState<GraphSnapshot>.Empty;
         _selectedId = null;
         ExitPlaythrough();
@@ -531,6 +534,10 @@ public sealed partial class DialogueGraphViewModel : ObservableObject
         RefreshDialogueList();
         Reload();
         PushHistory();
+
+        OnPropertyChanged(nameof(PhraseTextIdSuggestions));
+        OnPropertyChanged(nameof(ExpressionSuggestions));
+        foreach (var field in MetadataFields) field.RefreshSuggestions();
     }
 
     /// <summary>`patch` и отрисовка: синхронизировать карточки узлов и связи с проектом.</summary>
@@ -1030,6 +1037,10 @@ public sealed partial class DialogueGraphViewModel : ObservableObject
     [ObservableProperty]
     private string _phraseTextId = "";
 
+    /// <summary>Известные `text_id` проекта для поля ссылки на перевод.</summary>
+    public IReadOnlyList<SuggestionEntry> PhraseTextIdSuggestions =>
+        _suggestions.OfKind(SuggestionKind.TextId);
+
     /// <summary>Fallback-текст реплики (`data.text`).</summary>
     [ObservableProperty]
     private string _phraseText = "";
@@ -1041,6 +1052,13 @@ public sealed partial class DialogueGraphViewModel : ObservableObject
     /// <summary>Выражение условия (`data.expression`) для узлов-проверок.</summary>
     [ObservableProperty]
     private string _phraseExpression = "";
+
+    /// <summary>Lua API, функции скриптов и готовые привязки для поля выражения.</summary>
+    public IReadOnlyList<SuggestionEntry> ExpressionSuggestions => _suggestions.ForLua();
+
+    /// <summary>Подсказки для одного ключа метаданных реплики.</summary>
+    public IReadOnlyList<SuggestionEntry> SuggestionsForMetadata(string key) =>
+        _suggestions.ForMetadataField(key);
 
     /// <summary>Тип действия (`data.action_type`): `give_info`, `give_item`, `take_item`, `script_call`.</summary>
     [ObservableProperty]

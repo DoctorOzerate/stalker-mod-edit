@@ -9,6 +9,7 @@ using XRayForge.Core.Characters;
 using XRayForge.Core.Graph;
 using XRayForge.Core.Models;
 using XRayForge.Core.Projects;
+using XRayForge.Core.Suggestions;
 using XRayForge.Core.Ui;
 using XRayForge.Core.Validation;
 using XRayForge.Localization;
@@ -25,6 +26,7 @@ public sealed partial class CharactersViewModel : ObservableObject
 {
     private readonly ShellViewModel _shell;
     private Project _project = ProjectMigration.Empty();
+    private SuggestionLibrary _suggestions = SuggestionLibrary.Empty;
     private Dictionary<Character, CharacterViewModel> _wrappers = new();
     private string? _selectedId;
     private string? _xmlContent;
@@ -152,11 +154,15 @@ public sealed partial class CharactersViewModel : ObservableObject
     public void Attach(Project project)
     {
         _project = project ?? ProjectMigration.Empty();
+        _suggestions = SuggestionLibrary.Build(_project);
         _selectedId = null;
         _xmlContent = null;
         IsXmlOpen = false;
         RefreshAll();
     }
+
+    /// <summary>Подсказки для поля персонажа; запрашиваются из XAML через <see cref="CharacterViewModel"/>.</summary>
+    public IReadOnlyList<SuggestionEntry> SuggestionsFor(string field) => _suggestions.ForCharacterField(field);
 
     /// <summary>Смена локали: подписи групп, предупреждения, чипы и шкалы пересобираются.</summary>
     public void RefreshLocalization()

@@ -1,7 +1,8 @@
 <UserControl x:Class="XRayForge.Views.DialoguesView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:loc="clr-namespace:XRayForge.Localization">
+             xmlns:loc="clr-namespace:XRayForge.Localization"
+             xmlns:controls="clr-namespace:XRayForge.Controls">
     <!--
       Вкладка «Диалоги»: визуальный редактор графа (`DialoguesTab.js`).
       Шаг 6.2 — холст: карточки узлов, связи, выделение, поиск по графу, статистика,
@@ -709,9 +710,11 @@
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBox Grid.Column="0" Margin="0,0,6,0"
+                                        <controls:SuggestionTextBox Grid.Column="0" Margin="0,0,6,0"
+                                                 Style="{StaticResource {x:Type TextBox}}"
                                                  ToolTip="{loc:Loc graphTextIdPlaceholder}"
-                                                 Text="{Binding DialogueGraph.PhraseTextId, UpdateSourceTrigger=PropertyChanged}" />
+                                                 Text="{Binding DialogueGraph.PhraseTextId, UpdateSourceTrigger=PropertyChanged}"
+                                                 Suggestions="{Binding DialogueGraph.PhraseTextIdSuggestions}" />
                                         <Button Grid.Column="1" Style="{StaticResource ToolbarButton}" Content="⤵"
                                                 ToolTip="{loc:Loc graphSuggestTextId}"
                                                 Command="{Binding DialogueGraph.SuggestTextIdCommand}" />
@@ -791,8 +794,10 @@
                                                 <DataTemplate>
                                                     <StackPanel Margin="0,0,0,6">
                                                         <TextBlock Text="{Binding Label}" Style="{StaticResource PropsLabel}" />
-                                                        <TextBox Style="{StaticResource PropsArea}"
-                                                                 Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <controls:SuggestionTextBox Style="{StaticResource PropsArea}"
+                                                                 Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"
+                                                                 Suggestions="{Binding Suggestions}"
+                                                                 TokenSeparators="&#10;" />
                                                     </StackPanel>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
@@ -801,9 +806,12 @@
                                 </Expander>
 
                                 <!-- Проверки CONDITION/QUEST_CHECK/ITEM_CHECK: поле `expression` -->
-                                <TextBox Margin="0,6,0,0" ToolTip="{loc:Loc graphExpressionPlaceholder}"
+                                <controls:SuggestionTextBox Margin="0,6,0,0"
+                                         Style="{StaticResource {x:Type TextBox}}"
+                                         ToolTip="{loc:Loc graphExpressionPlaceholder}"
                                          Visibility="{Binding DialogueGraph.ShowsExpressionFields, Converter={StaticResource BoolToVisibility}}"
-                                         Text="{Binding DialogueGraph.PhraseExpression, UpdateSourceTrigger=PropertyChanged}" />
+                                         Text="{Binding DialogueGraph.PhraseExpression, UpdateSourceTrigger=PropertyChanged}"
+                                         Suggestions="{Binding DialogueGraph.ExpressionSuggestions}" />
 
                                 <!-- Действие (`selectedNode.type === 'ACTION'`): тип и параметры -->
                                 <StackPanel Margin="0,6,0,0"

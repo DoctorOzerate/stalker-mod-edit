@@ -10,6 +10,7 @@ using XRayForge.Core.History;
 using XRayForge.Core.Ltx;
 using XRayForge.Core.Models;
 using XRayForge.Core.Projects;
+using XRayForge.Core.Suggestions;
 using XRayForge.Core.Text;
 using XRayForge.Localization;
 using XRayForge.Services;
@@ -32,6 +33,7 @@ public sealed partial class ItemsViewModel : ObservableObject
     private LtxDocument _document = new();
     private List<LtxSection> _sections = new();
     private Dictionary<string, LtxSection> _itemsByName = new(StringComparer.Ordinal);
+    private SuggestionLibrary _suggestions = SuggestionLibrary.Empty;
     private HistoryState<string> _historyState = HistoryState<string>.Empty;
     private LtxSection? _selectedSection;
     private BitmapImage? _atlasBitmap;
@@ -185,6 +187,7 @@ public sealed partial class ItemsViewModel : ObservableObject
         _document = LtxParser.Parse(_project.ItemsLtx);
         _sections = _document.Sections;
         _itemsByName = ItemEditor.MapByName(_sections);
+        _suggestions = SuggestionLibrary.Build(_project, _sections);
         RefreshGroups();
 
         OnPropertyChanged(nameof(CountText));
@@ -271,7 +274,8 @@ public sealed partial class ItemsViewModel : ObservableObject
         {
             var overridden = ItemEditor.IsOverridden(section, entry, _itemsByName);
             Fields.Add(new ItemFieldViewModel(
-                this, entry, locked, overridden, ItemEditor.ValueSuggestions(_sections, entry.Key)));
+                this, entry, locked, overridden,
+                _suggestions.ForItemField(entry.Key, ItemEditor.ValueSuggestions(_sections, entry.Key))));
         }
 
         var parentLinks = ItemEditor.Parents(section, _itemsByName);

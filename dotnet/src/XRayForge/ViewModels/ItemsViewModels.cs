@@ -4,6 +4,7 @@ using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using XRayForge.Core.Ltx;
+using XRayForge.Core.Suggestions;
 using XRayForge.Localization;
 
 namespace XRayForge.ViewModels;
@@ -115,7 +116,8 @@ public sealed partial class ItemFieldViewModel : ObservableObject
     [ObservableProperty] private bool _hasError;
 
     public ItemFieldViewModel(
-        ItemsViewModel owner, MergedEntry entry, bool locked, bool overridden, IReadOnlyList<string> suggestions)
+        ItemsViewModel owner, MergedEntry entry, bool locked, bool overridden,
+        IReadOnlyList<SuggestionEntry> suggestions)
     {
         _owner = owner;
         Entry = entry;
@@ -135,7 +137,7 @@ public sealed partial class ItemFieldViewModel : ObservableObject
     public string Key => Entry.Key;
     public bool IsInherited => Entry.Inherited;
     public bool IsLocked { get; }
-    public IReadOnlyList<string> Suggestions { get; }
+    public IReadOnlyList<SuggestionEntry> Suggestions { get; }
     public bool IsEditable => !IsInherited && !IsLocked;
     public bool CanUnlock => IsInherited;
     public bool CanRemove => !IsInherited && !IsLocked;

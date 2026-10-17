@@ -1,7 +1,8 @@
 <UserControl x:Class="XRayForge.Views.ItemsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:loc="clr-namespace:XRayForge.Localization">
+             xmlns:loc="clr-namespace:XRayForge.Localization"
+             xmlns:controls="clr-namespace:XRayForge.Controls">
     <!--
       Вкладка «Предметы» (этап 7.2, порт `ItemsTab.js`): слева создание/экспорт, массовые
       операции, фильтр по категории, поиск, сортировка и группы секций; справа редактор
@@ -587,9 +588,11 @@
                                                            ToolTip="{Binding Tooltip}" FontFamily="Consolas"
                                                            FontSize="11" VerticalAlignment="Center"
                                                            Margin="0,0,6,0" TextTrimming="CharacterEllipsis" />
-                                                <TextBox Grid.Column="1"
+                                                <controls:SuggestionTextBox Grid.Column="1"
                                                          Style="{StaticResource ItemFieldInput}"
                                                          Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                                         Suggestions="{Binding Suggestions}"
+                                                         TokenSeparators=",;"
                                                          ToolTip="{Binding Tooltip}" />
                                                 <StackPanel Grid.Column="2" Orientation="Horizontal"
                                                             Margin="4,0,0,0" VerticalAlignment="Center">

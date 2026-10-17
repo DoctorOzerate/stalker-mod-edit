@@ -1,7 +1,8 @@
 <UserControl x:Class="XRayForge.Views.CharactersView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:loc="clr-namespace:XRayForge.Localization">
+             xmlns:loc="clr-namespace:XRayForge.Localization"
+             xmlns:controls="clr-namespace:XRayForge.Controls">
     <!--
       Вкладка «Персонажи» (этап 7.1, порт `CharactersTab.js`): слева поиск, сортировка и
       группы по community, справа карточка `game_relations`, редактор `specific_character`,
@@ -450,7 +451,9 @@
                         </StackPanel>
                         <StackPanel Margin="0,0,0,8">
                             <TextBlock Text="{loc:Loc charFieldRank}" Style="{StaticResource CharLabel}" />
-                            <TextBox Text="{Binding Characters.Selected.Rank, UpdateSourceTrigger=PropertyChanged}" />
+                            <controls:SuggestionTextBox Style="{StaticResource {x:Type TextBox}}"
+                                                        Text="{Binding Characters.Selected.Rank, UpdateSourceTrigger=PropertyChanged}"
+                                                        Suggestions="{Binding Characters.Selected.RankSuggestions}" />
                             <ItemsControl ItemsSource="{Binding Characters.RankMarks}" Margin="0,4,0,0"
                                           Visibility="{Binding Characters.HasRankMarks,
                                               Converter={StaticResource BoolToVisibility}}">
@@ -472,7 +475,9 @@
                         </StackPanel>
                         <StackPanel Margin="0,0,0,8">
                             <TextBlock Text="{loc:Loc charFieldReputation}" Style="{StaticResource CharLabel}" />
-                            <TextBox Text="{Binding Characters.Selected.Reputation, UpdateSourceTrigger=PropertyChanged}" />
+                            <controls:SuggestionTextBox Style="{StaticResource {x:Type TextBox}}"
+                                                        Text="{Binding Characters.Selected.Reputation, UpdateSourceTrigger=PropertyChanged}"
+                                                        Suggestions="{Binding Characters.Selected.ReputationSuggestions}" />
                             <ItemsControl ItemsSource="{Binding Characters.ReputationMarks}" Margin="0,4,0,0"
                                           Visibility="{Binding Characters.HasReputationMarks,
                                               Converter={StaticResource BoolToVisibility}}">
@@ -494,7 +499,9 @@
                         </StackPanel>
                         <StackPanel Margin="0,0,0,8">
                             <TextBlock Text="{loc:Loc charFieldNpcRank}" Style="{StaticResource CharLabel}" />
-                            <TextBox Text="{Binding Characters.Selected.NpcRank, UpdateSourceTrigger=PropertyChanged}" />
+                            <controls:SuggestionTextBox Style="{StaticResource {x:Type TextBox}}"
+                                                        Text="{Binding Characters.Selected.NpcRank, UpdateSourceTrigger=PropertyChanged}"
+                                                        Suggestions="{Binding Characters.Selected.NpcRankSuggestions}" />
                         </StackPanel>
                         <StackPanel Margin="0,0,0,8">
                             <TextBlock Text="{loc:Loc charFieldBio}" Style="{StaticResource CharLabel}" />
@@ -508,11 +515,15 @@
                         </StackPanel>
                         <StackPanel Margin="0,0,0,8">
                             <TextBlock Text="{loc:Loc charFieldIcon}" Style="{StaticResource CharLabel}" />
-                            <TextBox Text="{Binding Characters.Selected.Icon, UpdateSourceTrigger=PropertyChanged}" />
+                            <controls:SuggestionTextBox Style="{StaticResource {x:Type TextBox}}"
+                                                        Text="{Binding Characters.Selected.Icon, UpdateSourceTrigger=PropertyChanged}"
+                                                        Suggestions="{Binding Characters.Selected.IconSuggestions}" />
                         </StackPanel>
                         <StackPanel Margin="0,0,0,8">
                             <TextBlock Text="{loc:Loc charFieldVisual}" Style="{StaticResource CharLabel}" />
-                            <TextBox Text="{Binding Characters.Selected.Visual, UpdateSourceTrigger=PropertyChanged}" />
+                            <controls:SuggestionTextBox Style="{StaticResource {x:Type TextBox}}"
+                                                        Text="{Binding Characters.Selected.Visual, UpdateSourceTrigger=PropertyChanged}"
+                                                        Suggestions="{Binding Characters.Selected.VisualSuggestions}" />
                         </StackPanel>
 
                         <!-- «Иконка и визуал»: вырезка `textureMap[icon]` или заглушка 👤 -->
@@ -551,8 +562,11 @@
 
                         <StackPanel Margin="0,0,0,10">
                             <TextBlock Text="{loc:Loc charFieldStartDialog}" Style="{StaticResource CharLabel}" />
-                            <TextBox Text="{Binding Characters.Selected.StartDialogText,
-                                                UpdateSourceTrigger=PropertyChanged}" />
+                            <controls:SuggestionTextBox Style="{StaticResource {x:Type TextBox}}"
+                                                        Text="{Binding Characters.Selected.StartDialogText,
+                                                UpdateSourceTrigger=PropertyChanged}"
+                                                        Suggestions="{Binding Characters.Selected.StartDialogSuggestions}"
+                                                        TokenSeparators="," />
                         </StackPanel>
 
                         <!-- «Диалоги персонажа»: `start_dialog` + `actor_dialog` -->

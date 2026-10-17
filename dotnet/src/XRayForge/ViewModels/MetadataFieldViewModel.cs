@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using XRayForge.Core.Suggestions;
 
 namespace XRayForge.ViewModels;
 
@@ -25,9 +26,15 @@ public sealed partial class MetadataFieldViewModel : ObservableObject
     /// <summary>Подпись поля (совпадает с ключом).</summary>
     public string Label { get; }
 
+    /// <summary>Подсказки по ключу: info-порции для `*_info`, скрипты для `precondition`/`action`.</summary>
+    public IReadOnlyList<SuggestionEntry> Suggestions => _owner.SuggestionsForMetadata(Key);
+
     /// <summary>Содержимое поля: `(metadata[key] || []).join('\n')`.</summary>
     [ObservableProperty]
     private string _text = "";
+
+    /// <summary>Уведомить UI после пересборки библиотеки при смене проекта.</summary>
+    public void RefreshSuggestions() => OnPropertyChanged(nameof(Suggestions));
 
     partial void OnTextChanged(string value)
     {
