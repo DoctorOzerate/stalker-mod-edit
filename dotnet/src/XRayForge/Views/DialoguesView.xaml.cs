@@ -82,14 +82,24 @@ public partial class DialoguesView : UserControl
         graph.DragTo(screen.X, screen.Y, point.X, point.Y);
     }
 
-    /// <summary>`mouseup`: завершение переноса/панорамы; рамка выделения отбирает накрытые узлы.</summary>
+    /// <summary>
+    /// `mouseup`: завершение переноса/панорамы; рамка выделения отбирает накрытые узлы.
+    /// Холст не трогает отпускание, если он не начинал перетаскивание и не захватывал мышь:
+    /// клик по порту/связи должен дойти до самой кнопки. Иначе `PreviewMouseUp` помечается
+    /// обработанным, `Button.Click` не срабатывает, а кнопка остаётся в захвате мыши —
+    /// внешне приложение «зависает» и связь не создаётся.
+    /// </summary>
     private void OnCanvasMouseUp(object sender, MouseButtonEventArgs e)
     {
         if (e.ChangedButton is not (MouseButton.Left or MouseButton.Middle)) return;
         if (DataContext is not ShellViewModel shell) return;
 
+        var element = sender as UIElement;
+        var captured = element?.IsMouseCaptured == true || GraphLayer.IsMouseCaptured;
+        if (!shell.DialogueGraph.IsDragging && !captured) return;
+
         shell.DialogueGraph.EndDrag();
-        if (sender is UIElement element && element.IsMouseCaptured) element.ReleaseMouseCapture();
+        if (element?.IsMouseCaptured == true) element.ReleaseMouseCapture();
         else if (GraphLayer.IsMouseCaptured) GraphLayer.ReleaseMouseCapture();
         e.Handled = true;
     }
