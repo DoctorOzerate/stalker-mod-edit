@@ -59,6 +59,23 @@ public sealed class AppDataService
     public void SaveCurrentProject(Project? project) =>
         WriteFile(CurrentProjectFileName, Projects.ProjectSerializer.Serialize(Projects.ProjectSerializer.ToPersistable(project)));
 
+    /// <summary>
+    /// Проект для кнопки «Продолжить»: `current.project.json` возвращается, только если
+    /// его имя ещё есть в списке профиля. Устаревший файл удалённого проекта стирается.
+    /// </summary>
+    public Project? LoadResumableProject()
+    {
+        var project = LoadCurrentProject();
+        if (project == null) return null;
+
+        var name = project.ProjectName;
+        if (ListProjects().Any(stored => string.Equals(stored.Name, name, StringComparison.Ordinal)))
+            return project;
+
+        ClearCurrentProject();
+        return null;
+    }
+
     /// <summary>`saveProject()`/автобэкап: проект встаёт в начало списка с новым `updatedAt`.</summary>
     public void SaveProject(Project? project)
     {
@@ -73,11 +90,32 @@ public sealed class AppDataService
         SaveProjects(list);
     }
 
-    /// <summary>Удаление проекта из списка (`removeProject`).</summary>
+    /// <summary>
+    /// Удаление проекта из списка (`removeProject`). Если удаляется проект, записанный
+    /// в `current.project.json`, файл текущего проекта тоже очищается — иначе кнопка
+    /// «Продолжить» после перезапуска открывала бы уже удалённый проект.
+    /// </summary>
     public void RemoveProject(string? name)
     {
         var list = ListProjects().Where(p => p.Name != name).ToList();
         SaveProjects(list);
+
+        if (string.IsNullOrWhiteSpace(name)) return;
+        var current = LoadCurrentProject();
+        if (current != null && string.Equals(current.ProjectName, name, StringComparison.Ordinal))
+            ClearCurrentProject();
+    }
+
+    /// <summary>Удалить `current.project.json` (проект закрыт или удалён из профиля).</summary>
+    public void ClearCurrentProject()
+    {
+        var path = PathFor(CurrentProjectFileName);
+        try
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+        catch (IOException) { /* файл занят — состояние профиля не меняем */ }
+        catch (UnauthorizedAccessException) { }
     }
 
     /// <summary>Переименование проекта в списке (`renameProject`).</summary>

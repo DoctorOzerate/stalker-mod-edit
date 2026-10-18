@@ -58,10 +58,12 @@
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderBrush" Value="Transparent" />
         <Setter Property="Padding" Value="10,6" />
+        <Setter Property="FontSize" Value="{DynamicResource DensitySmallFontSize}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="Chrome" Background="{TemplateBinding Background}"
+                    <Border x:Name="Chrome" Background="{TemplateBinding Background}" CornerRadius="6"
                             BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
                         <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Stretch"
                                           VerticalAlignment="Center" />
@@ -169,7 +171,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="Chrome" Background="{TemplateBinding Background}"
+                    <Border x:Name="Chrome" Background="{TemplateBinding Background}" CornerRadius="4"
                             BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
                         <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center"
                                           VerticalAlignment="Center" RecognizesAccessKey="True" />

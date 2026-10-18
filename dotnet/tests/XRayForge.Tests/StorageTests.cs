@@ -134,6 +134,49 @@ public class StorageTests : IDisposable
     }
 
     [Fact]
+    public void Resumable_project_requires_a_list_entry_and_clears_stale_file()
+    {
+        var store = new AppDataService(_root);
+        store.SaveCurrentProject(NewProject("gone"));
+
+        Assert.Null(store.LoadResumableProject());
+        Assert.False(File.Exists(store.PathFor(AppDataService.CurrentProjectFileName)));
+
+        store.SaveProject(NewProject("kept"));
+        store.SaveCurrentProject(NewProject("kept"));
+
+        Assert.Equal("kept", store.LoadResumableProject()!.ProjectName);
+    }
+
+    [Fact]
+    public void Removing_current_project_clears_current_project_file()
+    {
+        var store = new AppDataService(_root);
+        store.SaveProject(NewProject("deleted"));
+        store.SaveCurrentProject(NewProject("deleted"));
+
+        store.RemoveProject("deleted");
+
+        Assert.Empty(store.ListProjects());
+        Assert.Null(store.LoadCurrentProject());
+        Assert.False(File.Exists(store.PathFor(AppDataService.CurrentProjectFileName)));
+    }
+
+    [Fact]
+    public void Removing_other_project_keeps_current_project_file()
+    {
+        var store = new AppDataService(_root);
+        store.SaveProject(NewProject("keep"));
+        store.SaveProject(NewProject("drop"));
+        store.SaveCurrentProject(NewProject("keep"));
+
+        store.RemoveProject("drop");
+
+        Assert.Equal("keep", store.LoadCurrentProject()!.ProjectName);
+        Assert.Equal(new[] { "keep" }, store.ListProjects().Select(p => p.Name));
+    }
+
+    [Fact]
     public void Projects_list_normalizes_broken_entries_like_js()
     {
         var store = new AppDataService(_root);

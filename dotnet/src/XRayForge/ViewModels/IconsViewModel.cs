@@ -450,6 +450,7 @@ public sealed partial class IconsViewModel : ObservableObject
         _project.Atlas.CellSize = value;
         if (_project.Atlas.CellHeight <= 0) _project.Atlas.CellHeight = value;
         RefreshLayout();
+        _shell.OnAtlasChanged();
         _shell.OnSectionEdited();
     }
 
@@ -466,6 +467,7 @@ public sealed partial class IconsViewModel : ObservableObject
 
         _project.Atlas.CellHeight = value;
         RefreshLayout();
+        _shell.OnAtlasChanged();
         _shell.OnSectionEdited();
     }
 
@@ -481,6 +483,7 @@ public sealed partial class IconsViewModel : ObservableObject
         _loading = false;
         SelectedPreset = PresetOptions.Count > 0 ? PresetOptions[0] : null;
         RefreshLayout();
+        _shell.OnAtlasChanged();
         _shell.OnSectionEdited(LocalizationSource.Get("iconPresetApplied") + ": " + value.Label);
     }
 
@@ -734,6 +737,7 @@ public sealed partial class IconsViewModel : ObservableObject
         NotifyAtlasDisplaySize();
         RefreshLayout(name);
         LoadOverlay();
+        _shell.OnAtlasChanged();
         _shell.OnSectionEdited(status);
     }
 

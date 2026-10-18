@@ -168,6 +168,13 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private bool _isWelcomeOpen = true;
 
     /// <summary>
+    /// В профиле есть `current.project.json`, и проект из него всё ещё присутствует
+    /// в списке сохранённых. Удалённый проект не должен предлагаться к продолжению.
+    /// </summary>
+    [ObservableProperty]
+    private bool _hasCurrentProject;
+
+    /// <summary>
     /// Есть открытый проект. До открытия/создания/импорта вкладки и их горячие клавиши
     /// недоступны, а автосохранение не пишет пустой проект.
     /// </summary>
@@ -269,6 +276,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         foreach (var stored in _store.ListProjects().Take(50))
             Projects.Add(new ProjectItemViewModel(stored).WithData(stored.Data));
         OnPropertyChanged(nameof(HasProjects));
+
+        // LoadResumableProject заодно вычищает current.project.json удалённого проекта.
+        HasCurrentProject = _store.LoadResumableProject() != null;
     }
 
     /// <summary>Открыть welcome-экран (кнопка «Проекты»).</summary>
@@ -290,9 +300,10 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ContinueProject()
     {
-        var project = _store.LoadCurrentProject();
+        var project = _store.LoadResumableProject();
         if (project == null)
         {
+            LoadWelcomeList();
             _dialogs.ShowMessage(LocalizationSource.Get("appTitle"), LocalizationSource.Get("noProjects"));
             return;
         }
@@ -1054,6 +1065,13 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     /// </summary>
     public void OnSectionEdited(string? statusText = null, string? statusDetail = null) =>
         OnGraphEdited(statusText, statusDetail);
+
+    /// <summary>
+    /// На вкладке «Иконки» сменились атлас или размер ячеек. «Предметы» держат
+    /// производные вырезки (`SelectedItemIcon`, слоты), поэтому их нужно пересобрать,
+    /// иначе до повторного выбора предмета показывалась иконка со старым масштабом.
+    /// </summary>
+    public void OnAtlasChanged() => Items.RefreshAtlasPreview();
 
     /// <summary>Флаг изменений: оболочка (`dirty`) и автосохранение (`AutosaveService.Dirty`).</summary>
     private void SetDirty(bool value)

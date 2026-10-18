@@ -142,9 +142,11 @@
 
         <!-- Кнопка разворота/свёртывания панели (`‹`/`›` в JS) и переключатель полноэкранного
              холста: компактная кнопка с глифом по центру. -->
-        <Style x:Key="GraphPanelButton" TargetType="Button">
+        <Style x:Key="GraphPanelButton" TargetType="Button"
+               BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="Padding" Value="6,2" />
             <Setter Property="MinWidth" Value="26" />
+            <Setter Property="MinHeight" Value="0" />
             <Setter Property="FontSize" Value="13" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
         </Style>

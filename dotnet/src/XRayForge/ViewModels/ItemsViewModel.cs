@@ -149,6 +149,21 @@ public sealed partial class ItemsViewModel : ObservableObject
 
     private const double DefaultPreviewCellPx = 50;
 
+    /// <summary>
+    /// Размер ячейки из `project.atlas` — единый источник для превью, пикера и слотов.
+    /// Пресет «Иконок» пишет сюда `cellSize`/`cellHeight`, поэтому после его смены
+    /// вырезки предметов пересчитываются тем же масштабом, что и сетка атласа.
+    /// </summary>
+    private (double Width, double Height) AtlasCellSize
+    {
+        get
+        {
+            var width = _project.Atlas.CellSize > 0 ? _project.Atlas.CellSize : DefaultPreviewCellPx;
+            var height = _project.Atlas.CellHeight > 0 ? _project.Atlas.CellHeight : width;
+            return (width, height);
+        }
+    }
+
     public bool HasSelectedItemIcon => SelectedItemIcon != null;
 
     partial void OnSelectedItemIconChanged(ImageSource? value) =>
@@ -295,6 +310,18 @@ public sealed partial class ItemsViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(CanUndo));
         OnPropertyChanged(nameof(CanRedo));
+    }
+
+    /// <summary>
+    /// Атлас или размер его ячеек изменился на вкладке «Иконки»: пересчитать вырезанную
+    /// иконку и слоты экипировки, не сбрасывая выбранную секцию и историю правок.
+    /// </summary>
+    public void RefreshAtlasPreview()
+    {
+        if (_selectedSection == null) return;
+        RefreshAtlas(_selectedSection);
+        RefreshEquipSlots();
+        NotifyDetails();
     }
 
     /// <summary>Пересчитать правую панель: слияние полей, быстрые поля, дерево, ссылки и слоты.</summary>
@@ -452,8 +479,7 @@ public sealed partial class ItemsViewModel : ObservableObject
         AtlasColumns = 0;
         SelectedItemIcon = null;
 
-        var cellSize = _project.Atlas.CellSize > 0 ? _project.Atlas.CellSize : 50;
-        var cellHeight = _project.Atlas.CellHeight > 0 ? _project.Atlas.CellHeight : cellSize;
+        var (cellSize, cellHeight) = AtlasCellSize;
         var placement = IconGrid.ResolvePlacement(section, _itemsByName);
         var iconWidth = Math.Max(1, placement.Width);
         var iconHeight = Math.Max(1, placement.Height);
@@ -468,27 +494,27 @@ public sealed partial class ItemsViewModel : ObservableObject
         IconPreviewWidth = preview.Width;
         IconPreviewHeight = preview.Height;
 
-        if (_atlasTexture == null || _atlasTexture.Width is not > 0 || _atlasTexture.Height is not > 0)
+        _atlasBitmap = TexturePreview.Load(_atlasTexture?.DataUrl);
+        var width = _atlasBitmap?.PixelWidth ?? _atlasTexture?.Width ?? 0;
+        var height = _atlasBitmap?.PixelHeight ?? _atlasTexture?.Height ?? 0;
+        if (_atlasBitmap == null || width <= 0 || height <= 0)
         {
             IsIconPickerOpen = false;
             return;
         }
 
-        var width = _atlasTexture.Width.Value;
-        var height = _atlasTexture.Height.Value;
         var cols = Math.Max(1, (int)Math.Floor(width / cellSize));
         var rows = Math.Max(1, (int)Math.Floor(height / cellHeight));
         AtlasColumns = cols;
-        AtlasTitle = LocalizationSource.Get("itemAtlasTitle") + " · " + _atlasTexture.Name +
+        AtlasTitle = LocalizationSource.Get("itemAtlasTitle") + " · " + _atlasTexture?.Name +
                      " (" + cols + "×" + rows + ")";
 
-        _atlasBitmap = TexturePreview.Load(_atlasTexture.DataUrl);
-        if (_atlasBitmap != null && placement.HasPosition)
+        if (placement.HasPosition)
         {
             SelectedItemIcon = TexturePreview.Crop(
                 _atlasBitmap, placement.X * cellSize, placement.Y * cellHeight,
                 iconWidth * cellSize, iconHeight * cellHeight,
-                _atlasBitmap.PixelWidth, _atlasBitmap.PixelHeight);
+                width, height);
         }
 
         if (IsIconPickerOpen) RefreshAtlasCells(section);
@@ -523,11 +549,8 @@ public sealed partial class ItemsViewModel : ObservableObject
         AtlasCells.Clear();
         if (section == null || _atlasBitmap == null || AtlasColumns <= 0) return;
 
-        var cellSize = _project.Atlas.CellSize > 0 ? _project.Atlas.CellSize : 50;
-        var cellHeight = _project.Atlas.CellHeight > 0 ? _project.Atlas.CellHeight : cellSize;
+        var (cellWidth, cellHeight) = AtlasCellSize;
         var rows = Math.Max(1, (int)Math.Floor(_atlasBitmap.PixelHeight / cellHeight));
-        var cellWidth = _atlasBitmap.PixelWidth / (double)AtlasColumns;
-        var cellHeightPx = _atlasBitmap.PixelHeight / (double)rows;
         var placement = IconGrid.ResolvePlacement(section, _itemsByName);
 
         for (var y = 0; y < rows; y++)
@@ -535,7 +558,7 @@ public sealed partial class ItemsViewModel : ObservableObject
             for (var x = 0; x < AtlasColumns; x++)
             {
                 var image = TexturePreview.Crop(
-                    _atlasBitmap, x * cellWidth, y * cellHeightPx, cellWidth, cellHeightPx,
+                    _atlasBitmap, x * cellWidth, y * cellHeight, cellWidth, cellHeight,
                     _atlasBitmap.PixelWidth, _atlasBitmap.PixelHeight);
                 var active = placement.HasPosition && x == placement.X && y == placement.Y;
                 AtlasCells.Add(new AtlasCellViewModel(this, x, y, image, active));
@@ -552,8 +575,7 @@ public sealed partial class ItemsViewModel : ObservableObject
         var selectedKey = SelectedEquipSlot?.Key;
         EquipSlots.Clear();
 
-        var cellSize = _project.Atlas.CellSize > 0 ? _project.Atlas.CellSize : 50;
-        var cellHeight = _project.Atlas.CellHeight > 0 ? _project.Atlas.CellHeight : cellSize;
+        var (cellSize, cellHeight) = AtlasCellSize;
         foreach (var slot in _slotLayout)
         {
             var key = slot.Key;

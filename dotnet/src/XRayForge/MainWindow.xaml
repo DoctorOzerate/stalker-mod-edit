@@ -263,7 +263,9 @@
 
                             <WrapPanel>
                                 <Button Content="{loc:Loc continue}" Style="{StaticResource AccentButton}"
-                                        Command="{Binding ContinueProjectCommand}" Margin="0,0,8,8" />
+                                        Command="{Binding ContinueProjectCommand}" Margin="0,0,8,8"
+                                        Visibility="{Binding HasCurrentProject,
+                                            Converter={StaticResource BoolToVisibility}}" />
                                 <Button Content="{loc:Loc createProject}" Command="{Binding NewProjectCommand}"
                                         Margin="0,0,8,8" />
                                 <Button Content="{loc:Loc importProject}" Command="{Binding ImportProjectCommand}"
