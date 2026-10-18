@@ -18,20 +18,12 @@ public sealed partial class ProjectSettingsViewModel : ObservableObject
     public ProjectSettingsViewModel(ShellViewModel shell)
     {
         _shell = shell;
-        Project = shell.Project;
         Series = new ObservableCollection<GameSeriesOption>(GameSeriesCatalog.Items);
-
-        _projectName = Project.ProjectName;
-        _dialogueId = Project.DialogueId;
-        _selectedSeries = Series.FirstOrDefault(item => item.Value == GameSeriesCatalog.Normalize(Project.Series)) ?? Series[0];
-        _importEncoding = Project.Settings.ImportEncoding;
-        _exportEncoding = Project.Settings.ExportEncoding;
-        _showNodeText = Project.Settings.ShowNodeText;
-        _gamedataPath = Project.GamedataPath;
+        LoadFromProject();
     }
 
-    /// <summary>Проект оболочки (правки применяются в <see cref="Commit"/>).</summary>
-    public Project Project { get; }
+    /// <summary>Актуальный проект оболочки (правки применяются в <see cref="Commit"/>).</summary>
+    public Project Project => _shell.Project;
 
     /// <summary>Серии игры (`GameSeriesCatalog.Items`: ТЧ/ЧН/ЗП).</summary>
     public ObservableCollection<GameSeriesOption> Series { get; }
@@ -44,23 +36,23 @@ public sealed partial class ProjectSettingsViewModel : ObservableObject
 
     /// <summary>Имя проекта (`projectName`).</summary>
     [ObservableProperty]
-    private string _projectName;
+    private string _projectName = "";
 
     /// <summary>Идентификатор диалога проекта (`dialogueId`).</summary>
     [ObservableProperty]
-    private string _dialogueId;
+    private string _dialogueId = "";
 
     /// <summary>Серия игры (`series`): влияет на каталог экспорта `config`/`configs`.</summary>
     [ObservableProperty]
-    private GameSeriesOption _selectedSeries;
+    private GameSeriesOption _selectedSeries = GameSeriesCatalog.Items[0];
 
     /// <summary>Кодировка импорта (`settings.importEncoding`).</summary>
     [ObservableProperty]
-    private string _importEncoding;
+    private string _importEncoding = "";
 
     /// <summary>Кодировка экспорта (`settings.exportEncoding`).</summary>
     [ObservableProperty]
-    private string _exportEncoding;
+    private string _exportEncoding = "";
 
     /// <summary>Показывать текст реплик в узлах графа (`settings.showNodeText`).</summary>
     [ObservableProperty]
@@ -68,7 +60,7 @@ public sealed partial class ProjectSettingsViewModel : ObservableObject
 
     /// <summary>Путь к gamedata (`gamedataPath`).</summary>
     [ObservableProperty]
-    private string _gamedataPath;
+    private string _gamedataPath = "";
 
     /// <summary>`showDirectoryPicker`: выбрать каталог gamedata.</summary>
     [RelayCommand]
@@ -81,6 +73,43 @@ public sealed partial class ProjectSettingsViewModel : ObservableObject
     /// <summary>`processGamedataMap`: запустить сканирование (окно настроек остаётся открытым).</summary>
     [RelayCommand]
     private void ScanGamedata() => _shell.ScanGamedataCommand.Execute(null);
+
+    /// <summary>Количество точек сохранения в истории профиля.</summary>
+    public int BackupCount => _shell.Backups.Count;
+
+    /// <summary>`saveBackups`: снимок текущего состояния проекта из настроек проекта.</summary>
+    [RelayCommand]
+    private void AddBackup()
+    {
+        _shell.AddBackupCommand.Execute(null);
+        OnPropertyChanged(nameof(BackupCount));
+    }
+
+    /// <summary>`backups`: история точек сохранения профиля (окно «Копии»).</summary>
+    [RelayCommand]
+    private void OpenBackups()
+    {
+        var project = _shell.Project;
+        _shell.OpenBackupsCommand.Execute(null);
+        // Восстановление снимка заменяет объект проекта в оболочке — перечитываем поля,
+        // чтобы «ОК» не записал значения старого проекта.
+        if (!ReferenceEquals(project, _shell.Project)) LoadFromProject();
+        OnPropertyChanged(nameof(BackupCount));
+    }
+
+    /// <summary>Перечитать поля окна из актуального проекта оболочки.</summary>
+    private void LoadFromProject()
+    {
+        var project = Project;
+        ProjectName = project.ProjectName;
+        DialogueId = project.DialogueId;
+        SelectedSeries = Series.FirstOrDefault(item => item.Value == GameSeriesCatalog.Normalize(project.Series)) ?? Series[0];
+        ImportEncoding = project.Settings.ImportEncoding;
+        ExportEncoding = project.Settings.ExportEncoding;
+        ShowNodeText = project.Settings.ShowNodeText;
+        GamedataPath = project.GamedataPath;
+        OnPropertyChanged(nameof(Summary));
+    }
 
     /// <summary>Записать значения полей в проект (вызывает окно при «Сохранить»).</summary>
     public void Commit()

@@ -815,36 +815,62 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         try
         {
             var read = await Task.Run(() => FileSystemService.ReadDirectory(folder));
+
+            // Скан с welcome-экрана создаёт проект: имя берём из папки, серию — по пути.
+            // Для открытого проекта сканируем в него же, как и раньше.
+            var startingNewProject = !IsProjectOpen;
+            var project = startingNewProject ? ProjectMigration.Empty() : _project;
+            if (startingNewProject)
+            {
+                var name = SuggestedProjectName(folder, read.TopName);
+                project.ProjectName = name;
+                project.DialogueId = name;
+                project.Series = DetectSeries(folder, read.TopName);
+            }
+
             var result = await Task.Run(() => GamedataScanner.Scan(
-                _project,
+                project,
                 read.TopName,
                 read.Files,
                 new GamedataScanOptions
                 {
-                    ImportEncoding = _project.Settings.ImportEncoding,
+                    ImportEncoding = project.Settings.ImportEncoding,
                     PngEncoder = PngDataUrlEncoder.FromRgba,
                     Progress = (done, total) => _dispatcher.BeginInvoke(new Action(() =>
                         StatusDetail = done.ToString(CultureInfo.CurrentCulture) + "/" +
                                        total.ToString(CultureInfo.CurrentCulture)))
                 }));
 
-            result.Patch.Apply(_project);
-            GamedataPath = string.IsNullOrWhiteSpace(_project.GamedataPath) ? read.TopName : _project.GamedataPath;
-            _project.GamedataPath = GamedataPath;
+            result.Patch.Apply(project);
+            GamedataPath = string.IsNullOrWhiteSpace(project.GamedataPath) ? read.TopName : project.GamedataPath;
+            project.GamedataPath = GamedataPath;
 
             var skipped = result.Skipped.Concat(read.Skipped).ToList();
-            _store.SaveGamedataSnapshot(_project.ProjectName, AppDataService.ToSnapshot(_project));
-            SetDirty(true);
-            // Скан заменяет персонажей/диалоги/предметы и справочники — вкладки и подсказки
-            // пересобираются сразу, иначе до перезапуска показывался старый проект.
-            DialogueGraph.Attach(_project);
-            Characters.Attach(_project);
-            Items.Attach(_project);
-            Icons.Attach(_project);
-            RefreshProjectView();
+            if (startingNewProject)
+            {
+                // Adopt закрывает welcome, подключает вкладки и делает проект текущим;
+                // Save фиксирует его в профиле, чтобы список проектов сразу обновился.
+                Adopt(project, dirty: true);
+                Save();
+                StatusText = LocalizationSource.Get("scanProjectCreated");
+            }
+            else
+            {
+                _store.SaveGamedataSnapshot(project.ProjectName, AppDataService.ToSnapshot(project));
+                SetDirty(true);
+                // Скан заменяет персонажей/диалоги/предметы и справочники — вкладки и подсказки
+                // пересобираются сразу, иначе до перезапуска показывался старый проект.
+                DialogueGraph.Attach(project);
+                Characters.Attach(project);
+                Items.Attach(project);
+                Icons.Attach(project);
+                RefreshProjectView();
+            }
             PublishSearch();
 
-            StatusText = LocalizationSource.Get("scanGamedata");
+            StatusDetail = startingNewProject
+                ? LocalizationSource.Get("scanProjectCreated") + " · " + project.ProjectName
+                : project.ProjectName + " · " + LocalizationSource.Get("scanGamedata");
             _dialogs.ShowMessage(LocalizationSource.Get("scanGamedata"), ScanReport(result.Stats, skipped));
         }
         catch (Exception e)
@@ -858,6 +884,41 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             IsBusy = false;
             BusyText = "";
         }
+    }
+
+    /// <summary>
+    /// Имя проекта для скана без открытого проекта: корневая папка, а для типового
+    /// `gamedata` — имя родительского каталога (например, «STALKER ТЧ»).
+    /// </summary>
+    private static string SuggestedProjectName(string folder, string? topName)
+    {
+        var name = (topName ?? "").Trim();
+        if (name.Length == 0 || IsGenericGamedataName(name))
+        {
+            var trimmed = folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var parent = Path.GetDirectoryName(trimmed);
+            var parentName = string.IsNullOrEmpty(parent) ? "" : Path.GetFileName(parent).Trim();
+            if (parentName.Length > 0) name = parentName;
+        }
+
+        return name.Length == 0 ? ProjectSchema.DefaultProjectName : name;
+    }
+
+    /// <summary>Типовое имя папки данных (`gamedata`, `gamedata_*`) не подходит как имя проекта.</summary>
+    private static bool IsGenericGamedataName(string name) =>
+        name.Equals("gamedata", StringComparison.OrdinalIgnoreCase) ||
+        name.StartsWith("gamedata_", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Серия по подсказкам в пути; иначе SoC (пользователь может сменить в настройках проекта).</summary>
+    private static string DetectSeries(string folder, string? topName)
+    {
+        var hint = (folder + " " + topName).ToLowerInvariant();
+        if (hint.Contains("зов припяти") || hint.Contains("call of pripyat") ||
+            hint.Contains("pripyat") || hint.Contains("cop"))
+            return "cop";
+        if (hint.Contains("чистое небо") || hint.Contains("clear sky"))
+            return "cs";
+        return GameSeriesCatalog.DefaultSeries;
     }
 
     /// <summary>`exportXml`: внутренний XML диалога в файл (`InternalXml`).</summary>

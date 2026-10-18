@@ -80,6 +80,19 @@
 
                         <TextBlock Text="{loc:Loc total}" Style="{StaticResource CaptionText}" />
                         <TextBlock Text="{Binding Summary.Total}" Style="{StaticResource TitleText}" Margin="0,2,0,0" />
+
+                        <!-- Точки сохранения проекта: снимок и история профиля -->
+                        <Separator Margin="0,14,0,10" />
+                        <TextBlock Text="{loc:Loc backups}" Style="{StaticResource CaptionText}" />
+                        <TextBlock Text="{loc:Loc backupsHint}" Style="{StaticResource CaptionText}"
+                                   TextWrapping="Wrap" Margin="0,2,0,6" />
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="{loc:Loc addBackup}" Style="{StaticResource AccentButton}"
+                                    Command="{Binding AddBackupCommand}" Margin="0,0,6,0" />
+                            <Button Content="{loc:Loc openBackups}" Command="{Binding OpenBackupsCommand}" />
+                            <TextBlock Text="{Binding BackupCount}" Style="{StaticResource MonoText}"
+                                       VerticalAlignment="Center" Margin="10,0,0,0" />
+                        </StackPanel>
                     </StackPanel>
                 </Grid>
             </ScrollViewer>
