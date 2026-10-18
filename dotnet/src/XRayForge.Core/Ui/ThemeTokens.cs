@@ -23,7 +23,9 @@ public sealed record ThemeTokens(
     string AccentDim,
     string StateWarn,
     string StateDanger,
-    string StateOk)
+    string StateOk,
+    string ChromeBackdrop,
+    string GridLine)
 {
     /// <summary>Имена ключей ресурсов в порядке следования (совпадают со свойствами записи).</summary>
     public static readonly string[] Keys =
@@ -32,7 +34,8 @@ public sealed record ThemeTokens(
         nameof(BorderBevel), nameof(BorderStrong),
         nameof(TextPrimary), nameof(TextMuted), nameof(TextInverted), nameof(TextAccent),
         nameof(AccentMain), nameof(AccentHover), nameof(AccentGlow), nameof(AccentDim),
-        nameof(StateWarn), nameof(StateDanger), nameof(StateOk)
+        nameof(StateWarn), nameof(StateDanger), nameof(StateOk),
+        nameof(ChromeBackdrop), nameof(GridLine)
     };
 
     /// <summary>Значения токенов в том же порядке, что и <see cref="Keys"/>.</summary>
@@ -42,7 +45,8 @@ public sealed record ThemeTokens(
         BorderBevel, BorderStrong,
         TextPrimary, TextMuted, TextInverted, TextAccent,
         AccentMain, AccentHover, AccentGlow, AccentDim,
-        StateWarn, StateDanger, StateOk
+        StateWarn, StateDanger, StateOk,
+        ChromeBackdrop, GridLine
     };
 
     /// <summary>Токены как словарь ключ → HEX (для `ThemeService` и тестов).</summary>
@@ -97,7 +101,8 @@ public sealed record ThemeTokens(
             Get(nameof(BorderBevel)), Get(nameof(BorderStrong)),
             Get(nameof(TextPrimary)), Get(nameof(TextMuted)), Get(nameof(TextInverted)), Get(nameof(TextAccent)),
             Get(nameof(AccentMain)), Get(nameof(AccentHover)), Get(nameof(AccentGlow)), Get(nameof(AccentDim)),
-            Get(nameof(StateWarn)), Get(nameof(StateDanger)), Get(nameof(StateOk)));
+            Get(nameof(StateWarn)), Get(nameof(StateDanger)), Get(nameof(StateOk)),
+            Get(nameof(ChromeBackdrop)), Get(nameof(GridLine)));
     }
 
     /// <summary>Проверка `#RRGGBB`.</summary>

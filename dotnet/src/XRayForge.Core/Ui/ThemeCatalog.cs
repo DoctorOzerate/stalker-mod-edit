@@ -1,7 +1,13 @@
 namespace XRayForge.Core.Ui;
 
-/// <summary>Тема интерфейса: id, подпись, референс-скриншот и токены.</summary>
-public sealed record ThemeDefinition(string Id, string Name, string Reference, bool IsAccentState, ThemeTokens Tokens);
+/// <summary>Тема интерфейса: id, подпись, референс-скриншот, токены и ключ описания.</summary>
+public sealed record ThemeDefinition(
+    string Id,
+    string Name,
+    string Reference,
+    bool IsAccentState,
+    ThemeTokens Tokens,
+    string DescriptionKey = "");
 
 /// <summary>Метрики плотности интерфейса (`compact`/`normal`/`roomy`).</summary>
 public sealed record DensityMetrics(
@@ -43,16 +49,24 @@ public static class ThemeCatalog
     public const string SteelId = "steel";
     public const string OliveId = "olive";
     public const string HazardId = "hazard";
+    public const string AmberId = "amber";
+    public const string CobaltId = "cobalt";
+    public const string ArcticId = "arctic";
+    public const string GraphiteId = "graphite";
 
     /// <summary>Алиасы схемы проекта (`theme: dark|light|auto`) → актуальные темы.</summary>
     public static readonly IReadOnlyDictionary<string, string> Aliases = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         ["dark"] = SteelId,
-        ["light"] = SteelId,
+        ["light"] = ArcticId,
         ["auto"] = SteelId,
         ["steel"] = SteelId,
         ["olive"] = OliveId,
-        ["hazard"] = HazardId
+        ["hazard"] = HazardId,
+        ["amber"] = AmberId,
+        ["cobalt"] = CobaltId,
+        ["arctic"] = ArcticId,
+        ["graphite"] = GraphiteId
     };
 
     public static readonly ThemeTokens Steel = new(
@@ -73,7 +87,9 @@ public static class ThemeCatalog
         AccentDim: "#1E5B32",
         StateWarn: "#FFB020",
         StateDanger: "#E03A3A",
-        StateOk: "#2FE06A");
+        StateOk: "#2FE06A",
+        ChromeBackdrop: "#202020",
+        GridLine: "#27272A");
 
     public static readonly ThemeTokens Olive = new(
         SurfaceBase: "#0A0F0A",
@@ -93,7 +109,9 @@ public static class ThemeCatalog
         AccentDim: "#21481F",
         StateWarn: "#FFB020",
         StateDanger: "#E03A3A",
-        StateOk: "#4CE04C");
+        StateOk: "#4CE04C",
+        ChromeBackdrop: "#1B2414",
+        GridLine: "#2A3320");
 
     public static readonly ThemeTokens Hazard = new(
         SurfaceBase: "#0A0A0A",
@@ -113,13 +131,111 @@ public static class ThemeCatalog
         AccentDim: "#4A1010",
         StateWarn: "#FFB020",
         StateDanger: "#FF2A2A",
-        StateOk: "#4CE04C");
+        StateOk: "#4CE04C",
+        ChromeBackdrop: "#241414",
+        GridLine: "#331C1C");
+
+    /// <summary>Тёплый янтарный CRT: тёмно-коричневые поверхности и янтарный люминофор.</summary>
+    public static readonly ThemeTokens Amber = new(
+        SurfaceBase: "#14100A",
+        SurfacePanel: "#211A10",
+        SurfaceRaised: "#3A2E1C",
+        SurfaceSunken: "#0D0A06",
+        SurfaceDisplay: "#1A1206",
+        BorderBevel: "#4A3A22",
+        BorderStrong: "#66502C",
+        TextPrimary: "#E8D8B0",
+        TextMuted: "#A08A60",
+        TextInverted: "#1A1206",
+        TextAccent: "#FFC24A",
+        AccentMain: "#FFB000",
+        AccentHover: "#D88F00",
+        AccentGlow: "#FFD166",
+        AccentDim: "#4A3308",
+        StateWarn: "#FFB020",
+        StateDanger: "#E03A3A",
+        StateOk: "#5BD75B",
+        ChromeBackdrop: "#1B150C",
+        GridLine: "#332714");
+
+    /// <summary>Холодная сине-стальная тема для ночной работы.</summary>
+    public static readonly ThemeTokens Cobalt = new(
+        SurfaceBase: "#0A1018",
+        SurfacePanel: "#111C2A",
+        SurfaceRaised: "#1F3046",
+        SurfaceSunken: "#070B11",
+        SurfaceDisplay: "#071823",
+        BorderBevel: "#29405C",
+        BorderStrong: "#3B5A7E",
+        TextPrimary: "#C8D8EA",
+        TextMuted: "#7890A8",
+        TextInverted: "#06101A",
+        TextAccent: "#7CC4FF",
+        AccentMain: "#4C9AFF",
+        AccentHover: "#2F7AD8",
+        AccentGlow: "#8FC8FF",
+        AccentDim: "#1B3A5A",
+        StateWarn: "#FFB020",
+        StateDanger: "#FF5A5A",
+        StateOk: "#4CE04C",
+        ChromeBackdrop: "#0D1620",
+        GridLine: "#1C2A3A");
+
+    /// <summary>Светлая ледяная тема: высокий контраст и приглушённый бирюзовый акцент.</summary>
+    public static readonly ThemeTokens Arctic = new(
+        SurfaceBase: "#E8EEF2",
+        SurfacePanel: "#F4F7FA",
+        SurfaceRaised: "#DCE5EC",
+        SurfaceSunken: "#D2DDE6",
+        SurfaceDisplay: "#EAF7F5",
+        BorderBevel: "#A8B8C4",
+        BorderStrong: "#7E94A4",
+        TextPrimary: "#17242E",
+        TextMuted: "#526775",
+        TextInverted: "#0B1A18",
+        TextAccent: "#0B6B5D",
+        AccentMain: "#2AAE93",
+        AccentHover: "#1F8F78",
+        AccentGlow: "#7EE0C9",
+        AccentDim: "#C8EDE6",
+        StateWarn: "#A15C00",
+        StateDanger: "#C62828",
+        StateOk: "#1F8A5B",
+        ChromeBackdrop: "#DCE5EC",
+        GridLine: "#C4D1DB");
+
+    /// <summary>Монохромный графит с серебристым акцентом — минималистичная тема.</summary>
+    public static readonly ThemeTokens Graphite = new(
+        SurfaceBase: "#101113",
+        SurfacePanel: "#17191C",
+        SurfaceRaised: "#26292D",
+        SurfaceSunken: "#0B0C0E",
+        SurfaceDisplay: "#0E1114",
+        BorderBevel: "#34383D",
+        BorderStrong: "#4A5058",
+        TextPrimary: "#D7DBE0",
+        TextMuted: "#858D97",
+        TextInverted: "#0B0D0F",
+        TextAccent: "#EAF0F6",
+        AccentMain: "#C3CBD5",
+        AccentHover: "#9FA9B5",
+        AccentGlow: "#F2F6FA",
+        AccentDim: "#3A424B",
+        StateWarn: "#FFB020",
+        StateDanger: "#E05A5A",
+        StateOk: "#6BD96B",
+        ChromeBackdrop: "#15171A",
+        GridLine: "#23262A");
 
     public static readonly IReadOnlyList<ThemeDefinition> Themes = new[]
     {
-        new ThemeDefinition(SteelId, "Steel + Phosphor", "work.png", false, Steel),
-        new ThemeDefinition(OliveId, "Olive Panel", "good-sborka.png", true, Olive),
-        new ThemeDefinition(HazardId, "Hazard Red", "fail-sborka.png", true, Hazard)
+        new ThemeDefinition(SteelId, "Steel + Phosphor", "work.png", false, Steel, "themeSteelSub"),
+        new ThemeDefinition(OliveId, "Olive Panel", "good-sborka.png", true, Olive, "themeOliveSub"),
+        new ThemeDefinition(HazardId, "Hazard Red", "fail-sborka.png", true, Hazard, "themeHazardSub"),
+        new ThemeDefinition(AmberId, "Amber CRT", "", false, Amber, "themeAmberSub"),
+        new ThemeDefinition(CobaltId, "Cobalt Night", "", false, Cobalt, "themeCobaltSub"),
+        new ThemeDefinition(ArcticId, "Arctic Light", "", false, Arctic, "themeArcticSub"),
+        new ThemeDefinition(GraphiteId, "Graphite", "", false, Graphite, "themeGraphiteSub")
     };
 
     /// <summary>
@@ -132,7 +248,10 @@ public static class ThemeCatalog
         ["blue"] = new[] { "#4C8CE0", "#2F6FC0" },
         ["orange"] = new[] { "#FFB020", "#D98A10" },
         ["purple"] = new[] { "#A86FE0", "#8A50C0" },
-        ["red"] = new[] { "#FF2A2A", "#D01A1A" }
+        ["red"] = new[] { "#FF2A2A", "#D01A1A" },
+        ["amber"] = new[] { "#FFB000", "#D88F00" },
+        ["teal"] = new[] { "#2AAE93", "#1F8F78" },
+        ["silver"] = new[] { "#C3CBD5", "#9FA9B5" }
     };
 
     /// <summary>Акцент по умолчанию для темы (Steel/Olive — фосфор, Hazard — алый).</summary>
@@ -140,7 +259,11 @@ public static class ThemeCatalog
     {
         [SteelId] = "green",
         [OliveId] = "green",
-        [HazardId] = "red"
+        [HazardId] = "red",
+        [AmberId] = "amber",
+        [CobaltId] = "blue",
+        [ArcticId] = "teal",
+        [GraphiteId] = "silver"
     };
 
     public static readonly IReadOnlyDictionary<string, DensityMetrics> DensityPresets = new Dictionary<string, DensityMetrics>(StringComparer.Ordinal)
@@ -150,11 +273,18 @@ public static class ThemeCatalog
         ["roomy"] = new DensityMetrics("roomy", 36, 14, 18, 16, 7, 14, 12, 13, 8)
     };
 
-    /// <summary>`theme` из настроек → актуальный id (`dark`/`light`/`auto` → `steel`).</summary>
+    /// <summary>`theme` из настроек → актуальный id (`dark`/`auto` → `steel`, `light` → `arctic`).</summary>
     public static string NormalizeThemeId(string? themeId)
     {
         if (string.IsNullOrWhiteSpace(themeId)) return SteelId;
         return Aliases.TryGetValue(themeId.Trim(), out var id) ? id : SteelId;
+    }
+
+    /// <summary>Акцент по умолчанию для темы; для новой темы без записи — `green`.</summary>
+    public static string DefaultAccentId(string? themeId)
+    {
+        var theme = Theme(themeId);
+        return DefaultAccent.TryGetValue(theme.Id, out var id) ? id : "green";
     }
 
     /// <summary>Описание темы по id (неизвестный id → Steel).</summary>
@@ -169,8 +299,9 @@ public static class ThemeCatalog
     public static string[] AccentPair(string? themeId, string? accentId)
     {
         var theme = Theme(themeId);
-        var id = accentId != null && Accents.ContainsKey(accentId) ? accentId : DefaultAccent[theme.Id];
-        if (id == DefaultAccent[theme.Id]) return new[] { theme.Tokens.AccentMain, theme.Tokens.AccentHover };
+        var defaultAccent = DefaultAccentId(theme.Id);
+        var id = accentId != null && Accents.ContainsKey(accentId) ? accentId : defaultAccent;
+        if (id == defaultAccent) return new[] { theme.Tokens.AccentMain, theme.Tokens.AccentHover };
         return Accents[id];
     }
 
@@ -178,7 +309,7 @@ public static class ThemeCatalog
     public static string NormalizeAccentId(string? themeId, string? accentId)
     {
         var theme = Theme(themeId);
-        return accentId != null && Accents.ContainsKey(accentId) ? accentId : DefaultAccent[theme.Id];
+        return accentId != null && Accents.ContainsKey(accentId) ? accentId : DefaultAccentId(theme.Id);
     }
 
     /// <summary>Разобрать настройки (+ плотность из проекта) в готовую тему интерфейса.</summary>
@@ -188,7 +319,7 @@ public static class ThemeCatalog
         var accent = NormalizeAccentId(theme.Id, accentId);
         var pair = AccentPair(theme.Id, accent);
         var metrics = Density(densityId);
-        var tokens = accent == DefaultAccent[theme.Id]
+        var tokens = accent == DefaultAccentId(theme.Id)
             ? theme.Tokens
             : theme.Tokens.WithAccent(pair[0], pair[1]);
         return new ResolvedTheme(theme.Id, accent, metrics.Id, tokens, metrics);

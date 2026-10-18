@@ -13,4 +13,24 @@ public class LocalizationTests
         Assert.Equal("unknown_key", LocalizationService.Tr("en", "unknown_key"));
         Assert.Equal("English", LocalizationService.LocaleNames["en"]);
     }
+
+    [Fact]
+    public void Theme_and_scan_onboarding_keys_exist_in_both_locales()
+    {
+        var keys = new[]
+        {
+            "welcomeSub", "welcomeScanTitle", "welcomeScanSub", "welcomeScanHint",
+            "welcomeScanAction", "scanProjectCreated",
+            "accentAmber", "accentTeal", "accentSilver",
+            "themeSteelSub", "themeOliveSub", "themeHazardSub", "themeAmberSub",
+            "themeCobaltSub", "themeArcticSub", "themeGraphiteSub",
+            "openBackups", "backupsHint"
+        };
+
+        foreach (var key in keys)
+        {
+            Assert.NotEqual(key, LocalizationService.Tr("ru", key));
+            Assert.NotEqual(key, LocalizationService.Tr("en", key));
+        }
+    }
 }

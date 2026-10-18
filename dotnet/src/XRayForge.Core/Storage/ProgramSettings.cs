@@ -44,7 +44,10 @@ public static class ProgramSettingsCatalog
         ["blue"] = new[] { "#2563eb", "#1d4ed8" },
         ["orange"] = new[] { "#f97316", "#ea580c" },
         ["purple"] = new[] { "#7c3aed", "#6d28d9" },
-        ["red"] = new[] { "#dc2626", "#b91c1c" }
+        ["red"] = new[] { "#dc2626", "#b91c1c" },
+        ["amber"] = new[] { "#FFB000", "#D88F00" },
+        ["teal"] = new[] { "#2AAE93", "#1F8F78" },
+        ["silver"] = new[] { "#C3CBD5", "#9FA9B5" }
     };
 
     /// <summary>Допустимая плотность интерфейса.</summary>

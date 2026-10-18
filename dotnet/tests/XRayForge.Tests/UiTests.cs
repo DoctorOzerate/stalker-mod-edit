@@ -42,8 +42,10 @@ public class UiTests
     [Fact]
     public void ThemeTokensExposeStableKeySet()
     {
-        Assert.Equal(18, ThemeTokens.Keys.Length);
+        Assert.Equal(20, ThemeTokens.Keys.Length);
         Assert.Equal(ThemeTokens.Keys.Length, ThemeTokens.Keys.Distinct().Count());
+        Assert.Contains(nameof(ThemeTokens.ChromeBackdrop), ThemeTokens.Keys);
+        Assert.Contains(nameof(ThemeTokens.GridLine), ThemeTokens.Keys);
         Assert.Equal(ThemeTokens.Keys.OrderBy(x => x, StringComparer.Ordinal),
             ThemeCatalog.Steel.ToDictionary().Keys.OrderBy(x => x, StringComparer.Ordinal));
         Assert.True(ThemeCatalog.Steel.IsValid());
@@ -78,14 +80,23 @@ public class UiTests
     }
 
     [Fact]
-    public void CatalogDeclaresThreeThemesWithPaletteValues()
+    public void CatalogDeclaresThemesWithPaletteValues()
     {
-        Assert.Equal(3, ThemeCatalog.Themes.Count);
-        Assert.Equal(new[] { "steel", "olive", "hazard" }, ThemeCatalog.Themes.Select(t => t.Id));
+        Assert.Equal(7, ThemeCatalog.Themes.Count);
+        Assert.Equal(new[] { "steel", "olive", "hazard", "amber", "cobalt", "arctic", "graphite" },
+            ThemeCatalog.Themes.Select(t => t.Id));
+        Assert.Equal(ThemeCatalog.Themes.Count, ThemeCatalog.Themes.Select(t => t.Id).Distinct().Count());
+        Assert.All(ThemeCatalog.Themes, theme => Assert.True(theme.Tokens.IsValid(), theme.Id));
+        Assert.All(ThemeCatalog.Themes, theme => Assert.False(string.IsNullOrWhiteSpace(theme.DescriptionKey), theme.Id));
+
         Assert.Equal("work.png", ThemeCatalog.Themes[0].Reference);
         Assert.False(ThemeCatalog.Themes[0].IsAccentState);
         Assert.True(ThemeCatalog.Themes[1].IsAccentState);
         Assert.True(ThemeCatalog.Themes[2].IsAccentState);
+        Assert.False(ThemeCatalog.Themes[3].IsAccentState);
+        Assert.False(ThemeCatalog.Themes[4].IsAccentState);
+        Assert.False(ThemeCatalog.Themes[5].IsAccentState);
+        Assert.False(ThemeCatalog.Themes[6].IsAccentState);
 
         // Значения из tokens/00-palette.tokens.md.
         Assert.Equal("#101010", ThemeCatalog.Steel.SurfaceBase);
@@ -94,20 +105,33 @@ public class UiTests
         Assert.Equal("#4CE04C", ThemeCatalog.Olive.AccentMain);
         Assert.Equal("#1A0E0E", ThemeCatalog.Hazard.SurfacePanel);
         Assert.Equal("#FF2A2A", ThemeCatalog.Hazard.AccentMain);
+
+        // Расширенные темы: CRT, холодная, светлая и монохромная.
+        Assert.Equal("#FFB000", ThemeCatalog.Amber.AccentMain);
+        Assert.Equal("#4C9AFF", ThemeCatalog.Cobalt.AccentMain);
+        Assert.Equal("#E8EEF2", ThemeCatalog.Arctic.SurfaceBase);
+        Assert.Equal("#C3CBD5", ThemeCatalog.Graphite.AccentMain);
+        Assert.Equal("#202020", ThemeCatalog.Steel.ChromeBackdrop);
+        Assert.Equal("#DCE5EC", ThemeCatalog.Arctic.ChromeBackdrop);
     }
 
     [Fact]
     public void ThemeAliasesMapLegacyValuesToSteel()
     {
         Assert.Equal("steel", ThemeCatalog.NormalizeThemeId("dark"));
-        Assert.Equal("steel", ThemeCatalog.NormalizeThemeId("light"));
+        Assert.Equal("arctic", ThemeCatalog.NormalizeThemeId("light"));
         Assert.Equal("steel", ThemeCatalog.NormalizeThemeId("auto"));
         Assert.Equal("steel", ThemeCatalog.NormalizeThemeId(""));
         Assert.Equal("steel", ThemeCatalog.NormalizeThemeId("unknown"));
         Assert.Equal("steel", ThemeCatalog.NormalizeThemeId(null));
         Assert.Equal("olive", ThemeCatalog.NormalizeThemeId("olive"));
         Assert.Equal("hazard", ThemeCatalog.NormalizeThemeId("Hazard"));
+        Assert.Equal("amber", ThemeCatalog.NormalizeThemeId("amber"));
+        Assert.Equal("cobalt", ThemeCatalog.NormalizeThemeId("Cobalt"));
+        Assert.Equal("arctic", ThemeCatalog.NormalizeThemeId("arctic"));
+        Assert.Equal("graphite", ThemeCatalog.NormalizeThemeId("graphite"));
         Assert.Equal("Olive Panel", ThemeCatalog.Theme("olive").Name);
+        Assert.Equal("Amber CRT", ThemeCatalog.Theme("amber").Name);
     }
 
     [Fact]
@@ -195,6 +219,32 @@ public class UiTests
         var hazard = ThemeCatalog.Resolve("hazard", null, "normal");
         Assert.Equal("red", hazard.AccentId);
         Assert.Equal("#FF2A2A", hazard.Tokens.AccentMain);
+
+        // Новые темы используют собственный токен акцента по умолчанию.
+        var amber = ThemeCatalog.Resolve("amber", null, "normal");
+        Assert.Equal("amber", amber.AccentId);
+        Assert.Equal("#FFB000", amber.Tokens.AccentMain);
+        Assert.Equal("amber", ThemeCatalog.DefaultAccentId("amber"));
+
+        var cobalt = ThemeCatalog.Resolve("cobalt", null, "normal");
+        Assert.Equal("blue", cobalt.AccentId);
+        Assert.Equal("#4C9AFF", cobalt.Tokens.AccentMain);
+        Assert.Equal("#0A1018", cobalt.Tokens.SurfaceBase);
+
+        var arctic = ThemeCatalog.Resolve("light", null, "normal");
+        Assert.Equal("arctic", arctic.ThemeId);
+        Assert.Equal("teal", arctic.AccentId);
+        Assert.Equal("#E8EEF2", arctic.Tokens.SurfaceBase);
+        Assert.Equal("#DCE5EC", arctic.Tokens.ChromeBackdrop);
+
+        var graphiteDefault = ThemeCatalog.Resolve("graphite", null, "normal");
+        Assert.Equal("silver", graphiteDefault.AccentId);
+        Assert.Equal("#C3CBD5", graphiteDefault.Tokens.AccentMain);
+
+        var graphite = ThemeCatalog.Resolve("graphite", "purple", "compact");
+        Assert.Equal("purple", graphite.AccentId);
+        Assert.Equal("#A86FE0", graphite.Tokens.AccentMain);
+        Assert.Equal(ThemeCatalog.Graphite.SurfaceBase, graphite.Tokens.SurfaceBase);
     }
 
     [Fact]
