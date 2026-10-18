@@ -474,7 +474,10 @@ public class UiTests
     public void HotkeyCatalogResolvesBindingsAndReportsDuplicates()
     {
         var bindings = HotkeyCatalog.Bindings(null);
-        Assert.Equal(ProgramSettingsCatalog.HotkeyActions.Length, bindings.Count);
+        var expectedCount = ProgramSettingsCatalog.HotkeyActions
+            .Count(action => BuildFeatures.IsDebug || !BuildFeatures.IsDebugOnlyAction(action.Id));
+        Assert.Equal(expectedCount, bindings.Count);
+        Assert.Equal(BuildFeatures.IsDebug, bindings.Any(b => b.Action.Id == "exportXml"));
         Assert.All(bindings, b => Assert.True(b.IsValid, b.Action.Id));
         Assert.Equal("Ctrl+S", bindings.First(b => b.Action.Id == "save").Display);
         Assert.Equal("Del", bindings.First(b => b.Action.Id == "deleteSelected").Display);
@@ -491,7 +494,6 @@ public class UiTests
         };
 
         var duplicates = HotkeyCatalog.Duplicates(hotkeys);
-        Assert.Equal("save", duplicates["exportXml"]);
         Assert.Equal("undo", duplicates["redo"]);
         Assert.False(duplicates.ContainsKey("addStart"));
 
@@ -506,12 +508,32 @@ public class UiTests
 
         // При конфликте побеждает первое действие реестра; `exportXml` здесь перевешен на mod+s.
         Assert.Equal("save", HotkeyCatalog.MatchAction(hotkeys, true, false, false, "S"));
-        Assert.Equal("exportXml", HotkeyCatalog.MatchAction(null, true, false, false, "E"));
         Assert.Null(HotkeyCatalog.MatchAction(hotkeys, true, false, false, "E"));
+        if (BuildFeatures.IsDebug)
+        {
+            // `exportXml` — debug-only действие: в Debug оно есть в реестре и на Ctrl+E.
+            Assert.Equal("save", duplicates["exportXml"]);
+            Assert.Equal("exportXml", HotkeyCatalog.MatchAction(null, true, false, false, "E"));
+        }
+        else
+        {
+            Assert.False(duplicates.ContainsKey("exportXml"));
+            Assert.False(resolved.ContainsKey("exportXml"));
+            Assert.Null(HotkeyCatalog.MatchAction(null, true, false, false, "E"));
+        }
         // `ComboMatches` (порт App.js) игнорирует незнакомые модификаторы: "meta+s" — это `S` без Ctrl,
         // поэтому в `Resolve`/`Bindings` (строгий разбор) такая комбинация считается битой, а здесь — совпадает.
         Assert.Equal("addStart", HotkeyCatalog.MatchAction(hotkeys, false, false, false, "S"));
         Assert.Null(HotkeyCatalog.MatchAction(null, false, false, false, "S"));
+    }
+
+    [Fact]
+    public void BuildFeaturesMarkEditorXmlAsDebugOnly()
+    {
+        Assert.True(BuildFeatures.IsDebugOnlyAction("exportXml"));
+        Assert.False(BuildFeatures.IsDebugOnlyAction("save"));
+        Assert.False(BuildFeatures.IsDebugOnlyAction("demoGraph"));
+        Assert.False(BuildFeatures.IsDebugOnlyAction(null));
     }
 
     [Fact]

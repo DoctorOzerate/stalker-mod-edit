@@ -64,7 +64,8 @@
                     <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc checkGraph}"
                             Command="{Binding CheckGraphCommand}" />
                     <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc exportXml}"
-                            Command="{Binding ExportXmlCommand}" />
+                            Command="{Binding ExportXmlCommand}"
+                            Visibility="{Binding IsDebugBuild, Converter={StaticResource BoolToVisibility}}" />
                     <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc globalSearch}"
                             Command="{Binding OpenSearchCommand}" />
                     <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc scanGamedata}"
@@ -183,7 +184,8 @@
                         <WrapPanel>
                             <Button Content="{loc:Loc checkGraph}" Command="{Binding CheckGraphCommand}" Margin="0,0,8,8" />
                             <Button Content="{loc:Loc scanGamedata}" Command="{Binding ScanGamedataCommand}" Margin="0,0,8,8" />
-                            <Button Content="{loc:Loc exportXml}" Command="{Binding ExportXmlCommand}" Margin="0,0,8,8" />
+                            <Button Content="{loc:Loc exportXml}" Command="{Binding ExportXmlCommand}" Margin="0,0,8,8"
+                                    Visibility="{Binding IsDebugBuild, Converter={StaticResource BoolToVisibility}}" />
                             <Button Content="{loc:Loc runPlugins}" Command="{Binding RunPluginsCommand}" Margin="0,0,8,8" />
                         </WrapPanel>
                     </StackPanel>
@@ -296,7 +298,8 @@
                                 <Button Content="{loc:Loc importProject}" Command="{Binding ImportProjectCommand}"
                                         Margin="0,0,8,8" />
                                 <Button Content="{loc:Loc demoGraph}" Command="{Binding LoadDemoGraphCommand}"
-                                        Margin="0,0,8,8" />
+                                        Margin="0,0,8,8"
+                                        Visibility="{Binding IsDebugBuild, Converter={StaticResource BoolToVisibility}}" />
                                 <Button Content="{loc:Loc close}" Command="{Binding CloseWelcomeCommand}"
                                         Margin="0,0,8,8"
                                         Visibility="{Binding IsProjectOpen,

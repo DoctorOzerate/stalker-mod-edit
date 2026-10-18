@@ -24,12 +24,18 @@ public static class HotkeyCatalog
         var map = new Dictionary<string, HotkeyGesture>(StringComparer.Ordinal);
         foreach (var action in ProgramSettingsCatalog.HotkeyActions)
         {
+            if (!IsAvailable(action)) continue;
+
             // Пустая комбинация → значение по умолчанию (в JS `hk[id] || defaultHotkeys()[id]`).
             var gesture = HotkeyGesture.Parse(ComboFor(hotkeys, action));
             if (gesture != null) map[action.Id] = gesture;
         }
         return map;
     }
+
+    /// <summary>Debug-only действия (`exportXml`) не попадают в Release-сборку.</summary>
+    private static bool IsAvailable(HotkeyAction action) =>
+        BuildFeatures.IsDebug || !BuildFeatures.IsDebugOnlyAction(action.Id);
 
     /// <summary>Комбинация действия: из настроек, иначе значение по умолчанию.</summary>
     public static string ComboFor(IReadOnlyDictionary<string, string>? hotkeys, HotkeyAction action)
@@ -44,6 +50,8 @@ public static class HotkeyCatalog
         var list = new List<HotkeyBinding>(ProgramSettingsCatalog.HotkeyActions.Length);
         foreach (var action in ProgramSettingsCatalog.HotkeyActions)
         {
+            if (!IsAvailable(action)) continue;
+
             var combo = ComboFor(hotkeys, action);
             list.Add(new HotkeyBinding(action, combo, HotkeyGesture.Parse(combo)));
         }
@@ -74,6 +82,8 @@ public static class HotkeyCatalog
         if (string.IsNullOrEmpty(key)) return null;
         foreach (var action in ProgramSettingsCatalog.HotkeyActions)
         {
+            if (!IsAvailable(action)) continue;
+
             var combo = ComboFor(hotkeys, action);
             if (ProgramSettingsCatalog.ComboMatches(combo, ctrl, shift, alt, key)) return action.Id;
         }

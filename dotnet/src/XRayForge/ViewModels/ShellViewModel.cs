@@ -231,6 +231,12 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     /// <summary>Активна вкладка «Обзор» (панель обзора вместо списка раздела).</summary>
     public bool IsOverviewActive => ActiveTab?.IsOverview == true;
 
+    /// <summary>
+    /// Debug-сборка: показывает отладочные кнопки (внутренний XML редактора, демо-граф).
+    /// В Release они скрыты, а команды не выполняются.
+    /// </summary>
+    public bool IsDebugBuild => BuildFeatures.IsDebug;
+
     /// <summary>В профиле есть сохранённые проекты.</summary>
     public bool HasProjects => Projects.Count > 0;
 
@@ -397,6 +403,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void LoadDemoGraph()
     {
+        if (!IsDebugBuild) return;
+
         var (nodes, edges) = DemoGraph.Seed();
         var project = ProjectMigration.Empty();
         project.ProjectName = DemoGraph.DialogueId;
@@ -925,6 +933,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ExportXml()
     {
+        if (!IsDebugBuild) return;
+
         var name = string.IsNullOrWhiteSpace(_project.ProjectName) ? ProjectSchema.DefaultProjectName : _project.ProjectName;
         var path = _dialogs.PickSaveFile(LocalizationSource.Get("exportXml"), name + ".xml",
             "XML (*.xml)|*.xml|*.*|*.*", _store.SavesDirectory);
