@@ -84,6 +84,24 @@ public class CoreTests
     }
 
     [Fact]
+    public void Encode_supports_project_export_encodings_without_bom()
+    {
+        var cp1251 = GameEncoding.Encode("Привет", "windows-1251");
+        Assert.Equal("Привет", GameEncoding.DecodeCp1251(cp1251));
+
+        var utf8 = GameEncoding.Encode("Привет", "utf-8");
+        Assert.False(utf8.Length >= 3 && utf8[0] == 0xEF && utf8[1] == 0xBB && utf8[2] == 0xBF);
+        Assert.Equal("Привет", GameEncoding.Decode(utf8, "utf-8"));
+
+        var utf16 = GameEncoding.Encode("Привет", "utf-16le");
+        Assert.False(utf16.Length >= 2 && utf16[0] == 0xFF && utf16[1] == 0xFE);
+        Assert.Equal("Привет", GameEncoding.Decode(utf16, "utf-16le"));
+
+        // Неизвестная кодировка трактуется как Windows-1251, как и при экспорте в JS.
+        Assert.Equal(cp1251, GameEncoding.Encode("Привет", "unknown"));
+    }
+
+    [Fact]
     public void Large_cycle_validation_iterative()
     {
         var n = new List<DialogueNode> { new() { Id = "s", Type = NodeTypes.Start } };

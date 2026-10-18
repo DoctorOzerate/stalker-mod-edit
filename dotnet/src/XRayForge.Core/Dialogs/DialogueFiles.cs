@@ -76,7 +76,8 @@ public static class DialogueFiles
         return data;
     }
 
-    private static string SafeName(string? value)
+    /// <summary>Безопасное имя файла/группы: только латиница, цифры, `_` и `-`.</summary>
+    public static string SafeName(string? value)
     {
         var s = Regex.Replace(string.IsNullOrEmpty(value) ? "dialogue" : value, "[^a-zA-Z0-9_-]", "_");
         return s.Length > 0 ? s : "dialogue";

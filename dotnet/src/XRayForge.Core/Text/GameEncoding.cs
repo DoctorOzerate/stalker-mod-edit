@@ -46,6 +46,20 @@ public static class GameEncoding
     /// <summary>Кодировать текст в Windows-1251 (непредставимые символы → «?»).</summary>
     public static byte[] EncodeCp1251(string? s) => Cp1251.GetBytes(s ?? string.Empty);
 
+    /// <summary>
+    /// Кодировать текст для экспорта в игру: UTF-8 без BOM, UTF-16 (LE/BE) без BOM или
+    /// Windows-1251 по умолчанию. Неизвестная кодировка трактуется как Windows-1251.
+    /// </summary>
+    public static byte[] Encode(string? s, string? encoding = "windows-1251") => encoding?.ToLowerInvariant() switch
+    {
+        "utf-8" or "utf8" => new UTF8Encoding(false).GetBytes(s ?? string.Empty),
+        "utf-16" or "utf-16le" or "utf-16-le" or "unicode" =>
+            new UnicodeEncoding(false, false).GetBytes(s ?? string.Empty),
+        "utf-16be" or "utf-16-be" or "bigendianunicode" =>
+            new UnicodeEncoding(true, false).GetBytes(s ?? string.Empty),
+        _ => EncodeCp1251(s)
+    };
+
     /// <summary>Декодировать байты как Windows-1251 (без автоопределения BOM/декларации).</summary>
     public static string DecodeCp1251(byte[] bytes) => Cp1251.GetString(bytes);
 

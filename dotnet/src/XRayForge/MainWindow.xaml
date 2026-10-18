@@ -61,6 +61,8 @@
                             Command="{Binding ShowWelcomeCommand}" />
                     <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc save}"
                             Command="{Binding SaveCommand}" />
+                    <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc gameExportDialogs}"
+                            Command="{Binding ExportGameDialogsCommand}" />
                     <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc checkGraph}"
                             Command="{Binding CheckGraphCommand}" />
                     <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc exportXml}"
@@ -183,6 +185,7 @@
                         <!-- Быстрые действия обзора -->
                         <WrapPanel>
                             <Button Content="{loc:Loc checkGraph}" Command="{Binding CheckGraphCommand}" Margin="0,0,8,8" />
+                            <Button Content="{loc:Loc gameExportDialogs}" Command="{Binding ExportGameDialogsCommand}" Margin="0,0,8,8" />
                             <Button Content="{loc:Loc scanGamedata}" Command="{Binding ScanGamedataCommand}" Margin="0,0,8,8" />
                             <Button Content="{loc:Loc exportXml}" Command="{Binding ExportXmlCommand}" Margin="0,0,8,8"
                                     Visibility="{Binding IsDebugBuild, Converter={StaticResource BoolToVisibility}}" />

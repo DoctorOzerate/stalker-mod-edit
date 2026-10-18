@@ -15,6 +15,22 @@ public class LocalizationTests
     }
 
     [Fact]
+    public void Dialogue_game_export_keys_exist_in_both_locales()
+    {
+        var keys = new[]
+        {
+            "gameExportDialogs", "gameExportDone", "gameExportEmpty",
+            "gameExportOverwrite", "gameExportFailed"
+        };
+
+        foreach (var key in keys)
+        {
+            Assert.NotEqual(key, LocalizationService.Tr("ru", key));
+            Assert.NotEqual(key, LocalizationService.Tr("en", key));
+        }
+    }
+
+    [Fact]
     public void Theme_and_scan_onboarding_keys_exist_in_both_locales()
     {
         var keys = new[]

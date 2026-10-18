@@ -220,6 +220,12 @@ public static class LocalizationService
         ["graphExportSvg"] = "Экспорт SVG",
         ["graphNoNodesToExport"] = "Нет нод для экспорта",
         ["graphExportedSvg"] = "Граф экспортирован в SVG",
+        // шаг 6.9: игровой экспорт диалогов
+        ["gameExportDialogs"] = "Экспорт диалогов в игру",
+        ["gameExportDone"] = "Диалоги экспортированы",
+        ["gameExportEmpty"] = "Нет диалогов для экспорта",
+        ["gameExportOverwrite"] = "Перезаписать существующие файлы",
+        ["gameExportFailed"] = "Не удалось экспортировать диалоги",
         // шаг 6.8: импорт диалогов из game_dialogs
         ["graphImportGameDialogs"] = "Импорт game_dialogs",
         ["graphImportDone"] = "Импортировано диалогов",
@@ -677,6 +683,12 @@ public static class LocalizationService
         ["graphExportSvg"] = "Export SVG",
         ["graphNoNodesToExport"] = "No nodes to export",
         ["graphExportedSvg"] = "Graph exported to SVG",
+        // stage 6.9: in-game dialogue export
+        ["gameExportDialogs"] = "Export dialogues to game",
+        ["gameExportDone"] = "Dialogues exported",
+        ["gameExportEmpty"] = "No dialogues to export",
+        ["gameExportOverwrite"] = "Overwrite existing files",
+        ["gameExportFailed"] = "Could not export dialogues",
         // stage 6.8: importing dialogues from game_dialogs
         ["graphImportGameDialogs"] = "Import game_dialogs",
         ["graphImportDone"] = "Dialogues imported",

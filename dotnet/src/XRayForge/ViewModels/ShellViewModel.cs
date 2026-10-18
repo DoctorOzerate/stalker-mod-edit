@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using XRayForge.Core.Dialogs;
 using XRayForge.Core.Gamedata;
 using XRayForge.Core.Graph;
 using XRayForge.Core.Ltx;
@@ -927,6 +928,64 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         if (hint.Contains("чистое небо") || hint.Contains("clear sky"))
             return "cs";
         return GameSeriesCatalog.DefaultSeries;
+    }
+
+    /// <summary>
+    /// `exportAllDialogues`: игровые `dialogs_*.xml`, `dialogs.ltx` и `string_table` всех диалогов
+    /// проекта записываются в выбранный каталог (в `gamedata/config|configs/...` по серии проекта).
+    /// Активный граф идёт первым, поэтому несохранённые правки холста попадают в экспорт.
+    /// </summary>
+    [RelayCommand]
+    private void ExportGameDialogs()
+    {
+        if (!IsProjectOpen) return;
+
+        Dictionary<string, string> files;
+        try
+        {
+            files = DialogueGameExport.GameFiles(_project);
+        }
+        catch (InvalidOperationException e)
+        {
+            _dialogs.ShowMessage(LocalizationSource.Get("appTitle"), e.Message);
+            StatusText = LocalizationSource.Get("gameExportFailed");
+            StatusDetail = e.Message;
+            return;
+        }
+
+        if (files.Count == 0)
+        {
+            StatusText = LocalizationSource.Get("gameExportEmpty");
+            StatusDetail = "";
+            return;
+        }
+
+        var start = string.IsNullOrWhiteSpace(_project.GamedataPath) || !Directory.Exists(_project.GamedataPath)
+            ? _store.SavesDirectory
+            : _project.GamedataPath;
+        var folder = _dialogs.PickFolder(start);
+        if (string.IsNullOrEmpty(folder)) return;
+
+        var existing = DialogueGameExport.TargetPaths(files, folder).Count(File.Exists);
+        if (existing > 0 && !_dialogs.Confirm(
+                LocalizationSource.Get("gameExportOverwrite") + ": " + existing.ToString(CultureInfo.CurrentCulture) + "?"))
+            return;
+
+        try
+        {
+            DialogueGameExport.WriteFiles(files, folder, _project.Settings.ExportEncoding);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            _dialogs.ShowMessage(LocalizationSource.Get("appTitle"), e.Message);
+            StatusText = LocalizationSource.Get("gameExportFailed");
+            StatusDetail = e.Message;
+            return;
+        }
+
+        StatusText = LocalizationSource.Get("gameExportDone") + " · " +
+            files.Count.ToString(CultureInfo.CurrentCulture);
+        StatusDetail = folder;
     }
 
     /// <summary>`exportXml`: внутренний XML диалога в файл (`InternalXml`).</summary>

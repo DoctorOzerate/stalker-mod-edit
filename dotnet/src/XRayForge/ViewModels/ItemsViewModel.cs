@@ -937,7 +937,7 @@ public sealed partial class ItemsViewModel : ObservableObject
 
         try
         {
-            File.WriteAllBytes(path, EncodeForExport(_project.ItemsLtx ?? "", _project.Settings.ExportEncoding));
+            File.WriteAllBytes(path, GameEncoding.Encode(_project.ItemsLtx ?? "", _project.Settings.ExportEncoding));
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
@@ -948,13 +948,4 @@ public sealed partial class ItemsViewModel : ObservableObject
         _shell.StatusText = LocalizationSource.Get("itemExportLtxDone");
         _shell.StatusDetail = path;
     }
-
-    /// <summary>Кодировка экспорта проекта: UTF-8 без BOM, UTF-16 или CP1251.</summary>
-    private static byte[] EncodeForExport(string text, string? encoding) => encoding?.ToLowerInvariant() switch
-    {
-        "utf-8" or "utf8" => new UTF8Encoding(false).GetBytes(text),
-        "utf-16" or "utf-16le" or "utf-16-le" or "unicode" => new UnicodeEncoding(false, false).GetBytes(text),
-        "utf-16be" or "utf-16-be" or "bigendianunicode" => new UnicodeEncoding(true, false).GetBytes(text),
-        _ => GameEncoding.EncodeCp1251(text)
-    };
 }

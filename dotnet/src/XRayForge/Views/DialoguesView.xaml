@@ -293,6 +293,8 @@
                                 Command="{Binding DialogueGraph.TogglePlaythroughCommand}" Margin="0,0,0,6" />
                         <Button HorizontalAlignment="Stretch" Content="{loc:Loc graphExportSvg}"
                                 Command="{Binding DialogueGraph.ExportSvgCommand}" Margin="0,0,0,6" />
+                        <Button HorizontalAlignment="Stretch" Content="{loc:Loc gameExportDialogs}"
+                                Command="{Binding ExportGameDialogsCommand}" Margin="0,0,0,6" />
                         <Button Style="{StaticResource DangerButton}" HorizontalAlignment="Stretch"
                                 Content="{loc:Loc delete}"
                                 Command="{Binding DialogueGraph.DeleteSelectedCommand}"
