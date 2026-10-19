@@ -140,7 +140,7 @@ public sealed partial class LanguageEntryViewModel : ObservableObject
             Model.Id = next;
             OnPropertyChanged();
             _language.RefreshEntryFlags();
-            _language.Owner.OnEntryChanged(_language, this, idChanged: true);
+            _language.Owner.OnEntryChanged(this, idChanged: true);
         }
     }
 
@@ -153,18 +153,16 @@ public sealed partial class LanguageEntryViewModel : ObservableObject
             if (Model.Text == next) return;
             Model.Text = next;
             OnPropertyChanged();
-            _language.Owner.OnEntryChanged(_language, this);
+            _language.Owner.OnEntryChanged(this);
         }
     }
 
     public bool IsDuplicate => _language.IsDuplicate(Model.Id);
     public bool IsEmpty => string.IsNullOrWhiteSpace(Model.Text);
     public int Usage => _language.Owner.UsageOf(Model.Id);
-    public bool HasUsage => Usage > 0;
-    public string UsageText => LocalizationSource.Get("languagesUsage") + ": " + Usage;
-    public string ToolTip => HasUsage
-        ? LocalizationSource.Get("languagesUsedIn") + " " + Usage
-        : LocalizationSource.Get("languagesUnused");
+    public bool HasUsage => _language.Owner.IsUsed(Model.Id);
+    public string UsageText => _language.Owner.UsageText(Model.Id);
+    public string ToolTip => _language.Owner.UsageToolTip(Model.Id);
 
     public void RefreshUsage()
     {

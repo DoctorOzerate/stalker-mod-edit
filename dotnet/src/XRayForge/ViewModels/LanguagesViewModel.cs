@@ -23,7 +23,8 @@ public sealed partial class LanguagesViewModel : ObservableObject
 {
     private readonly ShellViewModel _shell;
     private readonly IDialogService _dialogs;
-    private readonly Dictionary<string, int> _usageCounts = new(StringComparer.Ordinal);
+    private IReadOnlyDictionary<string, TextIdUsage> _usage =
+        new Dictionary<string, TextIdUsage>(StringComparer.Ordinal);
     private Project _project = ProjectMigration.Empty();
     private bool _loading;
 
@@ -92,11 +93,7 @@ public sealed partial class LanguagesViewModel : ObservableObject
     }
 
     /// <summary>Пересчитать использование text_id после правок диалогов и обновить подписи записей.</summary>
-    public void RefreshUsage()
-    {
-        RebuildUsageCounts();
-        foreach (var language in Languages) language.RefreshUsageFlags();
-    }
+    public void RefreshUsage() => RefreshUsageFromProject();
 
     partial void OnSummaryModeChanged(bool value)
     {
@@ -118,6 +115,7 @@ public sealed partial class LanguagesViewModel : ObservableObject
         };
         _project.Languages.Add(language);
         BuildEditors();
+        RefreshUsageFromProject();
         RefreshSummaryIfVisible();
         RefreshIssues();
         OnChanged(LocalizationSource.Get("languagesTableCreated"));
@@ -128,6 +126,7 @@ public sealed partial class LanguagesViewModel : ObservableObject
         if (!_dialogs.Confirm(LocalizationSource.Get("languagesDeleteTable") + ": " + language.Locale)) return;
         _project.Languages.Remove(language.Model);
         BuildEditors();
+        RefreshUsageFromProject();
         RefreshSummaryIfVisible();
         RefreshIssues();
         OnChanged(LocalizationSource.Get("languagesTableDeleted"));
@@ -163,6 +162,7 @@ public sealed partial class LanguagesViewModel : ObservableObject
 
         _project.Languages = XmlHelpers.MergeLanguages(_project.Languages, incoming);
         BuildEditors();
+        RefreshUsageFromProject();
         RefreshSummaryIfVisible();
         RefreshIssues();
         OnChanged(LocalizationSource.Get("languagesImported") + ": " +
@@ -174,6 +174,7 @@ public sealed partial class LanguagesViewModel : ObservableObject
         var id = UniqueEntryId(language.Model, "st_new");
         language.Model.Entries.Add(new LanguageEntry { Id = id, Text = "" });
         language.RebuildEntries();
+        RefreshUsageFromProject();
         RefreshSummaryIfVisible();
         RefreshIssues();
         OnChanged(LocalizationSource.Get("languagesEntryAdded"));
@@ -183,6 +184,7 @@ public sealed partial class LanguagesViewModel : ObservableObject
     {
         language.Model.Entries.Remove(entry.Model);
         language.RebuildEntries();
+        RefreshUsageFromProject();
         RefreshSummaryIfVisible();
         RefreshIssues();
         OnChanged(LocalizationSource.Get("languagesEntryRemoved"));
@@ -197,11 +199,11 @@ public sealed partial class LanguagesViewModel : ObservableObject
         OnChanged();
     }
 
-    internal void OnEntryChanged(LanguageEditorViewModel language, LanguageEntryViewModel entry, bool idChanged = false)
+    internal void OnEntryChanged(LanguageEntryViewModel entry, bool idChanged = false)
     {
         if (_loading) return;
-        if (idChanged) RebuildUsageCounts();
-        entry.RefreshFlags();
+        if (idChanged) RefreshUsageFromProject();
+        else entry.RefreshFlags();
         RefreshIssues();
         OnChanged();
     }
@@ -211,7 +213,36 @@ public sealed partial class LanguagesViewModel : ObservableObject
             .FirstOrDefault(e => e.Id == id)?.Text ?? "";
 
     internal int UsageOf(string id) =>
-        !string.IsNullOrEmpty(id) && _usageCounts.TryGetValue(id, out var count) ? count : 0;
+        !string.IsNullOrEmpty(id) && _usage.TryGetValue(id, out var usage) ? usage.Phrases : 0;
+
+    internal bool IsUsedInFiles(string id) =>
+        !string.IsNullOrEmpty(id) && _usage.TryGetValue(id, out var usage) && usage.InProjectFiles;
+
+    internal bool IsUsed(string id) => UsageOf(id) > 0 || IsUsedInFiles(id);
+
+    internal string UsageText(string id)
+    {
+        var count = UsageOf(id);
+        if (count > 0)
+            return LocalizationSource.Get("languagesUsage") + ": " + count.ToString(CultureInfo.CurrentCulture);
+        return IsUsedInFiles(id)
+            ? LocalizationSource.Get("languagesUsageFile")
+            : LocalizationSource.Get("languagesUsage") + ": 0";
+    }
+
+    internal string UsageToolTip(string id)
+    {
+        var count = UsageOf(id);
+        var inFiles = IsUsedInFiles(id);
+        var phraseText = LocalizationSource.Get("languagesUsedIn") + ": " +
+            count.ToString(CultureInfo.CurrentCulture);
+        if (count > 0 && inFiles)
+            return phraseText + "; " + LocalizationSource.Get("languagesUsedInFiles");
+        if (count > 0) return phraseText;
+        return inFiles
+            ? LocalizationSource.Get("languagesUsedInFiles")
+            : LocalizationSource.Get("languagesUnused");
+    }
 
     internal void SetSummaryCell(LanguageSummaryCellViewModel cell, string? value)
     {
@@ -224,6 +255,7 @@ public sealed partial class LanguagesViewModel : ObservableObject
         {
             entry = new LanguageEntry { Id = cell.Id, Text = text };
             language.Entries.Add(entry);
+            RefreshUsageFromProject();
         }
         else
         {
@@ -236,23 +268,35 @@ public sealed partial class LanguagesViewModel : ObservableObject
         OnChanged();
     }
 
-    /// <summary>Один проход по диалогам: счётчики text_id для всех записей без повторного сканирования.</summary>
+    /// <summary>
+    /// Один проход по проекту: реплики активного графа и импортированных диалогов,
+    /// а также ссылки в LTX, скриптах, квестах и описаниях. Ссылки из файлов собираются
+    /// только для id, которые есть в таблицах перевода.
+    /// </summary>
     private void RebuildUsageCounts()
     {
-        _usageCounts.Clear();
-        CountUsage(_project.Nodes);
-        foreach (var dialogue in _project.Dialogues) CountUsage(dialogue.Nodes);
+        var knownIds = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var language in _project.Languages ?? Enumerable.Empty<Language>())
+        {
+            if (language?.Entries == null) continue;
+            foreach (var entry in language.Entries)
+            {
+                if (entry?.Id is { Length: > 0 } id) knownIds.Add(id);
+            }
+        }
+
+        _usage = TextIdUsageCatalog.Analyze(_project, knownIds);
     }
 
-    private void CountUsage(IEnumerable<DialogueNode> nodes)
+    /// <summary>
+    /// Пересобрать карту использования и обновить подписи строк. Нужен после смены
+    /// набора id в таблицах: фильтр <see cref="RebuildUsageCounts"/> иначе останется
+    /// с прежними ключами и новые ссылки из файлов не попадут в счётчики.
+    /// </summary>
+    private void RefreshUsageFromProject()
     {
-        foreach (var node in nodes)
-        {
-            var id = node.Type == NodeTypes.Phrase ? node.Data?.TextId : null;
-            if (string.IsNullOrEmpty(id)) continue;
-            _usageCounts.TryGetValue(id!, out var count);
-            _usageCounts[id!] = count + 1;
-        }
+        RebuildUsageCounts();
+        foreach (var language in Languages) language.RefreshUsageFlags();
     }
 
     private void BuildEditors()
