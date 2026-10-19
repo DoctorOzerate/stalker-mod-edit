@@ -1,5 +1,4 @@
 using System.IO.Compression;
-using System.Text;
 using XRayForge.Core.Dialogs;
 using XRayForge.Core.Projects;
 using XRayForge.Core.Quests;

@@ -31,7 +31,7 @@ public sealed class ScriptJumpEventArgs : EventArgs
 
 /// <summary>
 /// Вкладка «Скрипты» (этап 7.4, `ScriptsTab.js`): список .script/.lua с поиском,
-/// редактирование с подсветкой, режим просмотра со свёрткой функций, сниппеты API,
+/// редактирование с подсветкой прямо во время ввода, сниппеты API,
 /// замена по всем файлам, проверка Lua, граф вызовов, diff и экспорт файла.
 /// </summary>
 public sealed partial class ScriptsViewModel : ObservableObject

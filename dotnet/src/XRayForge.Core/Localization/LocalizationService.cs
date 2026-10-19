@@ -471,7 +471,7 @@ public static class LocalizationService
         ["iconCells"] = "ячеек",
 
         // --- вкладка «Скрипты» (ScriptsTab.js) ---
-        ["tabScriptsHint"] = "Редактор Lua/script: подсветка, свёртка функций, API, проверка и граф вызовов.",
+        ["tabScriptsHint"] = "Редактор Lua/script: подсветка при вводе, API, проверка и граф вызовов.",
         ["scriptApi"] = "API движка",
         ["scriptCreate"] = "＋ Создать файл",
         ["scriptOpen"] = "Открыть",
@@ -1127,7 +1127,7 @@ public static class LocalizationService
         ["iconCells"] = "cells",
 
         // --- Scripts tab (ScriptsTab.js) ---
-        ["tabScriptsHint"] = "Lua/script editor: highlighting, function folding, API, checks and call graph.",
+        ["tabScriptsHint"] = "Lua/script editor: live highlighting, API, checks and call graph.",
         ["scriptApi"] = "Engine API",
         ["scriptCreate"] = "＋ Create file",
         ["scriptOpen"] = "Open",
