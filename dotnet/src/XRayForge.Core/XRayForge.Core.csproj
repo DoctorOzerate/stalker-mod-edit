@@ -10,4 +10,14 @@
     <PackageReference Include="System.Text.Encoding.CodePages" Version="10.0.13" />
   </ItemGroup>
 
+  <!--
+    Справочник gamedata лежит в корне репозитория рядом с catalog.docx.
+    Условное включение нужно для чистого клона без каталога: сборка продолжится,
+    а подсказки каталога просто не появятся (GamedataCatalog.Default будет пустым).
+  -->
+  <ItemGroup Condition="Exists('..\..\..\catalog.csv')">
+    <EmbeddedResource Include="..\..\..\catalog.csv"
+                      LogicalName="XRayForge.Core.Gamedata.Data.gamedata-catalog.csv" />
+  </ItemGroup>
+
 </Project>

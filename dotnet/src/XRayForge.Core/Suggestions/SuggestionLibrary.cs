@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using XRayForge.Core.Gamedata;
 using XRayForge.Core.Ltx;
 using XRayForge.Core.Lua;
 using XRayForge.Core.Models;
@@ -134,6 +135,9 @@ public sealed class SuggestionLibrary
         OfKinds(SuggestionKind.LuaApi, SuggestionKind.ScriptFunction,
             SuggestionKind.ScriptBinding, SuggestionKind.Script);
 
+    /// <summary>Подсказки путей для `#include` (редактор `system.ltx`).</summary>
+    public IReadOnlyList<SuggestionEntry> ForInclude() => OfKind(SuggestionKind.Include);
+
     /// <summary>Подсказки для метаданных реплики: info-порции и скрипты условий/действий.</summary>
     public IReadOnlyList<SuggestionEntry> ForMetadataField(string? key)
     {
@@ -150,8 +154,11 @@ public sealed class SuggestionLibrary
     /// <summary>
     /// Собрать индекс по проекту. `itemSections` передаёт уже разобранные секции
     /// `ItemsLtx`, чтобы вкладка «Предметы» не парсила один и тот же текст повторно.
+    /// `catalog` — справочник gamedata; по умолчанию встроенный `catalog.csv`.
     /// </summary>
-    public static SuggestionLibrary Build(Project? project, IEnumerable<LtxSection>? itemSections = null)
+    public static SuggestionLibrary Build(
+        Project? project, IEnumerable<LtxSection>? itemSections = null,
+        GamedataCatalog? catalog = null)
     {
         if (project == null) return Empty;
 
@@ -176,6 +183,8 @@ public sealed class SuggestionLibrary
         if (items.Count == 0 && project.ItemOrigins is { Count: > 0 } origins)
             foreach (var pair in origins)
                 builder.Add(new SuggestionEntry(pair.Key, SuggestionKind.Item, pair.Value));
+
+        builder.AddCatalog(catalog ?? GamedataCatalog.Default, project.Series);
 
         return new SuggestionLibrary(builder.Entries.ToList());
     }
@@ -427,6 +436,12 @@ public sealed class SuggestionLibrary
             if (project.EquipSlots != null)
                 foreach (var slot in project.EquipSlots)
                     Add(new SuggestionEntry(slot.Key, SuggestionKind.Field, "equip slot"));
+        }
+
+        /// <summary>Подсказки из каталога gamedata: секции, include, скрипты, функции и id.</summary>
+        public void AddCatalog(GamedataCatalog catalog, string? series)
+        {
+            foreach (var entry in catalog.Suggestions(series)) Add(entry);
         }
     }
 }

@@ -29,6 +29,7 @@ public enum SuggestionKind
     NpcProfile,
     Squad,
     Texture,
+    Include,
     Value
 }
 
@@ -83,6 +84,7 @@ public sealed class SuggestionEntry
         SuggestionKind.NpcProfile => "⚙",
         SuggestionKind.Squad => "⚔",
         SuggestionKind.Texture => "▨",
+        SuggestionKind.Include => "↳",
         _ => "="
     };
 

@@ -89,11 +89,13 @@
                                         Command="{Binding SystemLtx.DownloadSystemCommand}" />
                             </WrapPanel>
                         </Grid>
-                        <TextBox Style="{StaticResource SystemEditor}" Height="260"
-                                 Text="{Binding SystemLtx.SystemText, Mode=TwoWay,
-                                     UpdateSourceTrigger=PropertyChanged}"
-                                 TextWrapping="NoWrap"
-                                 SpellCheck.IsEnabled="False" />
+                        <controls:SuggestionTextBox Style="{StaticResource SystemEditor}" Height="260"
+                                                    Text="{Binding SystemLtx.SystemText, Mode=TwoWay,
+                                                        UpdateSourceTrigger=PropertyChanged}"
+                                                    Suggestions="{Binding SystemLtx.IncludeSuggestions}"
+                                                    TokenSeparators="{Binding SystemLtx.IncludeTokenSeparators}"
+                                                    TextWrapping="NoWrap"
+                                                    SpellCheck.IsEnabled="False" />
                     </StackPanel>
                 </Border>
 

@@ -3,10 +3,12 @@ using System.Globalization;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using XRayForge.Core.Gamedata;
 using XRayForge.Core.Ltx;
 using XRayForge.Core.Lua;
 using XRayForge.Core.Projects;
 using XRayForge.Core.Spawn;
+using XRayForge.Core.Suggestions;
 using XRayForge.Core.Text;
 using XRayForge.Core.Ui;
 using XRayForge.Localization;
@@ -28,6 +30,7 @@ public sealed partial class SystemLtxViewModel : ObservableObject
     private bool _loading;
     private bool _suppressDerived;
     private Dictionary<string, List<string>> _sectionMap = new(StringComparer.Ordinal);
+    private IReadOnlyList<SuggestionEntry> _includeSuggestions = Array.Empty<SuggestionEntry>();
 
     public SystemLtxViewModel(ShellViewModel shell, IDialogService dialogs)
     {
@@ -52,6 +55,15 @@ public sealed partial class SystemLtxViewModel : ObservableObject
     public ObservableCollection<LtxFileViewModel> LtxFileRows { get; }
     public ObservableCollection<string> SpawnSections { get; }
     public ObservableCollection<string> AvailableLtxPaths { get; }
+
+    /// <summary>Подсказки путей `#include` из каталога gamedata (`catalog.csv`).</summary>
+    public IReadOnlyList<SuggestionEntry> IncludeSuggestions => _includeSuggestions;
+
+    /// <summary>
+    /// Разделители токенов в редакторе `system.ltx`: путь — до перевода строки, кавычки,
+    /// запятой, двоеточия или пробела, чтобы подсказка внутри `#include "…"` заменяла только сам путь.
+    /// </summary>
+    public string IncludeTokenSeparators => "\r\n,\": ";
 
     /// <summary>Текст `system.ltx`; каждая правка сразу попадает в проект.</summary>
     [ObservableProperty] private string _systemText = "";
@@ -121,6 +133,7 @@ public sealed partial class SystemLtxViewModel : ObservableObject
         OnPropertyChanged(nameof(IncludePreview));
         OnPropertyChanged(nameof(SelectedLtxFile));
         OnPropertyChanged(nameof(SectionSearch));
+        RefreshIncludeSuggestions();
         RefreshLtxFileList();
         RefreshDerived();
     }
@@ -163,9 +176,17 @@ public sealed partial class SystemLtxViewModel : ObservableObject
         foreach (var pair in LtxFiles.OrderBy(x => x.Key, StringComparer.Ordinal))
             LtxFileRows.Add(new LtxFileViewModel(this, pair.Key, pair.Value));
 
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        void AddPath(string? path)
+        {
+            var value = (path ?? "").Trim().Replace('/', '\\');
+            if (value.Length > 0 && seen.Add(value)) AvailableLtxPaths.Add(value);
+        }
+
         AvailableLtxPaths.Clear();
         foreach (var path in LtxFiles.Keys.OrderBy(x => x, StringComparer.Ordinal))
-            AvailableLtxPaths.Add(path);
+            AddPath(path);
+        foreach (var suggestion in _includeSuggestions) AddPath(suggestion.Value);
 
         if (SelectedLtxFile != null)
         {
@@ -176,6 +197,13 @@ public sealed partial class SystemLtxViewModel : ObservableObject
         OnPropertyChanged(nameof(HasLtxFiles));
         OnPropertyChanged(nameof(LtxFilesTitle));
         OnPropertyChanged(nameof(HasSelectedLtxFile));
+    }
+
+    /// <summary>Пересобрать подсказки `#include` под серию проекта (`soc`/`cop`).</summary>
+    private void RefreshIncludeSuggestions()
+    {
+        _includeSuggestions = GamedataCatalog.Default.IncludeSuggestions(_project.Series);
+        OnPropertyChanged(nameof(IncludeSuggestions));
     }
 
     /// <summary>Полный пересчёт: секции, инклюды, дерево, карта секций и проверки.</summary>
