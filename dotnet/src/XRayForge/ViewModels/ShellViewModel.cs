@@ -292,6 +292,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     {
         foreach (var tab in Tabs) tab.IsActive = ReferenceEquals(tab, value);
         OnPropertyChanged(nameof(IsOverviewActive));
+        // Использование text_id могло измениться после правок диалогов; кэш обновляем при входе.
+        if (value?.Id == NavigationCatalog.LanguagesId) Languages.RefreshUsage();
         RefreshRows();
     }
 

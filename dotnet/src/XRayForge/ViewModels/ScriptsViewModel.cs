@@ -81,6 +81,9 @@ public sealed partial class ScriptsViewModel : ObservableObject
     /// <summary>`scriptDiff`: две колонки «оригинал / текущая».</summary>
     [ObservableProperty] private bool _showDiff;
 
+    /// <summary>Показывать панель диагностики Lua (ошибки/предупреждения можно свернуть).</summary>
+    [ObservableProperty] private bool _showDiagnostics = true;
+
     /// <summary>Текст для поиска API (поле с автодополнением; вставка по Enter/выбору).</summary>
     [ObservableProperty] private string _apiQuery = "";
     [ObservableProperty] private string? _selectedApi;
@@ -110,8 +113,11 @@ public sealed partial class ScriptsViewModel : ObservableObject
         ? LocalizationSource.Get("scriptNoMatches")
         : LocalizationSource.Get("scriptEmpty");
     public bool HasDiagnostics => Diagnostics.Count > 0;
+    public bool ShowDiagnosticsPanel => HasDiagnostics && ShowDiagnostics;
     public string DiagnosticsTitle => LocalizationSource.Get("scriptCheckLua") + " (" +
         Diagnostics.Count.ToString(CultureInfo.CurrentCulture) + ")";
+    public string DiagnosticsToggleText => DiagnosticsTitle +
+        (HasDiagnostics ? (ShowDiagnostics ? " ▾" : " ▸") : "");
     public bool HasCallGraph => Functions.Count > 0 || Edges.Count > 0 || UnusedText.Length > 0;
     public string CallGraphTitle => LocalizationSource.Get("scriptCallGraph") + " · " +
         Functions.Count.ToString(CultureInfo.CurrentCulture) + " " + LocalizationSource.Get("scriptFunctionsShort");
@@ -151,6 +157,7 @@ public sealed partial class ScriptsViewModel : ObservableObject
         OnPropertyChanged(nameof(CountText));
         OnPropertyChanged(nameof(NoScriptsText));
         OnPropertyChanged(nameof(DiagnosticsTitle));
+        OnPropertyChanged(nameof(DiagnosticsToggleText));
         OnPropertyChanged(nameof(CallGraphTitle));
         OnPropertyChanged(nameof(FunctionsCaption));
         OnPropertyChanged(nameof(SourceCaption));
@@ -187,6 +194,12 @@ public sealed partial class ScriptsViewModel : ObservableObject
     }
 
     partial void OnShowDiffChanged(bool value) => OnPropertyChanged(nameof(CanShowDiff));
+
+    partial void OnShowDiagnosticsChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowDiagnosticsPanel));
+        OnPropertyChanged(nameof(DiagnosticsToggleText));
+    }
 
     /// <summary>Выбор карточки (клик по списку или команда элемента).</summary>
     public void SelectItem(ScriptItemViewModel? item)
@@ -278,7 +291,9 @@ public sealed partial class ScriptsViewModel : ObservableObject
     private void NotifyDerived()
     {
         OnPropertyChanged(nameof(HasDiagnostics));
+        OnPropertyChanged(nameof(ShowDiagnosticsPanel));
         OnPropertyChanged(nameof(DiagnosticsTitle));
+        OnPropertyChanged(nameof(DiagnosticsToggleText));
         OnPropertyChanged(nameof(HasCallGraph));
         OnPropertyChanged(nameof(CallGraphTitle));
         OnPropertyChanged(nameof(CanShowDiff));
@@ -389,6 +404,14 @@ public sealed partial class ScriptsViewModel : ObservableObject
     {
         if (!CanShowDiff) return;
         ShowDiff = !ShowDiff;
+    }
+
+    /// <summary>Свернуть/развернуть панель диагностики Lua; анализ продолжает работать.</summary>
+    [RelayCommand]
+    private void ToggleDiagnostics()
+    {
+        if (!HasDiagnostics) return;
+        ShowDiagnostics = !ShowDiagnostics;
     }
 
     // --- форматирование и вставка (formatCurrentScript / insertLuaAtCursor) ---

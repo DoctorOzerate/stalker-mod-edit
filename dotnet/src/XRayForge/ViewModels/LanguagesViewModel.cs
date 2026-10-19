@@ -23,6 +23,7 @@ public sealed partial class LanguagesViewModel : ObservableObject
 {
     private readonly ShellViewModel _shell;
     private readonly IDialogService _dialogs;
+    private readonly Dictionary<string, int> _usageCounts = new(StringComparer.Ordinal);
     private Project _project = ProjectMigration.Empty();
     private bool _loading;
 
@@ -31,14 +32,18 @@ public sealed partial class LanguagesViewModel : ObservableObject
         _shell = shell;
         _dialogs = dialogs;
         Languages = new ObservableCollection<LanguageEditorViewModel>();
-        SummaryRows = new ObservableCollection<LanguageSummaryRowViewModel>();
-        Issues = new ObservableCollection<LanguageIssueViewModel>();
+        _summaryRows = new ObservableCollection<LanguageSummaryRowViewModel>();
+        _issues = new ObservableCollection<LanguageIssueViewModel>();
         Attach(ProjectMigration.Empty());
     }
 
     public ObservableCollection<LanguageEditorViewModel> Languages { get; }
-    public ObservableCollection<LanguageSummaryRowViewModel> SummaryRows { get; }
-    public ObservableCollection<LanguageIssueViewModel> Issues { get; }
+
+    private ObservableCollection<LanguageSummaryRowViewModel> _summaryRows;
+    public ObservableCollection<LanguageSummaryRowViewModel> SummaryRows => _summaryRows;
+
+    private ObservableCollection<LanguageIssueViewModel> _issues;
+    public ObservableCollection<LanguageIssueViewModel> Issues => _issues;
 
     [ObservableProperty] private bool _summaryMode;
 
@@ -64,8 +69,14 @@ public sealed partial class LanguagesViewModel : ObservableObject
         _project.Languages ??= new List<Language>();
 
         _loading = true;
+        RebuildUsageCounts();
         BuildEditors();
-        RefreshSummary();
+        if (SummaryMode) RefreshSummary();
+        else
+        {
+            _summaryRows = new ObservableCollection<LanguageSummaryRowViewModel>();
+            OnPropertyChanged(nameof(SummaryRows));
+        }
         RefreshIssues();
         _loading = false;
         NotifyAll();
@@ -78,6 +89,13 @@ public sealed partial class LanguagesViewModel : ObservableObject
         OnPropertyChanged(nameof(IssuesTitle));
         OnPropertyChanged(nameof(StatsText));
         OnPropertyChanged(nameof(TablesText));
+    }
+
+    /// <summary>Пересчитать использование text_id после правок диалогов и обновить подписи записей.</summary>
+    public void RefreshUsage()
+    {
+        RebuildUsageCounts();
+        foreach (var language in Languages) language.RefreshUsageFlags();
     }
 
     partial void OnSummaryModeChanged(bool value)
@@ -100,7 +118,7 @@ public sealed partial class LanguagesViewModel : ObservableObject
         };
         _project.Languages.Add(language);
         BuildEditors();
-        RefreshSummary();
+        RefreshSummaryIfVisible();
         RefreshIssues();
         OnChanged(LocalizationSource.Get("languagesTableCreated"));
     }
@@ -110,7 +128,7 @@ public sealed partial class LanguagesViewModel : ObservableObject
         if (!_dialogs.Confirm(LocalizationSource.Get("languagesDeleteTable") + ": " + language.Locale)) return;
         _project.Languages.Remove(language.Model);
         BuildEditors();
-        RefreshSummary();
+        RefreshSummaryIfVisible();
         RefreshIssues();
         OnChanged(LocalizationSource.Get("languagesTableDeleted"));
     }
@@ -145,7 +163,7 @@ public sealed partial class LanguagesViewModel : ObservableObject
 
         _project.Languages = XmlHelpers.MergeLanguages(_project.Languages, incoming);
         BuildEditors();
-        RefreshSummary();
+        RefreshSummaryIfVisible();
         RefreshIssues();
         OnChanged(LocalizationSource.Get("languagesImported") + ": " +
             incoming.Count.ToString(CultureInfo.CurrentCulture));
@@ -156,7 +174,7 @@ public sealed partial class LanguagesViewModel : ObservableObject
         var id = UniqueEntryId(language.Model, "st_new");
         language.Model.Entries.Add(new LanguageEntry { Id = id, Text = "" });
         language.RebuildEntries();
-        RefreshSummary();
+        RefreshSummaryIfVisible();
         RefreshIssues();
         OnChanged(LocalizationSource.Get("languagesEntryAdded"));
     }
@@ -165,7 +183,7 @@ public sealed partial class LanguagesViewModel : ObservableObject
     {
         language.Model.Entries.Remove(entry.Model);
         language.RebuildEntries();
-        RefreshSummary();
+        RefreshSummaryIfVisible();
         RefreshIssues();
         OnChanged(LocalizationSource.Get("languagesEntryRemoved"));
     }
@@ -174,14 +192,15 @@ public sealed partial class LanguagesViewModel : ObservableObject
     {
         if (_loading) return;
         language.RefreshEntryFlags();
+        RefreshSummaryIfVisible();
         RefreshIssues();
         OnChanged();
     }
 
-    internal void OnEntryChanged(LanguageEditorViewModel language, LanguageEntryViewModel entry)
+    internal void OnEntryChanged(LanguageEditorViewModel language, LanguageEntryViewModel entry, bool idChanged = false)
     {
         if (_loading) return;
-        language.RefreshEntryFlags();
+        if (idChanged) RebuildUsageCounts();
         entry.RefreshFlags();
         RefreshIssues();
         OnChanged();
@@ -191,17 +210,8 @@ public sealed partial class LanguagesViewModel : ObservableObject
         _project.Languages.FirstOrDefault(l => l.Locale == locale)?.Entries
             .FirstOrDefault(e => e.Id == id)?.Text ?? "";
 
-    internal int UsageOf(string id)
-    {
-        if (string.IsNullOrEmpty(id)) return 0;
-        var count = 0;
-        foreach (var node in _project.Nodes)
-            if (node.Type == NodeTypes.Phrase && node.Data?.TextId == id) count++;
-        foreach (var dialogue in _project.Dialogues)
-            foreach (var node in dialogue.Nodes)
-                if (node.Type == NodeTypes.Phrase && node.Data?.TextId == id) count++;
-        return count;
-    }
+    internal int UsageOf(string id) =>
+        !string.IsNullOrEmpty(id) && _usageCounts.TryGetValue(id, out var count) ? count : 0;
 
     internal void SetSummaryCell(LanguageSummaryCellViewModel cell, string? value)
     {
@@ -226,6 +236,25 @@ public sealed partial class LanguagesViewModel : ObservableObject
         OnChanged();
     }
 
+    /// <summary>Один проход по диалогам: счётчики text_id для всех записей без повторного сканирования.</summary>
+    private void RebuildUsageCounts()
+    {
+        _usageCounts.Clear();
+        CountUsage(_project.Nodes);
+        foreach (var dialogue in _project.Dialogues) CountUsage(dialogue.Nodes);
+    }
+
+    private void CountUsage(IEnumerable<DialogueNode> nodes)
+    {
+        foreach (var node in nodes)
+        {
+            var id = node.Type == NodeTypes.Phrase ? node.Data?.TextId : null;
+            if (string.IsNullOrEmpty(id)) continue;
+            _usageCounts.TryGetValue(id!, out var count);
+            _usageCounts[id!] = count + 1;
+        }
+    }
+
     private void BuildEditors()
     {
         Languages.Clear();
@@ -233,9 +262,14 @@ public sealed partial class LanguagesViewModel : ObservableObject
             Languages.Add(new LanguageEditorViewModel(this, language));
     }
 
+    private void RefreshSummaryIfVisible()
+    {
+        if (SummaryMode) RefreshSummary();
+    }
+
     private void RefreshSummary()
     {
-        SummaryRows.Clear();
+        var rows = new ObservableCollection<LanguageSummaryRowViewModel>();
         var ids = new SortedSet<string>(StringComparer.Ordinal);
         foreach (var language in _project.Languages)
             foreach (var entry in language.Entries)
@@ -244,21 +278,25 @@ public sealed partial class LanguagesViewModel : ObservableObject
         var locales = _project.Languages.Where(l => !string.IsNullOrEmpty(l.Locale))
             .Select(l => l.Locale).Distinct(StringComparer.Ordinal).ToList();
         foreach (var id in ids)
-            SummaryRows.Add(new LanguageSummaryRowViewModel(this, id, locales));
+            rows.Add(new LanguageSummaryRowViewModel(this, id, locales));
 
+        _summaryRows = rows;
+        OnPropertyChanged(nameof(SummaryRows));
         OnPropertyChanged(nameof(HasSummaryRows));
     }
 
     private void RefreshIssues()
     {
-        Issues.Clear();
+        var issues = new List<LanguageIssueViewModel>();
         Coverage = TextIdTools.Coverage(_project.Dialogues, _project.Languages);
         foreach (var issue in TextIdTools.FindTextIdIssues(_project.Languages, _project.Dialogues))
-            Issues.Add(new LanguageIssueViewModel(issue.Message, issue.Locale ?? "", issue.TextId));
+            issues.Add(new LanguageIssueViewModel(issue.Message, issue.Locale ?? "", issue.TextId));
 
         foreach (var issue in TextIdTools.ValidateTextIds(_project.Dialogues, _project.Languages))
-            Issues.Add(new LanguageIssueViewModel(issue.Message, "", issue.TextId));
+            issues.Add(new LanguageIssueViewModel(issue.Message, "", issue.TextId));
 
+        _issues = new ObservableCollection<LanguageIssueViewModel>(issues);
+        OnPropertyChanged(nameof(Issues));
         OnPropertyChanged(nameof(HasIssues));
         OnPropertyChanged(nameof(IssuesTitle));
         OnPropertyChanged(nameof(StatsText));

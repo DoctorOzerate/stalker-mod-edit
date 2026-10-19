@@ -90,15 +90,24 @@ public static class TextIdTools
             }
         }
 
+        var translated = TranslatedIds(languages);
         foreach (var id in used)
         {
-            var has = (languages ?? Array.Empty<Language>())
-                .Any(lang => lang.Entries.Any(e => e.Id == id && e.Text.Trim().Length > 0));
-            if (!has)
+            if (!translated.Contains(id))
                 issues.Add(new TextIdIssue { Locale = "", TextId = id, Message = "Нет перевода ни в одной локали: " + id });
         }
 
         return issues;
+    }
+
+    /// <summary>ID записей, у которых есть непустой перевод хотя бы в одной локали.</summary>
+    private static HashSet<string> TranslatedIds(IReadOnlyList<Language>? languages)
+    {
+        var translated = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var language in languages ?? Array.Empty<Language>())
+            foreach (var entry in language.Entries)
+                if (entry.Text.Trim().Length > 0) translated.Add(entry.Id);
+        return translated;
     }
 
     /// <summary>Покрытие text_id переводами (в %).</summary>
@@ -114,8 +123,8 @@ public static class TextIdTools
 
         if (ids.Count == 0) return new TextIdCoverage { Total = 0, Translated = 0, Pct = 100 };
 
-        var translated = ids.Count(id => (languages ?? Array.Empty<Language>())
-            .Any(l => l.Entries.Any(e => e.Id == id && e.Text.Trim().Length > 0)));
+        var translatedIds = TranslatedIds(languages);
+        var translated = ids.Count(translatedIds.Contains);
 
         return new TextIdCoverage
         {

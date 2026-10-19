@@ -16,14 +16,16 @@ public sealed partial class LanguageEditorViewModel : ObservableObject
     {
         _owner = owner;
         Model = model;
-        Entries = new ObservableCollection<LanguageEntryViewModel>();
+        _entries = new ObservableCollection<LanguageEntryViewModel>();
         RebuildEntries();
     }
 
     public Language Model { get; }
-    public ObservableCollection<LanguageEntryViewModel> Entries { get; }
+
+    private ObservableCollection<LanguageEntryViewModel> _entries;
+    public ObservableCollection<LanguageEntryViewModel> Entries => _entries;
     public LanguagesViewModel Owner => _owner;
-    public string CountText => Entries.Count.ToString(System.Globalization.CultureInfo.CurrentCulture) +
+    public string CountText => _entries.Count.ToString(System.Globalization.CultureInfo.CurrentCulture) +
         " " + LocalizationSource.Get("scriptLinesShort");
     public string DeleteText => LocalizationSource.Get("scriptDelete");
     public string AddEntryText => LocalizationSource.Get("languagesAddEntry");
@@ -58,9 +60,11 @@ public sealed partial class LanguageEditorViewModel : ObservableObject
 
     public void RebuildEntries()
     {
-        Entries.Clear();
+        var entries = new ObservableCollection<LanguageEntryViewModel>();
         foreach (var entry in Model.Entries)
-            Entries.Add(new LanguageEntryViewModel(this, entry));
+            entries.Add(new LanguageEntryViewModel(this, entry));
+        _entries = entries;
+        OnPropertyChanged(nameof(Entries));
         RefreshEntryFlags();
         OnPropertyChanged(nameof(CountText));
     }
@@ -75,16 +79,22 @@ public sealed partial class LanguageEditorViewModel : ObservableObject
             if (!seen.Add(entry.Id)) _duplicates.Add(entry.Id);
         }
 
-        foreach (var entry in Entries)
+        foreach (var entry in _entries)
         {
             entry.RefreshFlags();
         }
     }
 
+    /// <summary>Обновить только счётчики использования (после правок диалогов).</summary>
+    public void RefreshUsageFlags()
+    {
+        foreach (var entry in _entries) entry.RefreshUsage();
+    }
+
     /// <summary>Подтянуть текст из сводной таблицы без потери объекта записи.</summary>
     public void SyncEntry(LanguageEntry entry)
     {
-        var view = Entries.FirstOrDefault(e => ReferenceEquals(e.Model, entry) || e.Id == entry.Id);
+        var view = _entries.FirstOrDefault(e => ReferenceEquals(e.Model, entry) || e.Id == entry.Id);
         if (view == null) RebuildEntries();
         else view.Reload();
         RefreshEntryFlags();
@@ -130,7 +140,7 @@ public sealed partial class LanguageEntryViewModel : ObservableObject
             Model.Id = next;
             OnPropertyChanged();
             _language.RefreshEntryFlags();
-            _language.Owner.OnEntryChanged(_language, this);
+            _language.Owner.OnEntryChanged(_language, this, idChanged: true);
         }
     }
 
@@ -156,6 +166,14 @@ public sealed partial class LanguageEntryViewModel : ObservableObject
         ? LocalizationSource.Get("languagesUsedIn") + " " + Usage
         : LocalizationSource.Get("languagesUnused");
 
+    public void RefreshUsage()
+    {
+        OnPropertyChanged(nameof(Usage));
+        OnPropertyChanged(nameof(HasUsage));
+        OnPropertyChanged(nameof(UsageText));
+        OnPropertyChanged(nameof(ToolTip));
+    }
+
     public void RefreshFlags()
     {
         OnPropertyChanged(nameof(IsDuplicate));
@@ -180,16 +198,35 @@ public sealed partial class LanguageEntryViewModel : ObservableObject
 /// <summary>Строка сводной таблицы: id и ячейки по локалям (`Summary` в JS).</summary>
 public sealed class LanguageSummaryRowViewModel
 {
+    private readonly string[] _locales;
+    private ObservableCollection<LanguageSummaryCellViewModel>? _cells;
+
     public LanguageSummaryRowViewModel(LanguagesViewModel owner, string id, IEnumerable<string> locales)
     {
+        Owner = owner;
         Id = id;
-        Cells = new ObservableCollection<LanguageSummaryCellViewModel>(
-            locales.Select(locale => new LanguageSummaryCellViewModel(owner, id, locale)));
-        foreach (var cell in Cells) cell.SetInitial(owner.TextFor(cell.Locale, id));
+        _locales = locales.ToArray();
     }
 
+    public LanguagesViewModel Owner { get; }
     public string Id { get; }
-    public ObservableCollection<LanguageSummaryCellViewModel> Cells { get; }
+
+    /// <summary>Ячейки создаются только для видимых строк (виртуализация сводной таблицы).</summary>
+    public ObservableCollection<LanguageSummaryCellViewModel> Cells =>
+        _cells ??= BuildCells();
+
+    private ObservableCollection<LanguageSummaryCellViewModel> BuildCells()
+    {
+        var cells = new ObservableCollection<LanguageSummaryCellViewModel>();
+        foreach (var locale in _locales)
+        {
+            var cell = new LanguageSummaryCellViewModel(Owner, Id, locale);
+            cell.SetInitial(Owner.TextFor(locale, Id));
+            cells.Add(cell);
+        }
+
+        return cells;
+    }
 }
 
 /// <summary>Ячейка сводной таблицы: правка текста нужной локали.</summary>

@@ -30,6 +30,42 @@
             <Setter Property="Padding" Value="5,0" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
+
+        <!-- Виртуализированный список: строки string_table могут исчисляться десятками тысяч. -->
+        <Style x:Key="LangVirtualList" TargetType="ListBox">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
+            <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Standard" />
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="VerticalContentAlignment" Value="Top" />
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Margin" Value="0" />
+                        <Setter Property="Background" Value="Transparent" />
+                        <Setter Property="BorderThickness" Value="0" />
+                        <Setter Property="Focusable" Value="False" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <Border Background="Transparent" HorizontalAlignment="Stretch">
+                                        <ContentPresenter
+                                            HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                            VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -61,102 +97,112 @@
             </WrapPanel>
         </Grid>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Margin="16,0,16,16" MaxWidth="1200" HorizontalAlignment="Stretch">
-                <!-- Проверка text_id -->
-                <Border Style="{StaticResource LangCard}"
-                        Visibility="{Binding Languages.HasIssues,
-                            Converter={StaticResource BoolToVisibility}}">
-                    <StackPanel>
-                        <TextBlock Text="{Binding Languages.IssuesTitle}" Style="{StaticResource LangTitle}"
-                                   Foreground="{StaticResource LangRed}" />
-                        <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto">
-                            <ItemsControl ItemsSource="{Binding Languages.Issues}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding Text}" FontSize="11"
-                                                   TextWrapping="Wrap" Padding="0,1"
-                                                   Foreground="{StaticResource LangAmber}" />
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
+        <Grid Grid.Row="1" Margin="16,0,16,16" MaxWidth="1200" HorizontalAlignment="Stretch">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- Проверка text_id -->
+            <Border Grid.Row="0" Style="{StaticResource LangCard}"
+                    Visibility="{Binding Languages.HasIssues,
+                        Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock Text="{Binding Languages.IssuesTitle}" Style="{StaticResource LangTitle}"
+                               Foreground="{StaticResource LangRed}" />
+                    <ListBox Style="{StaticResource LangVirtualList}"
+                             ItemsSource="{Binding Languages.Issues}" MaxHeight="150">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Text}" FontSize="11"
+                                           TextWrapping="Wrap" Padding="0,1"
+                                           Foreground="{StaticResource LangAmber}" />
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+            </Border>
+
+            <!-- Сводная таблица -->
+            <Border Grid.Row="1" Style="{StaticResource LangCard}"
+                    Visibility="{Binding Languages.SummaryMode,
+                        Converter={StaticResource BoolToVisibility}}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="{loc:Loc languagesSummary}"
+                               Style="{StaticResource LangTitle}" />
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,4">
+                        <TextBlock Text="{loc:Loc languagesId}" Width="220" FontSize="11"
+                                   FontWeight="Bold" />
+                        <ItemsControl ItemsSource="{Binding Languages.Languages}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Locale}" Width="180"
+                                               FontSize="11" FontWeight="Bold" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
-                </Border>
-
-                <!-- Сводная таблица -->
-                <Border Style="{StaticResource LangCard}"
-                        Visibility="{Binding Languages.SummaryMode,
-                            Converter={StaticResource BoolToVisibility}}">
-                    <StackPanel>
-                        <TextBlock Text="{loc:Loc languagesSummary}" Style="{StaticResource LangTitle}" />
-                        <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                                      VerticalScrollBarVisibility="Disabled">
-                            <StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                    <TextBlock Text="{loc:Loc languagesId}" Width="220" FontSize="11"
-                                               FontWeight="Bold" />
-                                    <ItemsControl ItemsSource="{Binding Languages.Languages}">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <StackPanel Orientation="Horizontal" />
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <TextBlock Text="{Binding Locale}" Width="180"
-                                                           FontSize="11" FontWeight="Bold" />
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                                <TextBlock Text="{loc:Loc languagesNoRows}" Style="{StaticResource CaptionText}"
-                                           Visibility="{Binding Languages.HasSummaryRows,
-                                               Converter={StaticResource InverseBoolToVisibility}}" />
-                                <ItemsControl ItemsSource="{Binding Languages.SummaryRows}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <StackPanel Orientation="Horizontal" Margin="0,1">
-                                                <TextBlock Text="{Binding Id}" Width="220" FontSize="11"
-                                                           FontFamily="Consolas" VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <ItemsControl ItemsSource="{Binding Cells}">
-                                                    <ItemsControl.ItemsPanel>
-                                                        <ItemsPanelTemplate>
-                                                            <StackPanel Orientation="Horizontal" />
-                                                        </ItemsPanelTemplate>
-                                                    </ItemsControl.ItemsPanel>
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <Border Width="180" Margin="0,0,4,0" BorderThickness="1"
-                                                                    BorderBrush="{DynamicResource BorderBevel}">
-                                                                <TextBox Style="{StaticResource LangEntryBox}"
-                                                                         Text="{Binding Text, Mode=TwoWay,
-                                                                             UpdateSourceTrigger=PropertyChanged}"
-                                                                         BorderThickness="0" />
-                                                            </Border>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </StackPanel>
-                </Border>
+                    <Grid Grid.Row="2">
+                        <TextBlock Text="{loc:Loc languagesNoRows}" Style="{StaticResource CaptionText}"
+                                   VerticalAlignment="Top"
+                                   Visibility="{Binding Languages.HasSummaryRows,
+                                       Converter={StaticResource InverseBoolToVisibility}}" />
+                        <ListBox Style="{StaticResource LangVirtualList}"
+                                 ItemsSource="{Binding Languages.SummaryRows}"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Margin="0,1">
+                                        <TextBlock Text="{Binding Id}" Width="220" FontSize="11"
+                                                   FontFamily="Consolas" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <ItemsControl ItemsSource="{Binding Cells}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Width="180" Margin="0,0,4,0" BorderThickness="1"
+                                                            BorderBrush="{DynamicResource BorderBevel}">
+                                                        <TextBox Style="{StaticResource LangEntryBox}"
+                                                                 Text="{Binding Text, Mode=TwoWay,
+                                                                     UpdateSourceTrigger=PropertyChanged}"
+                                                                 BorderThickness="0" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </Grid>
+            </Border>
 
 
-                <!-- Редактор по языкам -->
-                <StackPanel Visibility="{Binding Languages.SummaryMode,
-                    Converter={StaticResource InverseBoolToVisibility}}">
-                    <TextBlock Text="{loc:Loc languagesEmpty}" Style="{StaticResource CaptionText}"
-                               Visibility="{Binding Languages.HasLanguages,
-                                   Converter={StaticResource InverseBoolToVisibility}}" />
-                    <ItemsControl ItemsSource="{Binding Languages.Languages}">
-                        <ItemsControl.ItemTemplate>
+            <!-- Редактор по языкам -->
+            <Grid Grid.Row="1" Visibility="{Binding Languages.SummaryMode,
+                Converter={StaticResource InverseBoolToVisibility}}">
+                <TextBlock Text="{loc:Loc languagesEmpty}" Style="{StaticResource CaptionText}"
+                           VerticalAlignment="Top"
+                           Visibility="{Binding Languages.HasLanguages,
+                               Converter={StaticResource InverseBoolToVisibility}}" />
+                <ListBox Style="{StaticResource LangVirtualList}"
+                         ItemsSource="{Binding Languages.Languages}">
+                    <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Border Style="{StaticResource LangCard}">
                                     <StackPanel>
@@ -193,8 +239,10 @@
                                         </Grid>
 
 
-                                        <ItemsControl ItemsSource="{Binding Entries}" Margin="0,8,0,0">
-                                            <ItemsControl.ItemTemplate>
+                                        <ListBox Style="{StaticResource LangVirtualList}"
+                                                 ItemsSource="{Binding Entries}"
+                                                 MaxHeight="440" Margin="0,8,0,0">
+                                            <ListBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <Grid Margin="0,1">
                                                         <Grid.ColumnDefinitions>
@@ -257,8 +305,8 @@
                                                         </StackPanel>
                                                     </Grid>
                                                 </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
                                         <Button Content="{Binding AddEntryText}"
                                                 Style="{StaticResource ToolbarButton}"
                                                 HorizontalAlignment="Left" Margin="0,6,0,0"
@@ -266,11 +314,10 @@
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </StackPanel>
-        </ScrollViewer>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+        </Grid>
     </Grid>
 </UserControl>
 
