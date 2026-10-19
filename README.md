@@ -77,7 +77,8 @@
 - Редактирование `.script`/`.lua` с номерами строк и проверкой баланса скобок.
 - Поиск по скриптам, переименование/удаление файлов, сниппеты (`function`, `if/then`, `for`,
   `while`, `local`), список функций.
-- Режим просмотра с подсветкой синтаксиса и сворачиванием блоков.
+- Подсветка синтаксиса прямо в редакторе во время ввода; каретка, выделение,
+  прокрутка и undo/redo работают без отдельного режима просмотра.
 
 ### system.ltx и инклюды
 
@@ -94,13 +95,16 @@
 
 ### Экспорт
 
-- Игровой ZIP: `dialogs_*.xml` плюс отдельный XML `string_table` для каждого языка.
+- Игровой ZIP: `dialogs_*.xml`, `string_table` для каждого языка, квесты,
+  `system.ltx` и скрипты в дереве `gamedata/...`.
 - Кодировка декларации и байтов совпадает: Windows-1251 либо UTF-8.
 - Внутренний XML редактора, проект в `.project.json`, DDS и PNG иконок.
 
 ### Самопроверка
 
-- Встроенные тесты: парсинг LTX и include, валидация графа, декодирование Windows-1251,
+- Встроенная проверка проекта: ссылки между вкладками, граф, LTX/инклюды, Lua,
+  квесты, локализации, Windows-1251 и наличие игрового пакета.
+- xUnit-набор: парсинг LTX и include, валидация графа, декодирование Windows-1251,
   локализации, предметы и координаты иконок.
 
 ## Установка и запуск
@@ -112,6 +116,15 @@ npm run build      # сборка веб-версии
 npm run electron   # запуск в Electron-оболочке
 npm run dist       # сборка Windows (portable + NSIS)
 npm test           # юнит-тесты
+```
+
+WPF-версия (.NET 9):
+
+```powershell
+dotnet build dotnet/XRayForge.sln
+dotnet test dotnet/XRayForge.sln
+dotnet run --project dotnet/src/XRayForge/XRayForge.csproj
+.\dotnet\publish.ps1          # single-file XRayForge.exe (win-x64)
 ```
 
 ## Стек

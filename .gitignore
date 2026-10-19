@@ -18,5 +18,6 @@ Thumbs.db
 # .NET build output
 dotnet/**/bin/
 dotnet/**/obj/
+dotnet/artifacts/
 .vscode/settings.json
 ebaniy-link.txt

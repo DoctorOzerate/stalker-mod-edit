@@ -1,0 +1,469 @@
+<UserControl x:Class="XRayForge.Views.SystemLtxView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:XRayForge.Localization"
+             xmlns:controls="clr-namespace:XRayForge.Controls">
+    <!--
+      Вкладка «system.ltx» (этап 7.5, порт SystemTab.js): редактор, секции, инклюды,
+      карта секций, проверки LTX/script_binding, дерево и SVG инклюдов, LTX-файлы и all.spawn.
+    -->
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="SystemRed" Color="#F87171" />
+        <SolidColorBrush x:Key="SystemGreen" Color="#4ADE80" />
+        <SolidColorBrush x:Key="SystemAmber" Color="#FBBF24" />
+
+        <Style x:Key="SystemCard" TargetType="Border" BasedOn="{StaticResource PanelBorder}">
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="12" />
+            <Setter Property="Margin" Value="0,0,0,10" />
+        </Style>
+        <Style x:Key="SystemLabel" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="0,0,0,3" />
+        </Style>
+        <Style x:Key="SystemTitle" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+        </Style>
+        <Style x:Key="SystemMono" TargetType="TextBlock" BasedOn="{StaticResource MonoText}">
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style x:Key="SystemEditor" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="AcceptsReturn" Value="True" />
+            <Setter Property="AcceptsTab" Value="True" />
+            <Setter Property="TextWrapping" Value="NoWrap" />
+            <Setter Property="HorizontalScrollBarVisibility" Value="Auto" />
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+            <Setter Property="VerticalContentAlignment" Value="Top" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style x:Key="SystemIncludeButton" TargetType="Button" BasedOn="{StaticResource ToolbarButton}">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="16,14,16,8">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="system.ltx" Style="{StaticResource TitleText}" />
+                <TextBlock Text="{loc:Loc tabSystemHint}" Style="{StaticResource CaptionText}"
+                           Margin="10,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+            <TextBlock Text="{loc:Loc systemSubtitle}" Style="{StaticResource CaptionText}"
+                       Margin="0,3,0,0" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="16,0,16,16" MaxWidth="1100" HorizontalAlignment="Stretch">
+                <!-- Редактор и добавление include -->
+                <Border Style="{StaticResource SystemCard}">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ComboBox Grid.Column="0" Height="30" Margin="0,0,6,0"
+                                      ItemsSource="{Binding SystemLtx.AvailableLtxPaths}"
+                                      SelectedItem="{Binding SystemLtx.SelectedIncludePath,
+                                          Mode=TwoWay}"
+                                      ToolTip="{loc:Loc systemAddInclude}" />
+                            <WrapPanel Grid.Column="1" Orientation="Horizontal">
+                                <Button Content="{loc:Loc systemAddInclude}"
+                                        Style="{StaticResource ToolbarButton}"
+                                        Command="{Binding SystemLtx.AddIncludeCommand}" Margin="0,0,4,0" />
+                                <Button Content="＋ include"
+                                        Style="{StaticResource ToolbarButton}"
+                                        Command="{Binding SystemLtx.AddIncludePlaceholderCommand}" Margin="0,0,4,0" />
+                                <Button Content="{loc:Loc scriptDownload}"
+                                        Style="{StaticResource ToolbarButton}"
+                                        Command="{Binding SystemLtx.DownloadSystemCommand}" />
+                            </WrapPanel>
+                        </Grid>
+                        <TextBox Style="{StaticResource SystemEditor}" Height="260"
+                                 Text="{Binding SystemLtx.SystemText, Mode=TwoWay,
+                                     UpdateSourceTrigger=PropertyChanged}"
+                                 TextWrapping="NoWrap"
+                                 SpellCheck.IsEnabled="False" />
+                    </StackPanel>
+                </Border>
+
+
+                <!-- Секции system.ltx -->
+                <Border Style="{StaticResource SystemCard}">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,6">
+                            <TextBlock Text="{Binding SystemLtx.SectionsTitle}"
+                                       Style="{StaticResource SystemTitle}" />
+                            <Button Content="{loc:Loc systemSectionAdd}"
+                                    Style="{StaticResource ToolbarButton}"
+                                    HorizontalAlignment="Right"
+                                    Command="{Binding SystemLtx.AddSectionCommand}" />
+                        </Grid>
+                        <TextBlock Text="{loc:Loc systemNoSections}"
+                                   Style="{StaticResource CaptionText}"
+                                   Visibility="{Binding SystemLtx.HasSections,
+                                       Converter={StaticResource InverseBoolToVisibility}}" />
+                        <ItemsControl ItemsSource="{Binding SystemLtx.Sections}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="{DynamicResource BorderBevel}"
+                                            BorderThickness="1" CornerRadius="6" Margin="0,0,0,4"
+                                            Padding="4">
+                                        <StackPanel>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <Button Grid.Column="0" Command="{Binding ToggleCommand}"
+                                                        Style="{StaticResource SystemIncludeButton}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding Marker}" Margin="0,0,6,0"
+                                                                   Foreground="{DynamicResource TextAccent}" />
+                                                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                                                        <TextBlock Text="{Binding CountText}" Margin="8,0,0,0"
+                                                                   Foreground="{DynamicResource TextMuted}" />
+                                                    </StackPanel>
+                                                </Button>
+                                                <Button Grid.Column="1" Content="{Binding AddEntryText}"
+                                                        Style="{StaticResource ToolbarButton}"
+                                                        FontSize="10" Padding="6,2" MinHeight="22"
+                                                        Command="{Binding AddEntryCommand}" />
+                                            </Grid>
+                                            <ItemsControl ItemsSource="{Binding Entries}" Margin="18,4,0,2"
+                                                          Visibility="{Binding IsExpanded,
+                                                              Converter={StaticResource BoolToVisibility}}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Margin="0,1">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="2*" />
+                                                                <ColumnDefinition Width="3*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBox Grid.Column="0" Margin="0,0,4,0"
+                                                                     FontSize="11" Height="26" Padding="4,0"
+                                                                     Text="{Binding Key, Mode=TwoWay,
+                                                                         UpdateSourceTrigger=PropertyChanged}" />
+                                                            <TextBox Grid.Column="1" Margin="0,0,4,0"
+                                                                     FontSize="11" Height="26" Padding="4,0"
+                                                                     Text="{Binding Value, Mode=TwoWay,
+                                                                         UpdateSourceTrigger=PropertyChanged}" />
+                                                            <Button Grid.Column="2" Content="✕"
+                                                                    Style="{StaticResource ToolbarButton}"
+                                                                    Foreground="{StaticResource SystemRed}"
+                                                                    Padding="6,0" MinHeight="24"
+                                                                    Command="{Binding RemoveCommand}" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+
+                <!-- Инклюды -->
+                <Border Style="{StaticResource SystemCard}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding SystemLtx.IncludesTitle}"
+                                   Style="{StaticResource SystemTitle}" />
+                        <TextBlock Text="{loc:Loc systemNoIncludes}"
+                                   Style="{StaticResource CaptionText}"
+                                   Visibility="{Binding SystemLtx.HasIncludes,
+                                       Converter={StaticResource InverseBoolToVisibility}}" />
+                        <ItemsControl ItemsSource="{Binding SystemLtx.Includes}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,1" ToolTip="{Binding ToolTip}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Status}" Margin="0,0,6,0">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground"
+                                                            Value="{StaticResource SystemGreen}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsBroken}" Value="True">
+                                                            <Setter Property="Foreground"
+                                                                    Value="{StaticResource SystemRed}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <Button Grid.Column="1" Content="{Binding Text}"
+                                                Style="{StaticResource SystemIncludeButton}"
+                                                ToolTip="{Binding Path}"
+                                                Command="{Binding DataContext.SystemLtx.PreviewIncludeCommand,
+                                                    RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}" />
+                                        <Button Grid.Column="2" Content="{Binding FixText}"
+                                                Style="{StaticResource ToolbarButton}"
+                                                FontSize="10" Padding="5,1" Margin="4,0,0,0"
+                                                Visibility="{Binding HasSuggestion,
+                                                    Converter={StaticResource BoolToVisibility}}"
+                                                Command="{Binding DataContext.SystemLtx.FixIncludeCommand,
+                                                    RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}" />
+                                        <Button Grid.Column="3" Content="{Binding CommentText}"
+                                                Style="{StaticResource ToolbarButton}"
+                                                FontSize="10" Padding="5,1" Margin="4,0,0,0"
+                                                Command="{Binding DataContext.SystemLtx.CommentIncludeCommand,
+                                                    RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}" />
+                                        <TextBlock Grid.Column="4" Text="{Binding Line}" Margin="6,0,0,0"
+                                                   Style="{StaticResource CaptionText}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Предпросмотр файла инклюда -->
+                <Border Style="{StaticResource SystemCard}"
+                        Visibility="{Binding SystemLtx.HasIncludePreview,
+                            Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding SystemLtx.IncludePreview.Path}"
+                                   Style="{StaticResource SystemMono}" FontWeight="Bold" />
+                        <TextBox Text="{Binding SystemLtx.IncludePreview.Preview, Mode=OneWay}"
+                                 IsReadOnly="True" AcceptsReturn="True" Height="180" Margin="0,4,0,0"
+                                 TextWrapping="NoWrap" HorizontalScrollBarVisibility="Auto"
+                                 VerticalScrollBarVisibility="Auto" FontSize="11" />
+                    </StackPanel>
+                </Border>
+
+
+                <!-- Дерево и SVG инклюдов -->
+                <Border Style="{StaticResource SystemCard}">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Loc systemIncludeTree}"
+                                   Style="{StaticResource SystemTitle}" />
+                        <TextBlock Text="{loc:Loc systemNoIncludes}"
+                                   Style="{StaticResource CaptionText}"
+                                   Visibility="{Binding SystemLtx.HasIncludeTree,
+                                       Converter={StaticResource InverseBoolToVisibility}}" />
+                        <ItemsControl ItemsSource="{Binding SystemLtx.IncludeRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Text}" Padding="{Binding Indent}" FontSize="11">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource MonoText}">
+                                                <Setter Property="Foreground"
+                                                        Value="{DynamicResource TextMuted}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Cyclic}" Value="True">
+                                                        <Setter Property="Foreground"
+                                                                Value="{StaticResource SystemRed}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Found}" Value="False">
+                                                        <Setter Property="Foreground"
+                                                                Value="{StaticResource SystemAmber}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <controls:SvgPreview Source="{Binding SystemLtx.IncludeGraphSvg}"
+                                             MaxHeight="320" Margin="0,8,0,0"
+                                             Visibility="{Binding SystemLtx.HasIncludeSvg,
+                                                 Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                </Border>
+
+
+                <!-- Карта секций во всех загруженных файлах -->
+                <Border Style="{StaticResource SystemCard}">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,6">
+                            <TextBlock Text="{Binding SystemLtx.SectionMapTitle}"
+                                       Style="{StaticResource SystemTitle}" />
+                            <TextBox Width="220" Height="26" HorizontalAlignment="Right"
+                                     FontSize="11" Padding="4,0"
+                                     Text="{Binding SystemLtx.SectionSearch, Mode=TwoWay,
+                                         UpdateSourceTrigger=PropertyChanged}"
+                                     ToolTip="{loc:Loc systemSearchSection}" />
+                        </Grid>
+                        <TextBlock Text="{loc:Loc systemNoLoadedSections}"
+                                   Style="{StaticResource CaptionText}"
+                                   Visibility="{Binding SystemLtx.HasSectionRows,
+                                       Converter={StaticResource InverseBoolToVisibility}}" />
+                        <ScrollViewer MaxHeight="190" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding SystemLtx.SectionRows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Text}" ToolTip="{Binding ToolTip}"
+                                                   FontSize="11" Padding="0,1">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource MonoText}">
+                                                    <Setter Property="Foreground"
+                                                            Value="{DynamicResource TextMuted}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsDuplicate}" Value="True">
+                                                            <Setter Property="Foreground"
+                                                                    Value="{StaticResource SystemAmber}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </StackPanel>
+                </Border>
+
+
+                <!-- Проверки LTX и script_binding -->
+                <Border Style="{StaticResource SystemCard}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding SystemLtx.ChecksTitle}"
+                                   Style="{StaticResource SystemTitle}" />
+                        <TextBlock Text="{loc:Loc systemNoIssues}"
+                                   Style="{StaticResource CaptionText}"
+                                   Visibility="{Binding SystemLtx.HasIssues,
+                                       Converter={StaticResource InverseBoolToVisibility}}" />
+                        <ItemsControl ItemsSource="{Binding SystemLtx.Issues}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Text}"
+                                                   TextWrapping="Wrap" FontSize="11">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground"
+                                                            Value="{StaticResource SystemAmber}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsError}" Value="True">
+                                                            <Setter Property="Foreground"
+                                                                    Value="{StaticResource SystemRed}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <Button Grid.Column="1" Content="↗"
+                                                Style="{StaticResource ToolbarButton}"
+                                                Padding="6,0" MinHeight="22"
+                                                ToolTip="{loc:Loc scriptJumpDefinition}"
+                                                Visibility="{Binding CanJump,
+                                                    Converter={StaticResource BoolToVisibility}}"
+                                                Command="{Binding DataContext.SystemLtx.JumpToBindingCommand,
+                                                    RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+
+                <!-- Файлы LTX (gamedata) -->
+                <Border Style="{StaticResource SystemCard}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding SystemLtx.LtxFilesTitle}"
+                                   Style="{StaticResource SystemTitle}" />
+                        <ListBox ItemsSource="{Binding SystemLtx.LtxFileRows}"
+                                 SelectedItem="{Binding SystemLtx.SelectedLtxFile, Mode=TwoWay}"
+                                 MaxHeight="150">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Path}" FontSize="11"
+                                               TextTrimming="CharacterEllipsis" />
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <Grid Margin="0,6,0,0"
+                              Visibility="{Binding SystemLtx.HasSelectedLtxFile,
+                                  Converter={StaticResource BoolToVisibility}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding SystemLtx.SelectedLtxFile.Path}"
+                                       Style="{StaticResource SystemMono}" VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis" />
+                            <WrapPanel Grid.Column="1" Orientation="Horizontal">
+                                <Button Content="{loc:Loc scriptDownload}"
+                                        Style="{StaticResource ToolbarButton}"
+                                        Command="{Binding SystemLtx.DownloadLtxFileCommand}"
+                                        CommandParameter="{Binding SystemLtx.SelectedLtxFile}" />
+                                <Button Content="{loc:Loc scriptDelete}"
+                                        Style="{StaticResource ToolbarButton}"
+                                        Foreground="{StaticResource SystemRed}"
+                                        Command="{Binding SystemLtx.DeleteLtxFileCommand}"
+                                        CommandParameter="{Binding SystemLtx.SelectedLtxFile}" />
+                            </WrapPanel>
+                        </Grid>
+                        <TextBox Style="{StaticResource SystemEditor}" Height="180" Margin="0,4,0,0"
+                                 Visibility="{Binding SystemLtx.HasSelectedLtxFile,
+                                     Converter={StaticResource BoolToVisibility}}"
+                                 Text="{Binding SystemLtx.SelectedLtxFile.Text, Mode=TwoWay,
+                                     UpdateSourceTrigger=PropertyChanged}"
+                                 SpellCheck.IsEnabled="False" />
+                    </StackPanel>
+                </Border>
+
+                <!-- all.spawn -->
+                <Border Style="{StaticResource SystemCard}">
+                    <StackPanel>
+                        <Grid>
+                            <TextBlock Text="{loc:Loc systemSpawn}" Style="{StaticResource SystemTitle}" />
+                            <Button Content="{loc:Loc systemLoadSpawn}"
+                                    Style="{StaticResource ToolbarButton}"
+                                    HorizontalAlignment="Right"
+                                    Command="{Binding SystemLtx.LoadSpawnCommand}" />
+                        </Grid>
+                        <TextBlock Text="{Binding SystemLtx.SpawnSummary}"
+                                   Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                                   Visibility="{Binding SystemLtx.HasSpawn,
+                                       Converter={StaticResource BoolToVisibility}}" />
+                        <ScrollViewer MaxHeight="160" VerticalScrollBarVisibility="Auto"
+                                      Visibility="{Binding SystemLtx.HasSpawn,
+                                          Converter={StaticResource BoolToVisibility}}">
+                            <ItemsControl ItemsSource="{Binding SystemLtx.SpawnSections}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" FontSize="11"
+                                                   Style="{StaticResource MonoText}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
+

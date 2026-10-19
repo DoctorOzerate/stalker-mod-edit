@@ -75,11 +75,11 @@ public partial class ScriptsView : UserControl
     {
         if (_scripts?.Selected == null) return;
 
-        _scripts.CaretIndex = EditorBox.CaretIndex;
+        _scripts.CaretIndex = EditorBox.CaretOffset;
         _scripts.SelectionLength = EditorBox.SelectionLength;
     }
 
-    /// <summary>Нумерация строк прокручивается вместе с `TextBox` (внутренний `ScrollViewer`).</summary>
+    /// <summary>Нумерация строк прокручивается вместе с редактором (внутренний `ScrollViewer`).</summary>
     private void OnEditorScrollChanged(object sender, ScrollChangedEventArgs e) =>
         LineNumbersScroll.ScrollToVerticalOffset(e.VerticalOffset);
 
@@ -88,7 +88,7 @@ public partial class ScriptsView : UserControl
     {
         if (_scripts?.Selected == null) return;
 
-        _scripts.CaretIndex = EditorBox.CaretIndex;
+        _scripts.CaretIndex = EditorBox.CaretOffset;
         _scripts.SelectionLength = EditorBox.SelectionLength;
     }
 
@@ -101,9 +101,8 @@ public partial class ScriptsView : UserControl
         Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
         {
             EditorBox.Focus();
-            var offset = Math.Clamp(e.Offset, 0, EditorBox.Text.Length);
-            EditorBox.Select(offset, 0);
-            EditorBox.ScrollToLine(Math.Max(0, e.Line));
+            EditorBox.SelectRange(e.Offset, 0);
+            EditorBox.ScrollToEditorLine(Math.Max(0, e.Line));
         }));
     }
 }

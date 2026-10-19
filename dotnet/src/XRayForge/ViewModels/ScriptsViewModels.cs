@@ -136,26 +136,3 @@ public sealed class ScriptFunctionViewModel
     public string Tooltip => LocalizationSource.Get("scriptJumpDefinition") + " · " +
         LocalizationSource.Get("scriptCalls") + ": " + Calls;
 }
-
-/// <summary>Строка предпросмотра: подсветка, маркер блока и заглушка свёрнутого диапазона.</summary>
-public sealed class ScriptPreviewViewModel
-{
-    public ScriptPreviewViewModel(ScriptPreviewLine line, string summary = "")
-    {
-        Line = line.Line;
-        Number = line.Number;
-        Marker = line.Marker;
-        IsBlockStart = line.IsBlockStart;
-        IsSummary = line.IsSummary;
-        Tokens = IsSummary
-            ? new List<LuaToken> { new() { Text = summary, Cls = LuaTokenClasses.Comment } }
-            : line.Tokens;
-    }
-
-    public string Number { get; }
-    public int Line { get; }
-    public string Marker { get; }
-    public bool IsBlockStart { get; }
-    public bool IsSummary { get; }
-    public List<LuaToken> Tokens { get; }
-}

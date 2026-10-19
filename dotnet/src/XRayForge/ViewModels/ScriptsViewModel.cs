@@ -39,7 +39,6 @@ public sealed partial class ScriptsViewModel : ObservableObject
     private readonly ShellViewModel _shell;
     private readonly IDialogService _dialogs;
     private readonly Dictionary<ScriptFile, ScriptItemViewModel> _items = new();
-    private readonly HashSet<int> _collapsed = new();
 
     private Project _project = ProjectMigration.Empty();
 
@@ -55,7 +54,6 @@ public sealed partial class ScriptsViewModel : ObservableObject
         Diagnostics = new ObservableCollection<ScriptDiagnosticViewModel>();
         Edges = new ObservableCollection<ScriptEdgeViewModel>();
         Functions = new ObservableCollection<ScriptFunctionViewModel>();
-        Preview = new ObservableCollection<ScriptPreviewViewModel>();
     }
 
     // --- коллекции ---
@@ -66,7 +64,6 @@ public sealed partial class ScriptsViewModel : ObservableObject
     public ObservableCollection<ScriptDiagnosticViewModel> Diagnostics { get; }
     public ObservableCollection<ScriptEdgeViewModel> Edges { get; }
     public ObservableCollection<ScriptFunctionViewModel> Functions { get; }
-    public ObservableCollection<ScriptPreviewViewModel> Preview { get; }
 
     /// <summary>Справочник API движка для вставки в курсор (`LUA_API`).</summary>
     public IReadOnlyList<string> EngineApi => LuaCatalog.Api;
@@ -80,9 +77,6 @@ public sealed partial class ScriptsViewModel : ObservableObject
     [ObservableProperty] private string _replaceText = "";
     [ObservableProperty] private bool _sortByName;
     [ObservableProperty] private ScriptItemViewModel? _selected;
-
-    /// <summary>`scriptViewMode`: просмотр с подсветкой и свёрткой вместо `TextBox`.</summary>
-    [ObservableProperty] private bool _isViewMode;
 
     /// <summary>`scriptDiff`: две колонки «оригинал / текущая».</summary>
     [ObservableProperty] private bool _showDiff;
@@ -108,10 +102,6 @@ public sealed partial class ScriptsViewModel : ObservableObject
     public bool HasScripts => TotalCount > 0;
     public bool HasVisibleScripts => Scripts.Count > 0;
     public bool HasSelection => Selected != null;
-    public bool IsEditMode => !IsViewMode;
-    public string ViewModeText => IsViewMode
-        ? LocalizationSource.Get("scriptEdit")
-        : LocalizationSource.Get("scriptView");
     public string CountText => LocalizationSource.Get("scriptFiles") + ": " +
         TotalCount.ToString(CultureInfo.CurrentCulture) +
         (string.IsNullOrWhiteSpace(Search) ? "" :
@@ -140,7 +130,6 @@ public sealed partial class ScriptsViewModel : ObservableObject
         _project = project ?? ProjectMigration.Empty();
         _project.Scripts ??= new List<ScriptFile>();
         _items.Clear();
-        _collapsed.Clear();
         Selected = null;
 
         foreach (var file in Files)
@@ -159,7 +148,6 @@ public sealed partial class ScriptsViewModel : ObservableObject
     {
         foreach (var item in _items.Values) item.RaiseMeta();
         RefreshDerived();
-        OnPropertyChanged(nameof(ViewModeText));
         OnPropertyChanged(nameof(CountText));
         OnPropertyChanged(nameof(NoScriptsText));
         OnPropertyChanged(nameof(DiagnosticsTitle));
@@ -192,18 +180,10 @@ public sealed partial class ScriptsViewModel : ObservableObject
         if (oldValue != null) oldValue.IsSelected = false;
         if (newValue != null) newValue.IsSelected = true;
 
-        _collapsed.Clear();
         ShowDiff = false;
         RefreshDerived();
         OnPropertyChanged(nameof(HasSelection));
         OnPropertyChanged(nameof(CanShowDiff));
-    }
-
-    partial void OnIsViewModeChanged(bool value)
-    {
-        OnPropertyChanged(nameof(IsEditMode));
-        OnPropertyChanged(nameof(ViewModeText));
-        RefreshDerived();
     }
 
     partial void OnShowDiffChanged(bool value) => OnPropertyChanged(nameof(CanShowDiff));
@@ -221,6 +201,24 @@ public sealed partial class ScriptsViewModel : ObservableObject
         Selected = item;
     }
 
+    /// <summary>Выбрать скрипт по имени файла (переход из проверки `script_binding`).</summary>
+    public bool SelectByName(string? fileName)
+    {
+        var wanted = (fileName ?? "").Trim();
+        if (wanted.Length == 0) return false;
+        var baseName = Path.GetFileName(wanted);
+        var item = Scripts.FirstOrDefault(x =>
+            string.Equals(x.Name, wanted, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(Path.GetFileName(x.Name), baseName, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(Path.GetFileName(x.Path), baseName, StringComparison.OrdinalIgnoreCase));
+        if (item == null) return false;
+
+        Search = "";
+        RefreshList();
+        SelectItem(item);
+        return true;
+    }
+
     /// <summary>Правка в `TextBox`: проект уже обновлён карточкой, пересчитать анализ.</summary>
     internal void OnScriptTextChanged(ScriptItemViewModel item)
     {
@@ -236,7 +234,6 @@ public sealed partial class ScriptsViewModel : ObservableObject
         Diagnostics.Clear();
         Edges.Clear();
         Functions.Clear();
-        Preview.Clear();
         UnusedText = "";
 
         var item = Selected;
@@ -275,16 +272,6 @@ public sealed partial class ScriptsViewModel : ObservableObject
             (BracketsBalanced ? "✓" : "✗ " + brackets.Open.ToString(CultureInfo.CurrentCulture) +
                 "/" + brackets.Close.ToString(CultureInfo.CurrentCulture));
 
-        if (IsViewMode && text.Length > 0)
-        {
-            foreach (var line in ScriptsCatalog.BuildPreview(text, _collapsed))
-            {
-                var summary = string.Format(CultureInfo.CurrentCulture,
-                    LocalizationSource.Get("scriptCollapsedLines"), line.CollapsedCount);
-                Preview.Add(new ScriptPreviewViewModel(line, summary));
-            }
-        }
-
         NotifyDerived();
     }
 
@@ -295,15 +282,6 @@ public sealed partial class ScriptsViewModel : ObservableObject
         OnPropertyChanged(nameof(HasCallGraph));
         OnPropertyChanged(nameof(CallGraphTitle));
         OnPropertyChanged(nameof(CanShowDiff));
-    }
-
-    /// <summary>Свернуть/развернуть функцию в режиме просмотра (`toggleBlock`).</summary>
-    [RelayCommand]
-    private void ToggleBlock(ScriptPreviewViewModel? row)
-    {
-        if (row == null || !row.IsBlockStart) return;
-        if (!_collapsed.Remove(row.Line)) _collapsed.Add(row.Line);
-        RefreshDerived();
     }
 
     // --- операции со списком (newScript / renameScript / deleteScript) ---
@@ -405,21 +383,12 @@ public sealed partial class ScriptsViewModel : ObservableObject
         _shell.OnSectionEdited(message);
     }
 
-    /// <summary>Переключить редактор/просмотр с подсветкой (`toggleViewMode` в JS).</summary>
-    [RelayCommand]
-    private void ToggleViewMode()
-    {
-        IsViewMode = !IsViewMode;
-        if (IsViewMode) ShowDiff = false;
-    }
-
     /// <summary>Переключить сравнение «оригинал / текущая» (`toggleDiff` в JS).</summary>
     [RelayCommand]
     private void ToggleDiff()
     {
         if (!CanShowDiff) return;
         ShowDiff = !ShowDiff;
-        if (ShowDiff) IsViewMode = false;
     }
 
     // --- форматирование и вставка (formatCurrentScript / insertLuaAtCursor) ---
@@ -483,7 +452,6 @@ public sealed partial class ScriptsViewModel : ObservableObject
             _items[definition.File] = item;
         }
 
-        IsViewMode = false;
         SelectItem(item);
 
         var offset = ScriptsCatalog.LineOffset(item.Text, definition.Line);

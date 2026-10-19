@@ -8,6 +8,7 @@ using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using XRayForge.Core.Dialogs;
+using XRayForge.Core.Export;
 using XRayForge.Core.Gamedata;
 using XRayForge.Core.Graph;
 using XRayForge.Core.Ltx;
@@ -15,6 +16,7 @@ using XRayForge.Core.Models;
 using XRayForge.Core.Projects;
 using XRayForge.Core.Storage;
 using XRayForge.Core.Ui;
+using XRayForge.Core.Validation;
 using XRayForge.Localization;
 using XRayForge.Services;
 using XRayForge.Views;
@@ -68,6 +70,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Items = new ItemsViewModel(this, _dialogs);
         Icons = new IconsViewModel(this, _dialogs);
         Scripts = new ScriptsViewModel(this, _dialogs);
+        SystemLtx = new SystemLtxViewModel(this, _dialogs);
+        Languages = new LanguagesViewModel(this, _dialogs);
+        Quests = new QuestsViewModel(this, _dialogs);
 
         _autosave = new AutosaveService(
             _store,
@@ -104,6 +109,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Items.Attach(_project);
         Icons.Attach(_project);
         Scripts.Attach(_project);
+        SystemLtx.Attach(_project);
+        Languages.Attach(_project);
+        Quests.Attach(_project);
 
         RefreshProjectView();
     }
@@ -149,6 +157,15 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
     /// <summary>Вкладка «Скрипты» (этап 7.4): Lua-редактор (`ScriptsTab.js`).</summary>
     public ScriptsViewModel Scripts { get; }
+
+    /// <summary>Вкладка «system.ltx» (этап 7.5): инклюды, секции и проверки (`SystemTab.js`).</summary>
+    public SystemLtxViewModel SystemLtx { get; }
+
+    /// <summary>Вкладка «Языки» (этап 7.6): string_table (`LanguagesTab.js`).</summary>
+    public LanguagesViewModel Languages { get; }
+
+    /// <summary>Вкладка «Квесты» (этап 7.7): game_tasks/task_manager (`QuestsTab.js`).</summary>
+    public QuestsViewModel Quests { get; }
 
     public Project Project => _project;
 
@@ -512,6 +529,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         // Атласы и коллекции иконок пересобираются вместе с проектом.
         Icons.Attach(_project);
         Scripts.Attach(_project);
+        SystemLtx.Attach(_project);
+        Languages.Attach(_project);
+        Quests.Attach(_project);
 
         RefreshProjectView();
     }
@@ -535,6 +555,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Items.Attach(_project);
         Icons.Attach(_project);
         Scripts.Attach(_project);
+        SystemLtx.Attach(_project);
+        Languages.Attach(_project);
+        Quests.Attach(_project);
         RefreshProjectView();
     }
 
@@ -668,6 +691,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Characters.RefreshLocalization();
         Items.RefreshLocalization();
         Scripts.RefreshLocalization();
+        SystemLtx.RefreshLocalization();
+        Languages.RefreshLocalization();
+        Quests.RefreshLocalization();
 
         // До открытия проекта серия не показывается (иначе в пустом старте висел бы «SoC · …»).
         SeriesLabel = IsProjectOpen ? GameSeriesCatalog.Label(_project.Series) : "";
@@ -823,6 +849,17 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     private void OpenHelp()
     {
         var window = new HelpWindow { Owner = ActiveWindow };
+        window.ShowDialog();
+    }
+
+    /// <summary>Встроенная самопроверка проекта (этап 8): отчёт открывается в отдельном окне.</summary>
+    [RelayCommand]
+    private void RunSelfCheck()
+    {
+        if (!IsProjectOpen) return;
+        var report = ProjectSelfCheck.Run(_project);
+        StatusText = LocalizationSource.Get("selfCheck") + ": " + report.Summary;
+        var window = new SelfCheckWindow(report) { Owner = ActiveWindow };
         window.ShowDialog();
     }
 
@@ -992,6 +1029,41 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         if (hint.Contains("чистое небо") || hint.Contains("clear sky"))
             return "cs";
         return GameSeriesCatalog.DefaultSeries;
+    }
+
+    /// <summary>
+    /// Игровой ZIP (этап 8): диалоги, string_table, квесты, system.ltx и скрипты
+    /// упаковываются в `gamedata/...` без записи в каталог.
+    /// </summary>
+    [RelayCommand]
+    private void ExportGameZip()
+    {
+        if (!IsProjectOpen) return;
+        var files = GamePackage.TextFiles(_project);
+        if (files.Count == 0)
+        {
+            StatusText = LocalizationSource.Get("gameExportEmpty");
+            return;
+        }
+
+        var name = string.Concat((_project.ProjectName ?? "project")
+            .Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
+        var path = _dialogs.PickSaveFile(LocalizationSource.Get("exportGameZip"),
+            name + "_gamedata.zip", "ZIP (*.zip)|*.zip|*.*|*.*", _store.SavesDirectory);
+        if (string.IsNullOrWhiteSpace(path)) return;
+
+        try
+        {
+            var count = GamePackage.WriteZip(_project, path);
+            StatusText = LocalizationSource.Get("gameZipExported") + " · " +
+                count.ToString(CultureInfo.CurrentCulture);
+            StatusDetail = path;
+        }
+        catch (Exception e)
+        {
+            StatusText = LocalizationSource.Get("gameExportFailed");
+            StatusDetail = e.Message;
+        }
     }
 
     /// <summary>
@@ -1259,6 +1331,23 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     /// </summary>
     public void OnSectionEdited(string? statusText = null, string? statusDetail = null) =>
         OnGraphEdited(statusText, statusDetail);
+
+    /// <summary>Переход из проверки `script_binding` к файлу скрипта (`jumpToScript` в JS).</summary>
+    public void JumpToScriptBinding(string? binding)
+    {
+        if (string.IsNullOrWhiteSpace(binding)) return;
+        var dot = binding.IndexOf('.');
+        var file = (dot >= 0 ? binding[..dot] : binding) + ".script";
+        if (Scripts.SelectByName(file))
+        {
+            ActivateTabById(NavigationCatalog.ScriptsId);
+            StatusText = LocalizationSource.Get("scriptDefinition") + ": " + binding;
+        }
+        else
+        {
+            StatusText = LocalizationSource.Get("systemScriptMissing") + ": " + file;
+        }
+    }
 
     /// <summary>
     /// На вкладке «Иконки» сменились атлас или размер ячеек. «Предметы» держат

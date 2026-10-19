@@ -51,6 +51,51 @@ public class LocalizationTests
     }
 
     [Fact]
+    public void Stage7_tabs_and_stage8_keys_exist_in_both_locales()
+    {
+        var keys = new[]
+        {
+            "tabSystemHint", "systemSubtitle", "systemAddInclude", "systemIncludeAdded",
+            "systemIncludeFixed", "systemDownload", "systemDownloaded", "systemDownloadFailed",
+            "systemIncludeTitle", "systemBroken", "systemNoIncludes", "systemIncludeFound",
+            "systemIncludeMissing", "systemIncludeFix", "systemIncludeComment", "systemIncludeTree",
+            "systemSections", "systemSectionAdd", "systemSectionName", "systemSectionCreated",
+            "systemNoSections", "systemAddEntry", "systemRemoveEntry", "systemSectionsLoaded",
+            "systemSearchSection", "systemNoLoadedSections", "systemChecks", "systemNoIssues",
+            "systemLtxFiles", "systemDeleteFile", "systemFileDeleted", "systemLoadSpawn",
+            "systemSpawn", "systemSpawnFailed", "systemScriptMissing",
+            "tabLanguagesHint", "languagesSubtitle", "languagesSummaryMode", "languagesByLocale",
+            "languagesIssues", "languagesStats", "languagesTables", "languagesCoverage",
+            "languagesTableCreated", "languagesDeleteTable", "languagesTableDeleted",
+            "languagesImport", "languagesImportEmpty", "languagesImported", "languagesEntryAdded",
+            "languagesEntryRemoved", "languagesAddEntry", "languagesLocale", "languagesName",
+            "languagesUsage", "languagesUsedIn", "languagesUnused", "languagesEmpty",
+            "languagesSummary", "languagesNoRows", "languagesId",
+            "tabQuestsHint", "questsSubtitle", "questsTotal", "questsCop", "questsChecks",
+            "questsRelated", "questsDiff", "questsChains", "questsPreview", "questsCopFormat",
+            "questsSocFormat", "questsEditor", "questsNoMatches", "questsEmpty", "questsPriority",
+            "questsTitleField", "questsTextField", "questsComplete", "questsFail", "questsIcon",
+            "questsLocation", "questsArticle", "questsObjectives", "questsObjectivesShort",
+            "questsDuplicate", "questsMatches", "questsAddObjective", "questsAddCondition",
+            "questsCreated", "questsDeleted", "questsNoTranslationIds", "questsBound",
+            "questsExportXml", "questsExportLtx", "questsExported", "questsExportFailed",
+            "questsNoTaskManager", "questsCreate", "questsTemplate", "questsSearch",
+            "questsSortName", "questsSortPrior", "questsCategory", "questsTitle", "questsText",
+            "questsRequires", "questsReward", "questsNoObjectives", "questsNoConditions",
+            "questsBind", "questsDeleteQuest", "questsPreviewLocale", "questsStoryline",
+            "questsRewardMoney", "questsRewardItem", "questsRewardTreasure", "questsCondlist",
+            "questsCompleteInfo", "questsFailInfo", "questsNoRelated", "questsDependencies",
+            "questsChainsEmpty", "exportGameZip", "gameZipExported", "selfCheck", "selfCheckHint"
+        };
+
+        foreach (var key in keys)
+        {
+            Assert.NotEqual(key, LocalizationService.Tr("ru", key));
+            Assert.NotEqual(key, LocalizationService.Tr("en", key));
+        }
+    }
+
+    [Fact]
     public void Scripts_tab_keys_exist_in_both_locales()
     {
         var keys = new[]

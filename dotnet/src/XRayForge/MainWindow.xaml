@@ -34,6 +34,15 @@
         <DataTemplate x:Key="ScriptsTemplate">
             <views:ScriptsView />
         </DataTemplate>
+        <DataTemplate x:Key="SystemLtxTemplate">
+            <views:SystemLtxView />
+        </DataTemplate>
+        <DataTemplate x:Key="LanguagesTemplate">
+            <views:LanguagesView />
+        </DataTemplate>
+        <DataTemplate x:Key="QuestsTemplate">
+            <views:QuestsView />
+        </DataTemplate>
     </Window.Resources>
 
     <Grid>
@@ -189,6 +198,8 @@
                         <WrapPanel>
                             <Button Content="{loc:Loc checkGraph}" Command="{Binding CheckGraphCommand}" Margin="0,0,8,8" />
                             <Button Content="{loc:Loc gameExportDialogs}" Command="{Binding ExportGameDialogsCommand}" Margin="0,0,8,8" />
+                            <Button Content="{loc:Loc exportGameZip}" Command="{Binding ExportGameZipCommand}" Margin="0,0,8,8" />
+                            <Button Content="{loc:Loc selfCheck}" Command="{Binding RunSelfCheckCommand}" Margin="0,0,8,8" />
                             <Button Content="{loc:Loc scanGamedata}" Command="{Binding ScanGamedataCommand}" Margin="0,0,8,8" />
                             <Button Content="{loc:Loc exportXml}" Command="{Binding ExportXmlCommand}" Margin="0,0,8,8"
                                     Visibility="{Binding IsDebugBuild, Converter={StaticResource BoolToVisibility}}" />
@@ -217,6 +228,15 @@
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding ActiveTab.Id}" Value="scripts">
                                     <Setter Property="ContentTemplate" Value="{StaticResource ScriptsTemplate}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding ActiveTab.Id}" Value="system">
+                                    <Setter Property="ContentTemplate" Value="{StaticResource SystemLtxTemplate}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding ActiveTab.Id}" Value="languages">
+                                    <Setter Property="ContentTemplate" Value="{StaticResource LanguagesTemplate}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding ActiveTab.Id}" Value="quests">
+                                    <Setter Property="ContentTemplate" Value="{StaticResource QuestsTemplate}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
