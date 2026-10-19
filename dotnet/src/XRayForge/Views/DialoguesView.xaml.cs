@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -21,7 +22,66 @@ namespace XRayForge.Views;
 /// </summary>
 public partial class DialoguesView : UserControl
 {
-    public DialoguesView() => InitializeComponent();
+    private DialogueGraphViewModel? _graph;
+
+    public DialoguesView()
+    {
+        InitializeComponent();
+        Loaded += OnViewLoaded;
+        Unloaded += OnViewUnloaded;
+    }
+
+    /// <summary>
+    /// Ширина панели палитры хранится в настройках, а сворачивание уводит её в полосу `w-9`.
+    /// Следим за VM, чтобы колонка получала актуальную ширину.
+    /// </summary>
+    private void OnViewLoaded(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not ShellViewModel shell) return;
+
+        if (_graph != null) _graph.PropertyChanged -= OnGraphPropertyChanged;
+        _graph = shell.DialogueGraph;
+        _graph.PropertyChanged += OnGraphPropertyChanged;
+        RestorePaletteWidth();
+    }
+
+    private void OnViewUnloaded(object sender, RoutedEventArgs e)
+    {
+        if (_graph == null) return;
+
+        _graph.PropertyChanged -= OnGraphPropertyChanged;
+        _graph = null;
+    }
+
+    private void OnGraphPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is not (nameof(DialogueGraphViewModel.ShowsPalettePanel)
+            or nameof(DialogueGraphViewModel.PalettePanelWidth))) return;
+
+        RestorePaletteWidth();
+    }
+
+    /// <summary>Применить ширину левой панели (сохранённую или узкую полосу `w-9`).</summary>
+    private void RestorePaletteWidth()
+    {
+        if (_graph == null) return;
+
+        // Свёрнутая палитра — полоса `w-9`: у колонки должен быть свой минимум.
+        PalettePanelColumn.MinWidth = _graph.ShowsPalettePanel ? 180 : GraphRailWidth;
+        PalettePanelColumn.Width = new GridLength(_graph.PalettePanelWidth);
+    }
+
+    /// <summary>Ширина свёрнутой палитры (`w-9` = 36px), как у <see cref="DialogueGraphViewModel.PalettePanelWidth"/>.</summary>
+    private const double GraphRailWidth = 36;
+
+    /// <summary>Перетаскивание `GridSplitter`: запомнить ширину панели палитры в настройках.</summary>
+    private void OnPaletteSplitterDragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        if (DataContext is not ShellViewModel shell) return;
+
+        shell.DialogueGraph.SetPalettePanelWidth(PalettePanelColumn.ActualWidth);
+        shell.SavePaneWidths();
+    }
 
     /// <summary>Размер холста нужен «В центр»: сдвиг считает `GraphEditing.CenterPan`.</summary>
     private void OnCanvasSizeChanged(object sender, SizeChangedEventArgs e)

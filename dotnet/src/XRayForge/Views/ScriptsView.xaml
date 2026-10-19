@@ -1,0 +1,607 @@
+<UserControl x:Class="XRayForge.Views.ScriptsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:XRayForge.Localization">
+    <!--
+      Вкладка «Скрипты» (этап 7.4, порт `ScriptsTab.js`): слева создание/открытие/сканирование,
+      поиск с заменой и карточки .script/.lua; справа редактор с подсветкой, режим просмотра
+      со свёрткой функций, справочник API и сниппеты, проверка Lua, граф вызовов и diff.
+    -->
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="ScriptRed" Color="#F87171" />
+        <SolidColorBrush x:Key="ScriptGreen" Color="#4ADE80" />
+        <SolidColorBrush x:Key="ScriptAmber" Color="#FBBF24" />
+        <SolidColorBrush x:Key="ScriptBlue" Color="#60A5FA" />
+        <SolidColorBrush x:Key="ScriptPurple" Color="#C084FC" />
+
+        <Style x:Key="ScriptLabel" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="0,0,0,3" />
+        </Style>
+
+        <Style x:Key="ScriptCardTitle" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+        </Style>
+
+        <!-- Карточка списка (`rounded-xl border p-3 ui.card ui.hover`) -->
+        <Style x:Key="ScriptCardButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Card" CornerRadius="10" Padding="8" BorderThickness="1"
+                                Background="{DynamicResource SurfaceRaised}"
+                                BorderBrush="{DynamicResource BorderBevel}">
+                            <ContentPresenter HorizontalAlignment="Stretch" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Card" Property="BorderBrush"
+                                        Value="{DynamicResource BorderStrong}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Card" Property="Background"
+                                        Value="{DynamicResource SurfaceSunken}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Акцентная рамка выбранной карточки (поверх шаблона) -->
+        <Style x:Key="ScriptSelectedBadge" TargetType="Border">
+            <Setter Property="BorderThickness" Value="0" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter Property="BorderThickness" Value="1" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentMain}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Кнопка-маркер свёртки функции в предпросмотре -->
+        <Style x:Key="ScriptMarkerButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="MinWidth" Value="14" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource TextAccent}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <!-- Токен подсветки Lua: цвет по классу (`comment/string/number/keyword/bracket`) -->
+        <Style x:Key="ScriptToken" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Cls}" Value="comment">
+                    <Setter Property="Foreground" Value="{StaticResource ScriptGreen}" />
+                    <Setter Property="FontStyle" Value="Italic" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Cls}" Value="string">
+                    <Setter Property="Foreground" Value="{StaticResource ScriptAmber}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Cls}" Value="number">
+                    <Setter Property="Foreground" Value="{StaticResource ScriptBlue}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Cls}" Value="keyword">
+                    <Setter Property="Foreground" Value="{StaticResource ScriptPurple}" />
+                    <Setter Property="FontWeight" Value="SemiBold" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Cls}" Value="bracket">
+                    <Setter Property="Foreground" Value="{DynamicResource TextAccent}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Строка предпросмотра: заглушка свёртки — приглушённая -->
+        <Style x:Key="ScriptPreviewRow" TargetType="Grid">
+            <Setter Property="Background" Value="Transparent" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSummary}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource SurfaceSunken}" />
+                    <Setter Property="Opacity" Value="0.85" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsBlockStart}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource SurfacePanel}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="ScriptInput" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Padding" Value="6,0" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="ScriptCombo" TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Margin" Value="0,6,0,0" />
+        </Style>
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="16,14,16,10">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding ActiveTab.Glyph}" Margin="0,0,8,0"
+                           Foreground="{Binding ActiveTab.AccentHex, Converter={StaticResource HexBrush}}" />
+                <TextBlock Text="{Binding ActiveTab.Label}" Style="{StaticResource TitleText}" />
+                <TextBlock Text="{Binding ActiveTab.Hotkey}" Style="{StaticResource CaptionText}"
+                           Margin="10,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+            <TextBlock Text="{loc:Loc tabScriptsHint}" Style="{StaticResource CaptionText}" Margin="0,2,0,0" />
+        </StackPanel>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="ScriptsPaneColumn" Width="288" MinWidth="180" MaxWidth="900" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="*" MinWidth="360" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Левая панель (`aside w-72 border-r p-4 overflow-auto`) -->
+            <Border Grid.Column="0" Background="{DynamicResource SurfacePanel}"
+                    BorderBrush="{DynamicResource BorderBevel}" BorderThickness="0,1,1,0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="12">
+                        <Button Content="{loc:Loc scriptCreate}" Style="{StaticResource AccentButton}"
+                                Command="{Binding Scripts.CreateScriptCommand}" />
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Content="{loc:Loc scriptOpen}"
+                                    Style="{StaticResource ToolbarButton}"
+                                    Command="{Binding Scripts.OpenFileCommand}" Margin="0,0,3,0" />
+                            <Button Grid.Column="1" Content="{loc:Loc scriptScan}"
+                                    Style="{StaticResource ToolbarButton}"
+                                    Command="{Binding Scripts.ScanFilesCommand}" Margin="3,0,0,0" />
+                        </Grid>
+                        <TextBlock Text="{Binding Scripts.CountText}" Style="{StaticResource CaptionText}"
+                                   Margin="0,8,0,0" TextWrapping="Wrap" />
+
+                        <TextBlock Text="{loc:Loc scriptSearch}" Style="{StaticResource ScriptCardTitle}"
+                                   Margin="0,12,0,4" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0"
+                                     Text="{Binding Scripts.Search, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource ScriptInput}" />
+                            <CheckBox Grid.Column="1" Content="{loc:Loc scriptSortByName}"
+                                      IsChecked="{Binding Scripts.SortByName}" Margin="6,0,0,0"
+                                      VerticalAlignment="Center" />
+                        </Grid>
+                        <TextBlock Text="{loc:Loc scriptReplaceWith}" Style="{StaticResource ScriptLabel}"
+                                   Margin="0,8,0,3" />
+                        <TextBox Text="{Binding Scripts.ReplaceText, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource ScriptInput}" />
+                        <Button Content="{loc:Loc scriptReplaceAll}" Style="{StaticResource ToolbarButton}"
+                                Margin="0,6,0,0" Command="{Binding Scripts.ReplaceAllCommand}" />
+
+                        <Border Background="{DynamicResource SurfaceRaised}" BorderThickness="0"
+                                CornerRadius="8" Padding="8" Margin="0,12,0,0">
+                            <StackPanel>
+                                <TextBlock Text="{loc:Loc scriptApi}" Style="{StaticResource ScriptCardTitle}" />
+                                <ComboBox ItemsSource="{Binding Scripts.EngineApi}"
+                                          SelectedItem="{Binding Scripts.SelectedApi}"
+                                          Style="{StaticResource ScriptCombo}" IsTextSearchEnabled="True" />
+                                <Button Content="{loc:Loc scriptInsertApi}"
+                                        Style="{StaticResource ToolbarButton}" Margin="0,4,0,0"
+                                        Command="{Binding Scripts.InsertApiCommand}"
+                                        CommandParameter="{Binding Scripts.SelectedApi}" />
+                                <TextBlock Text="{loc:Loc scriptSnippets}"
+                                           Style="{StaticResource ScriptCardTitle}" Margin="0,8,0,0" />
+                                <ComboBox ItemsSource="{Binding Scripts.Snippets}"
+                                          SelectedItem="{Binding Scripts.SelectedSnippet}"
+                                          DisplayMemberPath="Label" Style="{StaticResource ScriptCombo}" />
+                                <Button Content="{loc:Loc scriptInsertSnippet}"
+                                        Style="{StaticResource ToolbarButton}" Margin="0,4,0,0"
+                                        Command="{Binding Scripts.InsertSnippetCommand}" />
+                            </StackPanel>
+                        </Border>
+                        <ItemsControl ItemsSource="{Binding Scripts.Scripts}" Margin="0,12,0,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource ScriptCardButton}"
+                                            Command="{Binding SelectCommand}">
+                                        <Border Style="{StaticResource ScriptSelectedBadge}" CornerRadius="8">
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+                                                <Grid Grid.Row="0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                               FontWeight="SemiBold"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding ChangeMark}"
+                                                               FontSize="10" Margin="4,0,0,0"
+                                                               Foreground="{StaticResource ScriptAmber}" />
+                                                </Grid>
+                                                <TextBlock Grid.Row="1" Text="{Binding Subtitle}"
+                                                           Style="{StaticResource CaptionText}" FontSize="10"
+                                                           TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                                                <StackPanel Grid.Row="2" Orientation="Horizontal"
+                                                            Margin="0,6,0,0" HorizontalAlignment="Right">
+                                                    <Button Content="{loc:Loc scriptRename}"
+                                                            Style="{StaticResource ToolbarButton}"
+                                                            FontSize="10" Padding="6,2" MinHeight="22"
+                                                            Command="{Binding RenameCommand}" />
+                                                    <Button Content="{loc:Loc scriptDelete}"
+                                                            Style="{StaticResource ToolbarButton}"
+                                                            FontSize="10" Padding="6,2" MinHeight="22"
+                                                            Margin="4,0,0,0"
+                                                            Foreground="{StaticResource ScriptRed}"
+                                                            Command="{Binding DeleteCommand}" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Text="{Binding Scripts.NoScriptsText}"
+                                   Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                                   Margin="0,8,0,0"
+                                   Visibility="{Binding Scripts.HasVisibleScripts,
+                                       Converter={StaticResource InverseBoolToVisibility}}" />
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Style="{StaticResource PaneSplitter}"
+                          ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"
+                          DragCompleted="OnPaneSplitterDragCompleted" />
+
+            <ScrollViewer Grid.Column="2" x:Name="DetailsScroll"
+                          VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <Grid Margin="16">
+                    <TextBlock Text="{loc:Loc scriptEditorEmpty}" Style="{StaticResource CaptionText}"
+                               VerticalAlignment="Top"
+                               Visibility="{Binding Scripts.HasSelection,
+                                   Converter={StaticResource InverseBoolToVisibility}}" />
+
+                    <StackPanel DataContext="{Binding Scripts}" MaxWidth="1000"
+                                HorizontalAlignment="Stretch"
+                                Visibility="{Binding HasSelection,
+                                    Converter={StaticResource BoolToVisibility}}">
+                        <!-- Шапка: имя, путь и действия файла -->
+                        <Border Background="{DynamicResource SurfaceRaised}"
+                                BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
+                                CornerRadius="10" Padding="12" Margin="0,0,0,10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="{Binding Selected.Name}" FontSize="17"
+                                               FontWeight="Bold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Selected.Subtitle}"
+                                               Style="{StaticResource CaptionText}" Margin="0,3,0,0"
+                                               TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                                <WrapPanel Grid.Column="1" Orientation="Horizontal"
+                                           VerticalAlignment="Top">
+                                    <Button Content="{loc:Loc scriptDownload}"
+                                            Style="{StaticResource ToolbarButton}"
+                                            Command="{Binding DownloadCommand}" Margin="0,0,4,4" />
+                                    <Button Content="{Binding ViewModeText}"
+                                            Style="{StaticResource ToolbarButton}"
+                                            Command="{Binding ToggleViewModeCommand}" Margin="0,0,4,4" />
+                                    <Button Content="{loc:Loc scriptFormat}"
+                                            Style="{StaticResource ToolbarButton}"
+                                            Command="{Binding FormatScriptCommand}" Margin="0,0,4,4" />
+                                    <Button Content="{loc:Loc scriptDiff}"
+                                            Style="{StaticResource ToolbarButton}"
+                                            Command="{Binding ToggleDiffCommand}" Margin="0,0,0,4"
+                                            IsEnabled="{Binding CanShowDiff}" />
+                                </WrapPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- Статус проверки: скобки, диагностика и число функций -->
+                        <WrapPanel Margin="0,0,0,8">
+                            <Border Background="{DynamicResource SurfacePanel}" CornerRadius="8"
+                                    Padding="8,3" Margin="0,0,6,4">
+                                <TextBlock Text="{Binding BracketsText}" FontSize="11">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground"
+                                                    Value="{DynamicResource TextSecondary}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding BracketsBalanced}"
+                                                             Value="False">
+                                                    <Setter Property="Foreground"
+                                                            Value="{StaticResource ScriptRed}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Border>
+                            <Border Background="{DynamicResource SurfacePanel}" CornerRadius="8"
+                                    Padding="8,3" Margin="0,0,6,4">
+                                <TextBlock Text="{Binding DiagnosticsTitle}" FontSize="11" />
+                            </Border>
+                            <Border Background="{DynamicResource SurfacePanel}" CornerRadius="8"
+                                    Padding="8,3" Margin="0,0,0,4">
+                                <TextBlock Text="{Binding CallGraphTitle}" FontSize="11" />
+                            </Border>
+                        </WrapPanel>
+
+                        <Grid>
+                            <!-- Редактор (`textarea` + нумерация строк) -->
+                            <Border BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
+                                    CornerRadius="10" ClipToBounds="True">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsViewMode}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding ShowDiff}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Grid Background="{DynamicResource SurfaceSunken}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0"
+                                            Background="{DynamicResource SurfacePanel}"
+                                            BorderBrush="{DynamicResource BorderBevel}"
+                                            BorderThickness="0,0,1,0">
+                                        <ScrollViewer x:Name="LineNumbersScroll"
+                                                      VerticalScrollBarVisibility="Hidden"
+                                                      HorizontalScrollBarVisibility="Disabled"
+                                                      Height="480" IsHitTestVisible="False">
+                                            <TextBlock Text="{Binding Selected.LineNumbers}"
+                                                       FontFamily="Consolas" FontSize="12"
+                                                       Foreground="{DynamicResource TextMuted}"
+                                                       TextAlignment="Right" Padding="6,8,6,8" />
+                                        </ScrollViewer>
+                                    </Border>
+                                    <TextBox Grid.Column="1" x:Name="EditorBox"
+                                             Text="{Binding Selected.Text,
+                                                 UpdateSourceTrigger=PropertyChanged}"
+                                             AcceptsReturn="True" AcceptsTab="True"
+                                             FontFamily="Consolas" FontSize="12"
+                                             Foreground="{DynamicResource TextPrimary}"
+                                             Background="Transparent" BorderThickness="0"
+                                             Padding="8" Height="480"
+                                             TextWrapping="NoWrap"
+                                             VerticalScrollBarVisibility="Auto"
+                                             HorizontalScrollBarVisibility="Auto"
+                                             VerticalContentAlignment="Top"
+                                             SpellCheck.IsEnabled="False"
+                                             SelectionChanged="OnEditorSelectionChanged"
+                                             TextChanged="OnEditorTextChanged" />
+                                </Grid>
+                            </Border>
+
+                            <!-- Просмотр с подсветкой и свёрткой функций (`renderScriptPreview`) -->
+                            <Border BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
+                                    CornerRadius="10" ClipToBounds="True"
+                                    Background="{DynamicResource SurfaceSunken}">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding IsViewMode}" Value="True" />
+                                                    <Condition Binding="{Binding ShowDiff}" Value="False" />
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </MultiDataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                              VerticalScrollBarVisibility="Disabled">
+                                    <ItemsControl ItemsSource="{Binding Preview}" Padding="0,4">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Style="{StaticResource ScriptPreviewRow}">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="46" />
+                                                        <ColumnDefinition Width="16" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="{Binding Number}"
+                                                               FontFamily="Consolas" FontSize="12"
+                                                               Foreground="{DynamicResource TextMuted}"
+                                                               TextAlignment="Right" Margin="0,0,6,0" />
+                                                    <Button Grid.Column="1" Content="{Binding Marker}"
+                                                            Style="{StaticResource ScriptMarkerButton}"
+                                                            VerticalAlignment="Top"
+                                                            Visibility="{Binding IsBlockStart,
+                                                                Converter={StaticResource BoolToVisibility}}"
+                                                            Command="{Binding DataContext.Scripts.ToggleBlockCommand,
+                                                                RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}" />
+                                                    <ItemsControl Grid.Column="2"
+                                                                  ItemsSource="{Binding Tokens}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <WrapPanel Orientation="Horizontal" />
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock Text="{Binding Text}"
+                                                                           xml:space="preserve"
+                                                                           Style="{StaticResource ScriptToken}" />
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Border>
+
+                            <!-- Сравнение с исходником (`renderScriptDiff`) -->
+                            <Grid>
+                                <Grid.Style>
+                                    <Style TargetType="Grid">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ShowDiff}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Grid.Style>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0" BorderThickness="1" CornerRadius="10"
+                                        BorderBrush="{DynamicResource BorderBevel}"
+                                        Background="{DynamicResource SurfaceSunken}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding SourceCaption}"
+                                                   Style="{StaticResource ScriptCardTitle}"
+                                                   Margin="8,6,8,4" />
+                                        <TextBox Text="{Binding Selected.Original, Mode=OneWay}"
+                                                 IsReadOnly="True" AcceptsReturn="True"
+                                                 FontFamily="Consolas" FontSize="12"
+                                                 Background="Transparent" BorderThickness="0"
+                                                 Padding="8" Height="420" TextWrapping="NoWrap"
+                                                 VerticalScrollBarVisibility="Auto"
+                                                 HorizontalScrollBarVisibility="Auto" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Column="2" BorderThickness="1" CornerRadius="10"
+                                        BorderBrush="{DynamicResource BorderBevel}"
+                                        Background="{DynamicResource SurfaceSunken}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding CurrentCaption}"
+                                                   Style="{StaticResource ScriptCardTitle}"
+                                                   Margin="8,6,8,4" />
+                                        <TextBox Text="{Binding Selected.Text, Mode=OneWay}"
+                                                 IsReadOnly="True" AcceptsReturn="True"
+                                                 FontFamily="Consolas" FontSize="12"
+                                                 Background="Transparent" BorderThickness="0"
+                                                 Padding="8" Height="420" TextWrapping="NoWrap"
+                                                 VerticalScrollBarVisibility="Auto"
+                                                 HorizontalScrollBarVisibility="Auto" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </Grid>
+
+                        <!-- Диагностика Lua -->
+                        <Border Background="{DynamicResource SurfacePanel}"
+                                BorderBrush="{DynamicResource BorderBevel}"
+                                BorderThickness="1" CornerRadius="10" Padding="10" Margin="0,10,0,0"
+                                Visibility="{Binding HasDiagnostics,
+                                    Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel>
+                                <TextBlock Text="{Binding DiagnosticsTitle}"
+                                           Style="{StaticResource ScriptCardTitle}" />
+                                <ItemsControl ItemsSource="{Binding Diagnostics}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Text}" FontFamily="Consolas"
+                                                       FontSize="11" TextWrapping="Wrap" Margin="0,1">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground"
+                                                                Value="{StaticResource ScriptAmber}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsError}"
+                                                                         Value="True">
+                                                                <Setter Property="Foreground"
+                                                                        Value="{StaticResource ScriptRed}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                        <!-- Функции и граф вызовов -->
+                        <Border Background="{DynamicResource SurfacePanel}"
+                                BorderBrush="{DynamicResource BorderBevel}"
+                                BorderThickness="1" CornerRadius="10" Padding="10" Margin="0,10,0,0"
+                                Visibility="{Binding HasCallGraph,
+                                    Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel>
+                                <TextBlock Text="{Binding CallGraphTitle}"
+                                           Style="{StaticResource ScriptCardTitle}" />
+                                <ItemsControl ItemsSource="{Binding Functions}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel Orientation="Horizontal" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Content="{Binding Text}"
+                                                    ToolTip="{Binding Tooltip}"
+                                                    Style="{StaticResource ToolbarButton}"
+                                                    FontSize="10" Padding="6,2" Margin="0,0,4,4"
+                                                    Command="{Binding DataContext.Scripts.JumpFunctionCommand,
+                                                        RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding Name}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <TextBlock Text="{Binding UnusedText}"
+                                           Style="{StaticResource CaptionText}"
+                                           TextWrapping="Wrap" Margin="0,2,0,0" />
+                                <ItemsControl ItemsSource="{Binding Edges}" Margin="0,4,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Text}"
+                                                       Style="{StaticResource MonoText}"
+                                                       FontSize="11" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>

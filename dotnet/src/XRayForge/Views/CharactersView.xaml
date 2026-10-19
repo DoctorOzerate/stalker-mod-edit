@@ -223,10 +223,11 @@
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="288" />
-                <ColumnDefinition Width="*" />
+                <ColumnDefinition x:Name="CharactersPaneColumn" Width="288" MinWidth="180" MaxWidth="900" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="*" MinWidth="320" />
             </Grid.ColumnDefinitions>
-            <!-- Левая панель (`aside w-72 border-r p-4 overflow-auto`) -->
+            <!-- Левая панель (`aside w-72 border-r p-4 overflow-auto`), ширина меняется `GridSplitter` -->
             <Border Grid.Column="0" Background="{DynamicResource SurfacePanel}"
                     BorderBrush="{DynamicResource BorderBevel}" BorderThickness="0,1,1,0">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -302,7 +303,10 @@
                 </ScrollViewer>
             </Border>
 
-            <ScrollViewer x:Name="DetailsScroll" Grid.Column="1" VerticalScrollBarVisibility="Auto"
+            <GridSplitter Grid.Column="1" Style="{StaticResource PaneSplitter}"
+                          DragCompleted="OnPaneSplitterDragCompleted" />
+
+            <ScrollViewer x:Name="DetailsScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Margin="20" MaxWidth="768" HorizontalAlignment="Stretch">
                     <!-- `game_relations`: чипы community, матрица отношений и монстры -->

@@ -53,6 +53,34 @@ public class StorageTests : IDisposable
     }
 
     [Fact]
+    public void Program_settings_pane_widths_round_trip_and_clamp()
+    {
+        var store = new AppDataService(_root);
+        store.SaveProgramSettings(new ProgramSettings
+        {
+            CharactersPaneWidth = 320,
+            ItemsPaneWidth = 500,
+            IconsPaneWidth = 100,
+            DialoguesPaneWidth = 950,
+            ScriptsPaneWidth = 120
+        });
+
+        var loaded = store.LoadProgramSettings();
+        Assert.Equal(320, loaded.CharactersPaneWidth);
+        Assert.Equal(500, loaded.ItemsPaneWidth);
+        Assert.Equal(180, loaded.IconsPaneWidth); // clamp 180..900
+        Assert.Equal(900, loaded.DialoguesPaneWidth);
+        Assert.Equal(180, loaded.ScriptsPaneWidth);
+
+        var defaults = new ProgramSettings();
+        Assert.Equal(288, defaults.CharactersPaneWidth);
+        Assert.Equal(288, defaults.ItemsPaneWidth);
+        Assert.Equal(320, defaults.IconsPaneWidth);
+        Assert.Equal(250, defaults.DialoguesPaneWidth);
+        Assert.Equal(288, defaults.ScriptsPaneWidth);
+    }
+
+    [Fact]
     public void Program_settings_fall_back_to_defaults_for_unknown_values()
     {
         var normalized = ProgramSettingsCatalog.Normalize(new ProgramSettings

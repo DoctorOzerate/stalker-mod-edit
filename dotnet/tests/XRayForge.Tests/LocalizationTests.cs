@@ -49,4 +49,32 @@ public class LocalizationTests
             Assert.NotEqual(key, LocalizationService.Tr("en", key));
         }
     }
+
+    [Fact]
+    public void Scripts_tab_keys_exist_in_both_locales()
+    {
+        var keys = new[]
+        {
+            "tabScriptsHint", "scriptApi", "scriptCreate", "scriptOpen", "scriptScan",
+            "scriptSearch", "scriptSortByName", "scriptReplaceWith", "scriptReplaceAll",
+            "scriptSnippets", "scriptInsertApi", "scriptInsertSnippet", "scriptRename",
+            "scriptDelete", "scriptDownload", "scriptFormat", "scriptDiff", "scriptEdit",
+            "scriptView", "scriptEditorEmpty", "scriptEmpty", "scriptNoMatches",
+            "scriptFiles", "scriptFound", "scriptLinesShort", "scriptModified",
+            "scriptLine", "scriptBrackets", "scriptCheckLua", "scriptCallGraph",
+            "scriptFunctions", "scriptFunctionsShort", "scriptCalls", "scriptJumpDefinition",
+            "scriptDefinition", "scriptDefinitionMissing", "scriptSource", "scriptCurrent",
+            "scriptUnused", "scriptDuplicateFunction", "scriptCollapsedLines",
+            "scriptCreated", "scriptRenamed", "scriptDeleted", "scriptNameExists",
+            "scriptFileName", "scriptNothingReplaced", "scriptReplaced", "scriptFormatted",
+            "scriptInserted", "scriptAlreadyAdded", "scriptOpened", "scriptOpenFailed",
+            "scriptScanned", "scriptSaved", "scriptSaveFailed"
+        };
+
+        foreach (var key in keys)
+        {
+            Assert.NotEqual(key, LocalizationService.Tr("ru", key));
+            Assert.NotEqual(key, LocalizationService.Tr("en", key));
+        }
+    }
 }

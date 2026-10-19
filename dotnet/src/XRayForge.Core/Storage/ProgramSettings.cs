@@ -30,6 +30,21 @@ public sealed class ProgramSettings
     [JsonPropertyName("editorFontSize")] public double EditorFontSize { get; set; } = 13;
     [JsonPropertyName("hotkeys")] public Dictionary<string, string> Hotkeys { get; set; } = ProgramSettingsCatalog.DefaultHotkeys();
 
+    /// <summary>Ширина панели списка на вкладке «Персонажи» (`GridSplitter`).</summary>
+    [JsonPropertyName("charactersPaneWidth")] public double CharactersPaneWidth { get; set; } = 288;
+
+    /// <summary>Ширина панели списка на вкладке «Предметы» (`GridSplitter`).</summary>
+    [JsonPropertyName("itemsPaneWidth")] public double ItemsPaneWidth { get; set; } = 288;
+
+    /// <summary>Ширина панели списка на вкладке «Иконки» (`GridSplitter`).</summary>
+    [JsonPropertyName("iconsPaneWidth")] public double IconsPaneWidth { get; set; } = 320;
+
+    /// <summary>Ширина левой панели (палитра и список диалогов) на вкладке «Диалоги».</summary>
+    [JsonPropertyName("dialoguesPaneWidth")] public double DialoguesPaneWidth { get; set; } = 250;
+
+    /// <summary>Ширина панели списка на вкладке «Скрипты» (`GridSplitter`).</summary>
+    [JsonPropertyName("scriptsPaneWidth")] public double ScriptsPaneWidth { get; set; } = 288;
+
     /// <summary>Поля вне модели (сохраняются как есть).</summary>
     [JsonExtensionData] public Dictionary<string, JsonElement>? Extra { get; set; }
 }
@@ -99,9 +114,18 @@ public static class ProgramSettingsCatalog
             SyncUrl = source.SyncUrl is { Length: > 0 } url ? url : "",
             EditorFontSize = Math.Min(24, Math.Max(10, fontSize)),
             Hotkeys = hotkeys,
+            CharactersPaneWidth = NormalizePaneWidth(source.CharactersPaneWidth, 288),
+            ItemsPaneWidth = NormalizePaneWidth(source.ItemsPaneWidth, 288),
+            IconsPaneWidth = NormalizePaneWidth(source.IconsPaneWidth, 320),
+            DialoguesPaneWidth = NormalizePaneWidth(source.DialoguesPaneWidth, 250),
+            ScriptsPaneWidth = NormalizePaneWidth(source.ScriptsPaneWidth, 288),
             Extra = source.Extra
         };
     }
+
+    /// <summary>Ширина панели списка: конечное число в разумных пределах (`180…900`).</summary>
+    private static double NormalizePaneWidth(double value, double fallback) =>
+        double.IsFinite(value) ? Math.Min(900, Math.Max(180, value)) : fallback;
 
     /// <summary>Как `loadProgramSettings`: JSON → настройки; ошибка разбора → значения по умолчанию.</summary>
     public static ProgramSettings FromJson(string? json)

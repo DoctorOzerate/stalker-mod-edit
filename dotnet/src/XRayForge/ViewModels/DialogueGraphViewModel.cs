@@ -219,6 +219,18 @@ public sealed partial class DialogueGraphViewModel : ObservableObject
     /// <summary>Вместо левой панели — узкая полоса с кнопкой разворота.</summary>
     public bool ShowsPaletteRail => !ShowsPalettePanel;
 
+    /// <summary>Ширина левой панели: сохранённая в настройках или узкая полоса (`w-9`).</summary>
+    public double PalettePanelWidth => ShowsPalettePanel ? _shell.Settings.DialoguesPaneWidth : 36;
+
+    /// <summary>Сохранить ширину левой панели после перетаскивания `GridSplitter`.</summary>
+    public void SetPalettePanelWidth(double width)
+    {
+        if (!ShowsPalettePanel || !double.IsFinite(width)) return;
+
+        _shell.DialoguesPaneWidth = width;
+        OnPropertyChanged(nameof(PalettePanelWidth));
+    }
+
     /// <summary>Панель свойств показана целиком (`!propsCollapsed &amp;&amp; !canvasFull`).</summary>
     public bool ShowsPropsPanel => !PropsCollapsed && !CanvasFull;
 
@@ -239,6 +251,7 @@ public sealed partial class DialogueGraphViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(ShowsPalettePanel));
         OnPropertyChanged(nameof(ShowsPaletteRail));
+        OnPropertyChanged(nameof(PalettePanelWidth));
         OnPropertyChanged(nameof(ShowsPropsPanel));
         OnPropertyChanged(nameof(ShowsPropsRail));
         OnPropertyChanged(nameof(CanvasFullGlyph));

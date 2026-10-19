@@ -1,7 +1,9 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Threading;
+using XRayForge.ViewModels;
 
 namespace XRayForge.Views;
 
@@ -15,11 +17,34 @@ public partial class CharactersView : UserControl
     public CharactersView()
     {
         InitializeComponent();
-        Loaded += (_, _) => ResetDetailsScroll();
+        Loaded += (_, _) =>
+        {
+            RestorePaneWidth();
+            ResetDetailsScroll();
+        };
         IsVisibleChanged += (_, e) =>
         {
-            if (e.NewValue is true) ResetDetailsScroll();
+            if (e.NewValue is not true) return;
+
+            RestorePaneWidth();
+            ResetDetailsScroll();
         };
+    }
+
+    /// <summary>Восстановить сохранённую ширину левой панели списка.</summary>
+    private void RestorePaneWidth()
+    {
+        if (DataContext is ShellViewModel shell)
+            CharactersPaneColumn.Width = new GridLength(shell.CharactersPaneWidth);
+    }
+
+    /// <summary>Перетаскивание `GridSplitter`: запомнить ширину панели в настройках.</summary>
+    private void OnPaneSplitterDragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        if (DataContext is not ShellViewModel shell) return;
+
+        shell.CharactersPaneWidth = CharactersPaneColumn.ActualWidth;
+        shell.SavePaneWidths();
     }
 
     /// <summary>

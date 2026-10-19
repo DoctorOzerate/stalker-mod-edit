@@ -31,6 +31,9 @@
         <DataTemplate x:Key="IconsTemplate">
             <views:IconsView />
         </DataTemplate>
+        <DataTemplate x:Key="ScriptsTemplate">
+            <views:ScriptsView />
+        </DataTemplate>
     </Window.Resources>
 
     <Grid>
@@ -211,6 +214,9 @@
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding ActiveTab.Id}" Value="icons">
                                     <Setter Property="ContentTemplate" Value="{StaticResource IconsTemplate}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding ActiveTab.Id}" Value="scripts">
+                                    <Setter Property="ContentTemplate" Value="{StaticResource ScriptsTemplate}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>

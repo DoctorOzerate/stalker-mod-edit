@@ -199,14 +199,15 @@
 
         <Grid Grid.Row="1" Margin="16,0,16,16">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="PalettePanelColumn" Width="250" MinWidth="180" MaxWidth="900" />
                 <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" MinWidth="320" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
             <!-- Панель управления графом (в JS `aside w-72`): палитра узлов и список диалогов — этап 6.5,
-                 кнопки свёртывания палитры и полноэкранного холста — шаг 6.6 -->
-            <Border Grid.Column="0" Style="{StaticResource PanelBorder}" Width="250" Margin="0,0,10,0"
+                 кнопки свёртывания палитры и полноэкранного холста — шаг 6.6; ширина — `GridSplitter` -->
+            <Border Grid.Column="0" Style="{StaticResource PanelBorder}"
                     Visibility="{Binding DialogueGraph.ShowsPalettePanel, Converter={StaticResource BoolToVisibility}}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
@@ -346,7 +347,7 @@
             <!-- Свёрнутая палитра (`paletteCollapsed || canvasFull`): узкая полоса `w-9` с единственной
                  кнопкой разворота. Как и в JS, кнопка снимает только `paletteCollapsed`, поэтому под
                  полноэкранным холстом полоса остаётся до выхода из него. -->
-            <Border Grid.Column="0" Style="{StaticResource GraphRail}" Margin="0,0,10,0"
+            <Border Grid.Column="0" Style="{StaticResource GraphRail}"
                     Visibility="{Binding DialogueGraph.ShowsPaletteRail, Converter={StaticResource BoolToVisibility}}">
                 <StackPanel Margin="0,12,0,0" HorizontalAlignment="Center">
                     <Button Style="{StaticResource GraphPanelButton}" Content="›"
@@ -355,8 +356,13 @@
                 </StackPanel>
             </Border>
 
+            <!-- Разделитель панели палитры и холста; в свёрнутом виде уступает место полосе `w-9` -->
+            <GridSplitter Grid.Column="1" Style="{StaticResource PaneSplitter}"
+                          Visibility="{Binding DialogueGraph.ShowsPalettePanel, Converter={StaticResource BoolToVisibility}}"
+                          DragCompleted="OnPaletteSplitterDragCompleted" />
+
             <!-- Холст редактора: связи и карточки в transform-слое (`translate(pan) scale(zoom)`) -->
-            <Border x:Name="CanvasHost" Grid.Column="1" Style="{StaticResource PanelBorder}" Padding="0"
+            <Border x:Name="CanvasHost" Grid.Column="2" Style="{StaticResource PanelBorder}" Padding="0"
                     ClipToBounds="True" SizeChanged="OnCanvasSizeChanged">
                 <Grid>
                     <!-- Бесконечный фон холста: сетка живёт в viewport и не заканчивается квадратом.
@@ -651,7 +657,7 @@
             <!-- Панель свойств реплики (в JS `aside w-80`): роль, phraseId, text_id и переводы,
                  «Действия и условия» (метаданные), voice_id, expression и поля действия.
                  Кнопка «›» сворачивает панель (`propsCollapsed`), шаг 6.6. -->
-            <Border Grid.Column="2" Style="{StaticResource PanelBorder}" Width="300" Margin="10,0,0,0"
+            <Border Grid.Column="3" Style="{StaticResource PanelBorder}" Width="300" Margin="10,0,0,0"
                     Visibility="{Binding DialogueGraph.ShowsPropsPanel, Converter={StaticResource BoolToVisibility}}">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -828,7 +834,7 @@
             </Border>
 
             <!-- Свёрнутая панель свойств (`propsCollapsed || canvasFull`): `w-9` с кнопкой разворота -->
-            <Border Grid.Column="2" Style="{StaticResource GraphRail}" Margin="10,0,0,0"
+            <Border Grid.Column="3" Style="{StaticResource GraphRail}" Margin="10,0,0,0"
                     Visibility="{Binding DialogueGraph.ShowsPropsRail, Converter={StaticResource BoolToVisibility}}">
                 <StackPanel Margin="0,12,0,0" HorizontalAlignment="Center">
                     <Button Style="{StaticResource GraphPanelButton}" Content="‹"

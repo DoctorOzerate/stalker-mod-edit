@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Threading;
 using XRayForge.Controls;
 using XRayForge.ViewModels;
@@ -17,14 +18,37 @@ public partial class IconsView : UserControl
     public IconsView()
     {
         InitializeComponent();
-        Loaded += (_, _) => ResetScroll();
+        Loaded += (_, _) =>
+        {
+            RestorePaneWidth();
+            ResetScroll();
+        };
         IsVisibleChanged += (_, e) =>
         {
-            if (e.NewValue is true) ResetScroll();
+            if (e.NewValue is not true) return;
+
+            RestorePaneWidth();
+            ResetScroll();
         };
     }
 
     private IconsViewModel? Model => (DataContext as ShellViewModel)?.Icons;
+
+    /// <summary>Восстановить сохранённую ширину левой панели списка.</summary>
+    private void RestorePaneWidth()
+    {
+        if (DataContext is ShellViewModel shell)
+            IconsPaneColumn.Width = new GridLength(shell.IconsPaneWidth);
+    }
+
+    /// <summary>Перетаскивание `GridSplitter`: запомнить ширину панели в настройках.</summary>
+    private void OnPaneSplitterDragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        if (DataContext is not ShellViewModel shell) return;
+
+        shell.IconsPaneWidth = IconsPaneColumn.ActualWidth;
+        shell.SavePaneWidths();
+    }
 
     /// <summary>`onSelectRegion`: обновить прямоугольник выделения.</summary>
     private void OnAtlasSelectionChanged(object sender, AtlasSelectionEventArgs e) =>

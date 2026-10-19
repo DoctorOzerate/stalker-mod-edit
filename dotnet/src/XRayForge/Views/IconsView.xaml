@@ -230,10 +230,12 @@
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="320" />
-            <ColumnDefinition Width="*" />
+            <ColumnDefinition x:Name="IconsPaneColumn" Width="320" MinWidth="180" MaxWidth="900" />
+            <ColumnDefinition Width="10" />
+            <ColumnDefinition Width="*" MinWidth="320" />
         </Grid.ColumnDefinitions>
 
+        <!-- Список иконок, ширина меняется `GridSplitter` -->
         <Border Grid.Column="0" Background="{DynamicResource SurfacePanel}"
                 BorderBrush="{DynamicResource BorderBevel}" BorderThickness="0,0,1,0">
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -422,8 +424,11 @@
             </ScrollViewer>
         </Border>
 
+        <GridSplitter Grid.Column="1" Style="{StaticResource PaneSplitter}"
+                      DragCompleted="OnPaneSplitterDragCompleted" />
+
         <!-- Основная область: холст атласа, пустое состояние/ошибка и лупа -->
-        <Grid Grid.Column="1">
+        <Grid Grid.Column="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />

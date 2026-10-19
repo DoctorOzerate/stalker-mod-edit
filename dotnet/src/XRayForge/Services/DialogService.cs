@@ -21,6 +21,9 @@ public interface IDialogService
     /// <summary>Открытие файла с произвольным фильтром (импорт `game_dialogs*.xml`).</summary>
     string? PickOpenFile(string title, string filter, string? initialDirectory);
 
+    /// <summary>Открытие нескольких файлов (сканирование Lua-скриптов).</summary>
+    IReadOnlyList<string> PickOpenFiles(string title, string filter, string? initialDirectory);
+
     /// <summary>Открытие файла `.json` (импорт проекта/настроек).</summary>
     string? PickOpenJson(string title, string? initialDirectory);
 
@@ -66,6 +69,19 @@ public sealed class WpfDialogService : IDialogService
         };
         SetInitialDirectory(dialog, initialDirectory);
         return dialog.ShowDialog(Owner()) == true ? dialog.FileName : null;
+    }
+
+    public IReadOnlyList<string> PickOpenFiles(string title, string filter, string? initialDirectory)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = title,
+            Filter = filter,
+            CheckFileExists = true,
+            Multiselect = true
+        };
+        SetInitialDirectory(dialog, initialDirectory);
+        return dialog.ShowDialog(Owner()) == true ? dialog.FileNames : Array.Empty<string>();
     }
 
     public string? PickOpenJson(string title, string? initialDirectory)

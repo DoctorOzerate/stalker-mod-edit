@@ -132,6 +132,8 @@ public sealed partial class GraphNodeViewModel : ObservableObject
     {
         Title = GraphLayout.NodeLabel(Node, languages, showText);
         RefreshBadges();
+        // Роль могла измениться из панели свойств: шапка при «цвете по роли» зависит от неё.
+        OnPropertyChanged(nameof(HeaderHex));
     }
 
     /// <summary>Бейджи озвучки, условий и действий (метаданные реплики).</summary>

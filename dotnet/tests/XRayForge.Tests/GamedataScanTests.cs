@@ -152,6 +152,25 @@ public class GamedataScanTests : IDisposable
     }
 
     [Fact]
+    public void Scan_layouts_imported_dialogue_nodes_instead_of_stacking_at_origin()
+    {
+        WriteText("config/gameplay/dialogs_layout.xml",
+            "<game_dialogs><dialog id=\"d_layout\"><phrase_list>" +
+            "<phrase id=\"0\"><text>first</text><next>1</next></phrase>" +
+            "<phrase id=\"1\"><text>second</text></phrase>" +
+            "</phrase_list></dialog></game_dialogs>");
+
+        var dialogues = Scan().Patch.Dialogues!;
+        var nodes = Assert.Single(dialogues).Nodes;
+
+        Assert.True(nodes.Count >= 4); // START, две реплики и END
+        Assert.True(nodes.Select(n => (n.X, n.Y)).Distinct().Count() > 1);
+        var start = Assert.Single(nodes, n => n.Type == NodeTypes.Start);
+        Assert.Equal(60, start.X);
+        Assert.Equal(80, start.Y);
+    }
+
+    [Fact]
     public void Scan_merges_item_files_into_single_ltx_sorted_by_name()
     {
         WriteText("config/misc/ammo.ltx", "[ammo_9x18_fmj]\ncost = 5\n");

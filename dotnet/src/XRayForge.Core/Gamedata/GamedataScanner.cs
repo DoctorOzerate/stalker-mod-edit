@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using XRayForge.Core.Graph;
 using XRayForge.Core.Imaging;
 using XRayForge.Core.Ltx;
 using XRayForge.Core.Models;
@@ -353,6 +354,9 @@ public static class GamedataScanner
                     {
                         dialogue.SourcePath = group.Path;
                         dialogue.SourceFile = group.File;
+                        // Сканер разбирает XML напрямую, без DialogueImporter: раскладываем узлы здесь,
+                        // иначе все импортированные реплики остаются в точке (0, 0) друг под другом.
+                        GraphLayout.LayoutDialogue(dialogue.Nodes, dialogue.Edges);
                         dialogues.Add(dialogue);
                     }
                 patch.Dialogues = dialogues;

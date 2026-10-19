@@ -67,6 +67,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Characters = new CharactersViewModel(this);
         Items = new ItemsViewModel(this, _dialogs);
         Icons = new IconsViewModel(this, _dialogs);
+        Scripts = new ScriptsViewModel(this, _dialogs);
 
         _autosave = new AutosaveService(
             _store,
@@ -102,6 +103,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Characters.Attach(_project);
         Items.Attach(_project);
         Icons.Attach(_project);
+        Scripts.Attach(_project);
 
         RefreshProjectView();
     }
@@ -144,6 +146,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
     /// <summary>Вкладка «Иконки» (этап 7.3): DDS-атлас (`IconsTab.js`).</summary>
     public IconsViewModel Icons { get; }
+
+    /// <summary>Вкладка «Скрипты» (этап 7.4): Lua-редактор (`ScriptsTab.js`).</summary>
+    public ScriptsViewModel Scripts { get; }
 
     public Project Project => _project;
 
@@ -506,6 +511,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Items.Attach(_project);
         // Атласы и коллекции иконок пересобираются вместе с проектом.
         Icons.Attach(_project);
+        Scripts.Attach(_project);
 
         RefreshProjectView();
     }
@@ -528,6 +534,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Characters.Attach(_project);
         Items.Attach(_project);
         Icons.Attach(_project);
+        Scripts.Attach(_project);
         RefreshProjectView();
     }
 
@@ -660,6 +667,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         foreach (var tab in Tabs) tab.Label = LocalizationSource.Get(tab.LabelKey);
         Characters.RefreshLocalization();
         Items.RefreshLocalization();
+        Scripts.RefreshLocalization();
 
         // До открытия проекта серия не показывается (иначе в пустом старте висел бы «SoC · …»).
         SeriesLabel = IsProjectOpen ? GameSeriesCatalog.Label(_project.Series) : "";
@@ -701,6 +709,62 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
     /// <summary>Настройки программы (окно настроек правит их на месте).</summary>
     public ProgramSettings Settings => _settings;
+
+    // --- ширины панелей списков (GridSplitter, сохраняются в settings.json) ---
+
+    /// <summary>Ширина левой панели вкладки «Персонажи».</summary>
+    public double CharactersPaneWidth
+    {
+        get => _settings.CharactersPaneWidth;
+        set => SetPaneWidth(value, () => _settings.CharactersPaneWidth, width => _settings.CharactersPaneWidth = width);
+    }
+
+    /// <summary>Ширина левой панели вкладки «Предметы».</summary>
+    public double ItemsPaneWidth
+    {
+        get => _settings.ItemsPaneWidth;
+        set => SetPaneWidth(value, () => _settings.ItemsPaneWidth, width => _settings.ItemsPaneWidth = width);
+    }
+
+    /// <summary>Ширина левой панели вкладки «Иконки».</summary>
+    public double IconsPaneWidth
+    {
+        get => _settings.IconsPaneWidth;
+        set => SetPaneWidth(value, () => _settings.IconsPaneWidth, width => _settings.IconsPaneWidth = width);
+    }
+
+    /// <summary>Ширина левой панели вкладки «Диалоги» (палитра и список диалогов).</summary>
+    public double DialoguesPaneWidth
+    {
+        get => _settings.DialoguesPaneWidth;
+        set => SetPaneWidth(value, () => _settings.DialoguesPaneWidth, width => _settings.DialoguesPaneWidth = width);
+    }
+
+    /// <summary>Ширина левой панели вкладки «Скрипты».</summary>
+    public double ScriptsPaneWidth
+    {
+        get => _settings.ScriptsPaneWidth;
+        set => SetPaneWidth(value, () => _settings.ScriptsPaneWidth, width => _settings.ScriptsPaneWidth = width);
+    }
+
+    /// <summary>Сохранить ширины панелей после перетаскивания `GridSplitter`.</summary>
+    public void SavePaneWidths() => _store.SaveProgramSettings(_settings);
+
+    /// <summary>Общий сеттер ширины панели: конечное значение и пределы `180…900`.</summary>
+    private void SetPaneWidth(double value, Func<double> current, Action<double> assign)
+    {
+        if (!double.IsFinite(value)) return;
+
+        var width = Math.Min(900, Math.Max(180, value));
+        if (Math.Abs(current() - width) < 0.5) return;
+
+        assign(width);
+        OnPropertyChanged(nameof(CharactersPaneWidth));
+        OnPropertyChanged(nameof(ItemsPaneWidth));
+        OnPropertyChanged(nameof(IconsPaneWidth));
+        OnPropertyChanged(nameof(DialoguesPaneWidth));
+        OnPropertyChanged(nameof(ScriptsPaneWidth));
+    }
 
     /// <summary>Настройки применены (тема/локаль/плотность) — окно перечитывает ресурсы.</summary>
     public event EventHandler? SettingsApplied;

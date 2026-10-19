@@ -284,11 +284,12 @@
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="288" />
-                <ColumnDefinition Width="*" />
+                <ColumnDefinition x:Name="ItemsPaneColumn" Width="288" MinWidth="180" MaxWidth="900" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="*" MinWidth="320" />
             </Grid.ColumnDefinitions>
 
-            <!-- Левая панель (`aside w-72 border-r p-4 overflow-auto`) -->
+            <!-- Левая панель (`aside w-72 border-r p-4 overflow-auto`), ширина меняется `GridSplitter` -->
             <Border Grid.Column="0" Background="{DynamicResource SurfacePanel}"
                     BorderBrush="{DynamicResource BorderBevel}" BorderThickness="0,1,1,0">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -377,8 +378,11 @@
                 </ScrollViewer>
             </Border>
 
+            <GridSplitter Grid.Column="1" Style="{StaticResource PaneSplitter}"
+                          DragCompleted="OnPaneSplitterDragCompleted" />
+
             <!-- Правая панель: редактор выбранной секции (`max-w-3xl`) -->
-            <ScrollViewer Grid.Column="1" x:Name="DetailsScroll"
+            <ScrollViewer Grid.Column="2" x:Name="DetailsScroll"
                           VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <Grid Margin="16">
                     <TextBlock Text="{loc:Loc itemEditorEmpty}" Style="{StaticResource CaptionText}"
