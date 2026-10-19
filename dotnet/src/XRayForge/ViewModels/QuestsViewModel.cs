@@ -161,7 +161,7 @@ public sealed partial class QuestsViewModel : ObservableObject
 
     private void BuildSelection()
     {
-        var quest = Selected?.Quest ?? _project.Quests.FirstOrDefault();
+        var quest = Selected?.Quest;
         SelectedEditor = quest != null ? new QuestEditorViewModel(this, quest) : null;
         RefreshDerived();
     }

@@ -505,6 +505,7 @@ public sealed partial class SystemLtxViewModel : ObservableObject
     internal void OnLtxFileTextChanged(LtxFileViewModel file)
     {
         LtxFiles[file.Path] = file.Text;
+        RefreshDerived();
         _shell.OnSectionEdited();
     }
 }
