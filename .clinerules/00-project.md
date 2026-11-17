@@ -90,5 +90,6 @@ dotnet test dotnet/XRayForge.sln -c Release --no-build
 - Не коммитить `saves/*.project.json`, `ebaniy-link.txt`, `bin/`, `obj/`, `node_modules/`.
 - Не ломать JSON-паритет проекта и round-trip реальных `saves/*.project.json`.
 - Не тащить в редактор Level Editor, 3D-рендер, погоду/шейдеры (см. P3 в gap-анализе).
-- Не менять `package.json`/Vite-часть ради WPF-задач.
+- Не менять `src/`, `electron/`, `test/` ради WPF-задач: это референс, у него больше нет
+  сборочной обвязки (`package.json`, Vite/Tailwind, `index.html` удалены).
 - Не оставлять «временные» TODO, заглушки команд и неиспользуемые ключи локализации.

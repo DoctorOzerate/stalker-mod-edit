@@ -2,8 +2,13 @@
 
 Мастерская моддинга **S.T.A.L.K.E.R.** для проектов на движке X-Ray: редактор диалогов,
 персонажей, предметов, иконок, скриптов и локализаций. Поддерживает «Тень Чернобыля» (SoC),
-«Чистое Небо» (CS) и «Зов Припяти» (CoP). Работает в браузере и как настольное
-приложение (Electron, сборки portable/NSIS для Windows).
+«Чистое Небо» (CS) и «Зов Припяти» (CoP).
+
+> **Актуальная версия — WPF (.NET 9) в `dotnet/`.** Прежний клиент Electron + React
+> (`src/`, `electron/`, `test/`) выведен из сборки: его сборочная обвязка (Vite, Tailwind,
+> `package.json`) удалена, а исходники остались **референсом для портирования**.
+> Прогресс миграции и оставшиеся расхождения — в `MIGRATION.md` и
+> `dotnet/docs/FEATURE_GAP_AMK.md`.
 
 ## Возможности
 
@@ -109,16 +114,7 @@
 
 ## Установка и запуск
 
-```bash
-npm install
-npm run start      # веб-версия (Vite dev-сервер)
-npm run build      # сборка веб-версии
-npm run electron   # запуск в Electron-оболочке
-npm run dist       # сборка Windows (portable + NSIS)
-npm test           # юнит-тесты
-```
-
-WPF-версия (.NET 9):
+Собирается и запускается только WPF-версия (.NET 9):
 
 ```powershell
 dotnet build dotnet/XRayForge.sln
@@ -127,11 +123,15 @@ dotnet run --project dotnet/src/XRayForge/XRayForge.csproj
 .\dotnet\publish.ps1          # single-file XRayForge.exe (win-x64)
 ```
 
+Legacy-клиент (`src/`, `electron/`, `test/`) больше не собирается: `package.json`,
+Vite/Tailwind-конфиги и `index.html` удалены, поэтому `npm install`/`npm run …` неприменимы.
+Файлы оставлены как референс при портировании модулей в `dotnet/`.
+
 ## Стек
 
-- React 18, Vite 5, Tailwind CSS.
-- `fflate` (ZIP), `@xmldom/xmldom` (тесты).
-- Electron 31 + electron-builder.
+- WPF, .NET 9, CommunityToolkit.Mvvm; xUnit для тестов.
+- Legacy (референс): React 18, Vite 5, Tailwind CSS, Electron 31, `fflate` (ZIP),
+  `@xmldom/xmldom` (тесты).
 
 ## Ограничения
 

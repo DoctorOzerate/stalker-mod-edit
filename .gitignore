@@ -1,8 +1,5 @@
-# dependencies
+# dependencies (legacy-референс, сборка не используется)
 node_modules
-
-# build output
-dist/
 
 # extracted game resources (reference only, large binary/config data)
 stalk-src/
