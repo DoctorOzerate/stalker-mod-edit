@@ -112,6 +112,10 @@ public static class DialogueGameExport
     /// Путь назначения для ключа карты (<c>gamedata/config/...</c>). Если пользователь выбрал сам
     /// каталог <c>gamedata</c>, префикс не дублируется — файл кладётся сразу в <c>config/...</c>.
     /// </summary>
+    /// <exception cref="ArgumentException">
+    /// Не указан каталог или итоговый путь выходит за каталог экспорта
+    /// (абсолютный ключ или `..` в пути).
+    /// </exception>
     public static string TargetPath(string root, string relativePath)
     {
         if (string.IsNullOrWhiteSpace(root))
@@ -134,7 +138,16 @@ public static class DialogueGameExport
 
         // Combine с исходным (возможно, с завершающим разделителем) корнем: для `C:\`
         // обрезанный `C:` дал бы путь относительно текущего каталога диска.
-        return Path.GetFullPath(Path.Combine(normalizedRoot, relative));
+        var target = Path.GetFullPath(Path.Combine(normalizedRoot, relative));
+
+        // Защита от выхода за каталог экспорта: абсолютный ключ (`C:\…`) или `..` в пути
+        // иначе записали бы файл мимо gamedata.
+        var rootPrefix = Path.TrimEndingDirectorySeparator(normalizedRoot);
+        if (!rootPrefix.EndsWith(Path.DirectorySeparatorChar)) rootPrefix += Path.DirectorySeparatorChar;
+        if (!target.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Путь выходит за каталог экспорта: " + relativePath, nameof(relativePath));
+
+        return target;
     }
 
     /// <summary>
