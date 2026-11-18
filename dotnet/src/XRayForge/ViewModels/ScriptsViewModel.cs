@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using XRayForge.Core.Lua;
 using XRayForge.Core.Projects;
 using XRayForge.Core.Scripts;
+using XRayForge.Core.Suggestions;
 using XRayForge.Core.Text;
 using XRayForge.Localization;
 using XRayForge.Services;
@@ -42,6 +43,15 @@ public sealed partial class ScriptsViewModel : ObservableObject
 
     private Project _project = ProjectMigration.Empty();
 
+    /// <summary>Индекс автодополнения Lua: API, глобалы, функции скриптов и info-порции.</summary>
+    private SuggestionLibrary _suggestions = SuggestionLibrary.Empty;
+
+    /// <summary>Текущий список подсказок для Lua-редактора (см. <see cref="Completions"/>).</summary>
+    private IReadOnlyList<SuggestionEntry> _completions = Array.Empty<SuggestionEntry>();
+
+    /// <summary>Набор файлов изменился — индекс подсказок нужно пересобрать.</summary>
+    private bool _suggestionsDirty = true;
+
     /// <summary>Список файлов проекта; `null` для ручного JSON заменяется пустым.</summary>
     private List<ScriptFile> Files => _project.Scripts ??= new List<ScriptFile>();
 
@@ -51,6 +61,9 @@ public sealed partial class ScriptsViewModel : ObservableObject
         _dialogs = dialogs;
 
         Scripts = new ObservableCollection<ScriptItemViewModel>();
+        OpenScripts = new ObservableCollection<ScriptItemViewModel>();
+        GameScripts = new ObservableCollection<ScriptItemViewModel>();
+        LocalScripts = new ObservableCollection<ScriptItemViewModel>();
         Diagnostics = new ObservableCollection<ScriptDiagnosticViewModel>();
         Edges = new ObservableCollection<ScriptEdgeViewModel>();
         Functions = new ObservableCollection<ScriptFunctionViewModel>();
@@ -58,8 +71,17 @@ public sealed partial class ScriptsViewModel : ObservableObject
 
     // --- коллекции ---
 
-    /// <summary>Отфильтрованный список карточек скриптов.</summary>
+    /// <summary>Отфильтрованный список карточек скриптов (полный набор).</summary>
     public ObservableCollection<ScriptItemViewModel> Scripts { get; }
+
+    /// <summary>Открытые вкладки редактора (файлы, которые пользователь открыл в этой сессии).</summary>
+    public ObservableCollection<ScriptItemViewModel> OpenScripts { get; }
+
+    /// <summary>Игровые скрипты — файлы из `gamedata/scripts`.</summary>
+    public ObservableCollection<ScriptItemViewModel> GameScripts { get; }
+
+    /// <summary>Локационные скрипты — всё, что лежит вне `gamedata/scripts`.</summary>
+    public ObservableCollection<ScriptItemViewModel> LocalScripts { get; }
 
     public ObservableCollection<ScriptDiagnosticViewModel> Diagnostics { get; }
     public ObservableCollection<ScriptEdgeViewModel> Edges { get; }
@@ -70,6 +92,20 @@ public sealed partial class ScriptsViewModel : ObservableObject
 
     /// <summary>Готовые STALKER-сниппеты (`LUA_SNIPPETS`).</summary>
     public IReadOnlyList<LuaSnippet> Snippets => LuaCatalog.Snippets;
+
+    /// <summary>
+    /// Подсказки Lua-редактора: API и глобалы движка, функции/файлы скриптов проекта,
+    /// info-порции и ключевые слова. Пересобираются при смене набора файлов.
+    /// </summary>
+    public IReadOnlyList<SuggestionEntry> Completions
+    {
+        get => _completions;
+        private set
+        {
+            _completions = value;
+            OnPropertyChanged();
+        }
+    }
 
     // --- состояние ---
 
@@ -104,6 +140,9 @@ public sealed partial class ScriptsViewModel : ObservableObject
     public int TotalCount => _project.Scripts?.Count ?? 0;
     public bool HasScripts => TotalCount > 0;
     public bool HasVisibleScripts => Scripts.Count > 0;
+    public bool HasGameScripts => GameScripts.Count > 0;
+    public bool HasLocalScripts => LocalScripts.Count > 0;
+    public bool HasOpenScripts => OpenScripts.Count > 0;
     public bool HasSelection => Selected != null;
     public string CountText => LocalizationSource.Get("scriptFiles") + ": " +
         TotalCount.ToString(CultureInfo.CurrentCulture) +
@@ -136,6 +175,9 @@ public sealed partial class ScriptsViewModel : ObservableObject
         _project = project ?? ProjectMigration.Empty();
         _project.Scripts ??= new List<ScriptFile>();
         _items.Clear();
+        // Вкладки открытых файлов принадлежат сессии: с новым проектом они закрываются.
+        OpenScripts.Clear();
+        OnPropertyChanged(nameof(HasOpenScripts));
         Selected = null;
 
         foreach (var file in Files)
@@ -145,8 +187,16 @@ public sealed partial class ScriptsViewModel : ObservableObject
             _items[file] = new ScriptItemViewModel(this, file);
         }
 
+        _suggestionsDirty = true;
         RefreshList();
         RefreshLocalization();
+    }
+
+    /// <summary>Пересобрать индекс подсказок Lua (API, функции скриптов, info-порции).</summary>
+    private void RebuildSuggestions()
+    {
+        _suggestions = SuggestionLibrary.Build(_project);
+        Completions = _suggestions.ForLua();
     }
 
     /// <summary>Смена локали: подписи и заглушки пересобираются.</summary>
@@ -168,14 +218,29 @@ public sealed partial class ScriptsViewModel : ObservableObject
     {
         var filtered = ScriptsCatalog.Filter(Files, Search, SortByName);
         Scripts.Clear();
+        GameScripts.Clear();
+        LocalScripts.Clear();
         foreach (var file in filtered)
-            if (_items.TryGetValue(file, out var item)) Scripts.Add(item);
+        {
+            if (!_items.TryGetValue(file, out var item)) continue;
 
-        if (Selected == null || !Scripts.Contains(Selected)) Selected = Scripts.FirstOrDefault();
+            Scripts.Add(item);
+            // Список делится на игровые (`gamedata/scripts`) и локационные (всё остальное).
+            if (ScriptsCatalog.IsGameScript(file)) GameScripts.Add(item);
+            else LocalScripts.Add(item);
+        }
 
         OnPropertyChanged(nameof(CountText));
         OnPropertyChanged(nameof(HasVisibleScripts));
+        OnPropertyChanged(nameof(HasGameScripts));
+        OnPropertyChanged(nameof(HasLocalScripts));
         OnPropertyChanged(nameof(NoScriptsText));
+
+        if (_suggestionsDirty)
+        {
+            _suggestionsDirty = false;
+            RebuildSuggestions();
+        }
     }
 
     partial void OnSearchChanged(string value) => RefreshList();
@@ -201,7 +266,7 @@ public sealed partial class ScriptsViewModel : ObservableObject
         OnPropertyChanged(nameof(DiagnosticsToggleText));
     }
 
-    /// <summary>Выбор карточки (клик по списку или команда элемента).</summary>
+    /// <summary>Выбор карточки (клик по списку или команда элемента): файл открывается во вкладке.</summary>
     public void SelectItem(ScriptItemViewModel? item)
     {
         if (item != null && !Scripts.Contains(item))
@@ -211,7 +276,33 @@ public sealed partial class ScriptsViewModel : ObservableObject
             RefreshList();
         }
 
+        if (item != null && !OpenScripts.Contains(item))
+        {
+            OpenScripts.Add(item);
+            OnPropertyChanged(nameof(HasOpenScripts));
+        }
+
         Selected = item;
+    }
+
+    /// <summary>
+    /// Закрыть вкладку открытого файла: сам файл остаётся в проекте, редактор переключается
+    /// на соседнюю вкладку (как вкладки редактора).
+    /// </summary>
+    [RelayCommand]
+    internal void CloseTab(ScriptItemViewModel? item)
+    {
+        item ??= Selected;
+        if (item == null) return;
+
+        var index = OpenScripts.IndexOf(item);
+        if (index < 0) return;
+
+        OpenScripts.RemoveAt(index);
+        OnPropertyChanged(nameof(HasOpenScripts));
+        if (!ReferenceEquals(Selected, item)) return;
+
+        Selected = OpenScripts.Count > 0 ? OpenScripts[Math.Min(index, OpenScripts.Count - 1)] : null;
     }
 
     /// <summary>Выбрать скрипт по имени файла (переход из проверки `script_binding`).</summary>
@@ -250,7 +341,9 @@ public sealed partial class ScriptsViewModel : ObservableObject
         UnusedText = "";
 
         var item = Selected;
-        if (item == null)
+        // Проверка/граф считаются только для открытых вкладок: файл, выбранный в списке,
+        // но не открытый, не анализируется.
+        if (item == null || !OpenScripts.Contains(item))
         {
             BracketsText = "";
             BracketsBalanced = true;
@@ -310,9 +403,10 @@ public sealed partial class ScriptsViewModel : ObservableObject
         var item = new ScriptItemViewModel(this, file);
         _items[file] = item;
 
+        _suggestionsDirty = true;
         Search = "";
         RefreshList();
-        Selected = item;
+        SelectItem(item);
         _shell.StatusText = LocalizationSource.Get("scriptCreated") + ": " + file.Name;
         _shell.OnSectionEdited();
     }
@@ -340,6 +434,7 @@ public sealed partial class ScriptsViewModel : ObservableObject
         // В проекте `name` и `path` переименовываются вместе (`renameScript`).
         item.File.Path = normalized;
         item.RaiseMeta();
+        _suggestionsDirty = true;
         RefreshList();
         _shell.StatusText = LocalizationSource.Get("scriptRenamed") + ": " + normalized;
         _shell.OnSectionEdited();
@@ -355,7 +450,16 @@ public sealed partial class ScriptsViewModel : ObservableObject
         if (!ScriptsCatalog.Remove(Files, item.File)) return;
         _items.Remove(item.File);
         Scripts.Remove(item);
-        Selected = Scripts.Count == 0 ? null : Scripts[Math.Min(index, Scripts.Count - 1)];
+        var tabIndex = OpenScripts.IndexOf(item);
+        if (tabIndex >= 0) OpenScripts.RemoveAt(tabIndex);
+        OnPropertyChanged(nameof(HasOpenScripts));
+
+        // Следующая вкладка — соседняя справа (или последняя), сам список уже без файла.
+        var next = OpenScripts.Count == 0
+            ? null
+            : OpenScripts[Math.Clamp(tabIndex < 0 ? index : tabIndex, 0, OpenScripts.Count - 1)];
+        SelectItem(next);
+        _suggestionsDirty = true;
         RefreshList();
         _shell.StatusText = LocalizationSource.Get("scriptDeleted") + ": " + item.Name;
         _shell.OnSectionEdited();
@@ -507,7 +611,7 @@ public sealed partial class ScriptsViewModel : ObservableObject
         }
 
         RefreshList();
-        Selected = _items[Files[^1]];
+        SelectItem(_items[Files[^1]]);
         _shell.StatusText = LocalizationSource.Get("scriptOpened") + ": " + Path.GetFileName(path);
         _shell.OnSectionEdited();
     }
@@ -524,7 +628,7 @@ public sealed partial class ScriptsViewModel : ObservableObject
         foreach (var path in paths) if (AddFile(path)) added++;
 
         RefreshList();
-        if (added > 0) Selected = _items[Files[^1]];
+        if (added > 0) SelectItem(_items[Files[^1]]);
         _shell.StatusText = LocalizationSource.Get("scriptScanned") + ": " +
             added.ToString(CultureInfo.CurrentCulture) + " / " +
             paths.Count.ToString(CultureInfo.CurrentCulture);
@@ -557,9 +661,9 @@ public sealed partial class ScriptsViewModel : ObservableObject
         try
         {
             var fullPath = Path.GetFullPath(path);
-            var normalized = Paths.Normalize(fullPath);
+            var normalized = ScriptsCatalog.PathKey(fullPath);
             if (Files.Any(file =>
-                    string.Equals(Paths.Normalize(file.Path), normalized, StringComparison.OrdinalIgnoreCase)))
+                    string.Equals(ScriptsCatalog.PathKey(file.Path), normalized, StringComparison.OrdinalIgnoreCase)))
                 return false;
 
             var text = File.ReadAllText(fullPath);
@@ -572,6 +676,7 @@ public sealed partial class ScriptsViewModel : ObservableObject
             };
             Files.Add(file);
             _items[file] = new ScriptItemViewModel(this, file);
+            _suggestionsDirty = true;
             LastOpenedFile = fullPath;
             return true;
         }
@@ -581,5 +686,212 @@ public sealed partial class ScriptsViewModel : ObservableObject
             return false;
         }
     }
+
+    // --- ссылки в тексте (Ctrl+ЛКМ по `#include`/`dofile`/имени файла) ---
+
+    /// <summary>
+    /// Открыть файл по ссылке под курсором (`#include "x"`, `dofile("x")`, `require "x"`,
+    /// просто `x.lua`). Возвращает `true`, если ссылка распознана и обработана.
+    /// </summary>
+    public bool OpenFileLinkAt(int offset)
+    {
+        var link = ScriptLinks.At(Selected?.Text, offset);
+        if (link == null) return false;
+
+        // `level.actor()` — ссылка на функцию внутри скрипта `level`.
+        if (link.IsCall) return OpenCallLink(link);
+
+        // Вкладка проекта: ищем по полному пути, хвосту пути и имени файла.
+        var item = FindByLink(link.Target);
+        if (item != null)
+        {
+            OpenLinked(item);
+            return true;
+        }
+
+        var extension = Path.GetExtension(link.Target).ToLowerInvariant();
+        if (extension.Length > 0 && extension != ".lua" && extension != ".script")
+        {
+            // .ltx/.xml и прочее — не скрипты, открывать в редакторе нечего.
+            _shell.StatusText = LocalizationSource.Get("scriptLinkNotScript") + ": " + link.Target;
+            return false;
+        }
+
+        var path = ResolveLinkedPath(link.Target);
+        if (path != null)
+        {
+            if (AddFile(path))
+            {
+                // Ссылка может вести в файл, скрытый фильтром поиска: сбрасываем фильтр,
+                // чтобы открытая карточка была видна в списке.
+                if (Search.Length > 0) Search = "";
+                RefreshList();
+                OpenLinked(_items[Files[^1]]);
+                _shell.OnSectionEdited();
+                return true;
+            }
+
+            // Файл уже в проекте, но не нашёлся по имени ссылки (например, скрыт фильтром
+            // или путь карточки записан иначе) — сверяем по ключу пути.
+            var existing = FindByPath(path);
+            if (existing != null)
+            {
+                OpenLinked(existing);
+                return true;
+            }
+        }
+
+        _shell.StatusText = LocalizationSource.Get("scriptLinkMissing") + ": " + link.Target;
+        return false;
+    }
+
+    /// <summary>
+    /// Переход по вызову `скрипт.функция(` (`level.actor()`): открыть файл скрипта
+    /// (`level.script`/`level.lua`) и поставить каретку на строку `function actor(`.
+    /// </summary>
+    private bool OpenCallLink(ScriptLink link)
+    {
+        var file = ScriptsCatalog.FindScript(Files, link.Script);
+        var item = file != null && _items.TryGetValue(file, out var found) ? found : null;
+
+        if (item == null)
+        {
+            // Скрипт ещё не в проекте — пробуем достать его из gamedata по имени.
+            var path = ResolveLinkedPath(link.Script);
+            if (path != null && AddFile(path))
+            {
+                if (Search.Length > 0) Search = "";
+                RefreshList();
+                item = _items[Files[^1]];
+            }
+        }
+
+        if (item == null)
+        {
+            _shell.StatusText = LocalizationSource.Get("scriptLinkMissing") + ": " + link.Target;
+            return false;
+        }
+
+        SelectItem(item);
+        var line = ScriptsCatalog.DefinitionLine(item.Text, link.Member);
+        if (line < 0)
+        {
+            RaiseCaret(item, 0, 0, "");
+            _shell.StatusText = LocalizationSource.Get("scriptDefinitionMissing") + ": " +
+                link.Member + " · " + item.Name;
+            return true;
+        }
+
+        var offset = ScriptsCatalog.LineOffset(item.Text, line);
+        var lineText = (item.Text ?? "").Split('\n')[line];
+        var column = lineText.IndexOf(link.Member, StringComparison.Ordinal);
+        if (column >= 0) offset += column;
+
+        RaiseCaret(item, line, offset, link.Member);
+        _shell.StatusText = LocalizationSource.Get("scriptDefinition") + ": " +
+            link.Member + " · " + item.Name + ":" + (line + 1).ToString(CultureInfo.CurrentCulture);
+        return true;
+    }
+
+    /// <summary>Карточка скрипта с тем же файлом на диске (сравнение развёрнутых путей).</summary>
+    private ScriptItemViewModel? FindByPath(string path)
+    {
+        var wanted = ScriptsCatalog.ResolveFullPath(path, _project.GamedataPath) ?? path;
+        wanted = wanted.Replace('\\', '/').TrimStart('/');
+
+        foreach (var file in Files)
+        {
+            var full = ScriptsCatalog.ResolveFullPath(file.Path, _project.GamedataPath);
+            if (full == null) continue;
+            if (!full.Replace('\\', '/').TrimStart('/').Equals(wanted, StringComparison.OrdinalIgnoreCase))
+                continue;
+            if (_items.TryGetValue(file, out var item)) return item;
+        }
+
+        return null;
+    }
+
+    /// <summary>Открыть вкладку скрипта и поставить каретку в начало файла.</summary>
+    private void OpenLinked(ScriptItemViewModel item)
+    {
+        SelectItem(item);
+        RaiseCaret(item, 0, 0, "");
+        _shell.StatusText = LocalizationSource.Get("scriptLinkOpened") + ": " + item.Name;
+    }
+
+    /// <summary>
+    /// Найти карточку скрипта по тексту ссылки: полный путь, хвост пути (`scripts/x.lua`),
+    /// имя файла, а для ссылок без расширения — имя без расширения (`require "x"`).
+    /// Просматриваются все файлы проекта: фильтр поиска не должен ломать переход по ссылке.
+    /// </summary>
+    private ScriptItemViewModel? FindByLink(string? target)
+    {
+        var wanted = NormalizeLink(target);
+        if (wanted.Length == 0) return null;
+
+        var baseName = Path.GetFileName(wanted);
+        var stem = Path.GetFileNameWithoutExtension(baseName);
+        var hasExtension = Path.GetExtension(wanted).Length > 0;
+
+        foreach (var file in Files)
+        {
+            var path = NormalizeLink(file.Path);
+            var matched = path.Equals(wanted, StringComparison.OrdinalIgnoreCase) ||
+                          path.EndsWith("/" + wanted, StringComparison.OrdinalIgnoreCase) ||
+                          Path.GetFileName(path).Equals(baseName, StringComparison.OrdinalIgnoreCase);
+            if (!matched && !hasExtension)
+                matched = Path.GetFileNameWithoutExtension(path).Equals(stem, StringComparison.OrdinalIgnoreCase);
+
+            if (matched && _items.TryGetValue(file, out var item)) return item;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Найти файл ссылки на диске: рядом с текущим скриптом, в `gamedata` проекта и её
+    /// подпапке `scripts`; для ссылок без расширения пробуются `.lua` и `.script`.
+    /// </summary>
+    private string? ResolveLinkedPath(string? target)
+    {
+        var wanted = NormalizeLink(target);
+        if (wanted.Length == 0) return null;
+
+        var candidates = new List<string>();
+        if (Path.IsPathRooted(target)) candidates.Add(target!);
+
+        var currentDir = Path.GetDirectoryName(
+            ScriptsCatalog.ResolveFullPath(Selected?.File.Path, _project.GamedataPath) ?? "");
+        if (!string.IsNullOrEmpty(currentDir)) candidates.Add(Path.Combine(currentDir, wanted));
+
+        var root = _project.GamedataPath?.TrimEnd('\\', '/');
+        if (!string.IsNullOrEmpty(root))
+        {
+            // `gamedata/scripts/x.lua` → `x.lua` относительно самой папки gamedata.
+            var relative = wanted.StartsWith("gamedata/", StringComparison.OrdinalIgnoreCase)
+                ? wanted["gamedata/".Length..]
+                : wanted;
+            candidates.Add(Path.Combine(root, relative));
+            candidates.Add(Path.Combine(root, "scripts", relative));
+
+            var parent = Path.GetDirectoryName(root);
+            if (!string.IsNullOrEmpty(parent)) candidates.Add(Path.Combine(parent, wanted));
+        }
+
+        foreach (var candidate in candidates.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (File.Exists(candidate)) return candidate;
+            if (Path.GetExtension(candidate).Length > 0) continue;
+
+            foreach (var extension in new[] { ".lua", ".script" })
+                if (File.Exists(candidate + extension)) return candidate + extension;
+        }
+
+        return null;
+    }
+
+    /// <summary>Прямые слеши без ведущего разделителя — для сравнения путей со ссылками.</summary>
+    private static string NormalizeLink(string? value) =>
+        (value ?? "").Replace('\\', '/').Trim().TrimStart('/');
 }
 

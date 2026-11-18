@@ -15,6 +15,9 @@ public sealed class TextIdResolution
 {
     public string Locale { get; set; } = "";
     public string Text { get; set; } = "";
+
+    /// <summary>Файл таблицы переводов (`Language.Path`), в которой найден текст.</summary>
+    public string Path { get; set; } = "";
 }
 
 public sealed class TextIdCoverage
@@ -53,16 +56,62 @@ public static class TextIdTools
         return issues;
     }
 
-    /// <summary>Резолв text_id → перевод по всем локалям (#5).</summary>
+    /// <summary>
+    /// Резолв text_id → перевод по всем локалям (#5). Приоритет у русской таблицы:
+    /// остальные языки доступны в списке локалей панели реплики.
+    /// </summary>
     public static TextIdResolution? ResolveTextId(IReadOnlyList<Language>? languages, string? textId)
     {
-        foreach (var lang in languages ?? Array.Empty<Language>())
+        if (string.IsNullOrEmpty(textId)) return null;
+
+        foreach (var lang in PreferredOrder(languages))
         {
             var e = lang.Entries.FirstOrDefault(x => x.Id == textId && x.Text.Trim().Length > 0);
-            if (e != null) return new TextIdResolution { Locale = lang.Locale, Text = e.Text };
+            if (e != null)
+                return new TextIdResolution { Locale = lang.Locale, Text = e.Text, Path = lang.Path };
         }
+
         return null;
     }
+
+    /// <summary>Русская локаль (`rus`, `ru`, `ru-RU`) — основная в редакторе.</summary>
+    public static bool IsRussian(string? locale)
+    {
+        var value = (locale ?? "").Trim().ToLowerInvariant();
+        return value is "rus" or "ru" || value.StartsWith("ru-", StringComparison.Ordinal);
+    }
+
+    /// <summary>Таблицы в порядке предпочтения: русская, затем остальные как в проекте.</summary>
+    private static IEnumerable<Language> PreferredOrder(IReadOnlyList<Language>? languages) =>
+        (languages ?? Array.Empty<Language>())
+            .OrderBy(language => IsRussian(language.Locale) ? 0 : 1);
+
+    /// <summary>
+    /// Локаль панели перевода реплики: текущая, если в ней есть текст; иначе русская
+    /// с переводом; иначе первая с переводом; иначе русская; иначе первая таблица проекта.
+    /// </summary>
+    public static Language? PreferredLanguage(
+        IReadOnlyList<Language>? languages, string? locale, string? textId)
+    {
+        var list = languages ?? Array.Empty<Language>();
+        if (list.Count == 0) return null;
+
+        var current = list.FirstOrDefault(language => language.Locale == locale);
+        if (current != null && HasTranslation(current, textId)) return current;
+
+        var translated = list.FirstOrDefault(language => HasTranslation(language, textId));
+        if (translated != null && !IsRussian(translated.Locale))
+            translated = list.FirstOrDefault(language => IsRussian(language.Locale) && HasTranslation(language, textId))
+                         ?? translated;
+        if (translated != null) return translated;
+
+        return list.FirstOrDefault(language => IsRussian(language.Locale)) ?? current ?? list[0];
+    }
+
+    /// <summary>В таблице есть непустой перевод указанного text_id.</summary>
+    private static bool HasTranslation(Language language, string? textId) =>
+        !string.IsNullOrEmpty(textId) &&
+        language.Entries.Any(e => e.Id == textId && e.Text.Trim().Length > 0);
 
     /// <summary>Проверка text_id: дубликаты, пустые переводы, отсутствие перевода (#77).</summary>
     public static List<TextIdIssue> FindTextIdIssues(IReadOnlyList<Language>? languages, IEnumerable<DialogueGraph?>? dialogues)

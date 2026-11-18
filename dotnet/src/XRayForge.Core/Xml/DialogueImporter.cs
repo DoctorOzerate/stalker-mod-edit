@@ -35,6 +35,14 @@ public static class DialogueImporter
     /// <summary>Строка `#include` в X-Ray XML — разбору мешает (в JS снимается перед разбором).</summary>
     private static readonly Regex IncludeLine = new(@"^\s*#include\b[^\n]*$", RegexOptions.Multiline);
 
+    /// <summary>
+    /// Пустой диалог: ни одной реплики (`phrase`). В `dialogs.xml` такие `&lt;dialog&gt;` служебные
+    /// (`dm_*` с `precondition`/`action` на самом диалоге), граф из них не строится, поэтому в проект
+    /// они не загружаются.
+    /// </summary>
+    public static bool IsEmpty(DialogueGraph? dialog) =>
+        dialog == null || !dialog.Nodes.Any(node => node != null && node.Type == NodeTypes.Phrase);
+
     public static List<DialogueGraph> Import(string? text)
     {
         var result = new List<DialogueGraph>();
@@ -80,6 +88,10 @@ public static class DialogueImporter
         var cleaned = IncludeLine.Replace(text ?? string.Empty, string.Empty);
         foreach (var dialog in Import(cleaned))
         {
+            // Служебные диалоги без реплик (`dm_*` в dialogs.xml) не подгружаем: в редакторе
+            // нечего показывать, а список забивается пустыми графами.
+            if (IsEmpty(dialog)) continue;
+
             var key = dialog.Id.Length > 0 ? dialog.Id : dialog.Name;
             if (key.Length > 0 && !seen.Add(key))
             {

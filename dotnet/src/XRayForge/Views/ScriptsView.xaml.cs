@@ -37,6 +37,7 @@ public partial class ScriptsView : UserControl
 
         EditorBox.AddHandler(ScrollViewer.ScrollChangedEvent,
             new ScrollChangedEventHandler(OnEditorScrollChanged));
+        EditorBox.LinkClicked += OnEditorLinkClicked;
     }
 
     /// <summary>Подписаться на запросы каретки после перехода/вставки (`jumpToDefinition`).</summary>
@@ -91,6 +92,12 @@ public partial class ScriptsView : UserControl
         _scripts.CaretIndex = EditorBox.CaretOffset;
         _scripts.SelectionLength = EditorBox.SelectionLength;
     }
+
+    /// <summary>
+    /// Ctrl+ЛКМ по ссылке в тексте: `#include`, `dofile`, `require` или имя файла —
+    /// открыть связанный скрипт во вкладке (логика и статусы — в <see cref="ScriptsViewModel.OpenFileLinkAt"/>).
+    /// </summary>
+    private void OnEditorLinkClicked(object? sender, int offset) => _scripts?.OpenFileLinkAt(offset);
 
     /// <summary>Переход к определению функции: показать редактор и поставить каретку.</summary>
     private void OnCaretRequested(object? sender, ScriptJumpEventArgs e)

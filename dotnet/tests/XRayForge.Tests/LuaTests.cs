@@ -25,6 +25,11 @@ public class LuaTests
     {
         Assert.NotEmpty(LuaCatalog.Snippets);
         Assert.Contains("db.actor:give_item", LuaCatalog.Api);
+
+        // Функции, которые пользователь набирает в скриптах: подсказки должны их находить.
+        Assert.Contains("db.actor:give_info_portion", LuaCatalog.Api);
+        Assert.Contains("xr_effects.give_items", LuaCatalog.Api);
+        Assert.Contains("level.actor", LuaCatalog.Api);
     }
 
     [Fact]

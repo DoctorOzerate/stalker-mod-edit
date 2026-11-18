@@ -51,6 +51,9 @@ public sealed partial class ScriptItemViewModel : ObservableObject
     private void Select() => _owner.SelectItem(this);
 
     [RelayCommand]
+    private void Close() => _owner.CloseTab(this);
+
+    [RelayCommand]
     private void Rename() => _owner.RenameScript(this);
 
     [RelayCommand]

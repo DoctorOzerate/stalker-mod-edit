@@ -212,6 +212,66 @@ public class DialogsTests
         Assert.Equal("", TextIdTools.TranslationOf(languages, "eng", "st_1"));
     }
 
+    /// <summary>Русская таблица выигрывает даже если идёт второй; файл-источник попадает в резолв.</summary>
+    [Fact]
+    public void ResolveTextId_prefers_russian_and_reports_source_file()
+    {
+        var languages = new List<Language>
+        {
+            new()
+            {
+                Locale = "eng", Path = "configs/text/eng/dialogues.xml",
+                Entries = new() { new LanguageEntry { Id = "a", Text = "Hello" } }
+            },
+            new()
+            {
+                Locale = "rus", Path = "configs/text/rus/dialogues.xml",
+                Entries = new() { new LanguageEntry { Id = "a", Text = "Привет" } }
+            }
+        };
+
+        var resolved = TextIdTools.ResolveTextId(languages, "a");
+        Assert.NotNull(resolved);
+        Assert.Equal("rus", resolved!.Locale);
+        Assert.Equal("Привет", resolved.Text);
+        Assert.Equal("configs/text/rus/dialogues.xml", resolved.Path);
+
+        // Пустой text_id не резолвится.
+        Assert.Null(TextIdTools.ResolveTextId(languages, ""));
+        Assert.Null(TextIdTools.ResolveTextId(null, "a"));
+    }
+
+    /// <summary>
+    /// Панель реплики открывается на локали с переводом, а не на пустой «unknown»;
+    /// остальные языки остаются в списке локалей.
+    /// </summary>
+    [Fact]
+    public void PreferredLanguage_skips_empty_locales_and_falls_back_to_russian()
+    {
+        var languages = new List<Language>
+        {
+            new() { Locale = "unknown", Entries = new() { new LanguageEntry { Id = "a", Text = "" } } },
+            new() { Locale = "eng", Entries = new() { new LanguageEntry { Id = "a", Text = "Hello" } } },
+            new() { Locale = "rus", Entries = new() { new LanguageEntry { Id = "a", Text = "Привет" } } }
+        };
+
+        Assert.Equal("eng", TextIdTools.PreferredLanguage(languages, "eng", "a")!.Locale);
+        Assert.Equal("rus", TextIdTools.PreferredLanguage(languages, "unknown", "a")!.Locale);
+        Assert.Equal("rus", TextIdTools.PreferredLanguage(languages, "", "a")!.Locale);
+
+        // Перевод только на английском — выбираем его, русского текста нет.
+        var englishOnly = new List<Language>
+        {
+            new() { Locale = "rus", Entries = new() { new LanguageEntry { Id = "b", Text = "" } } },
+            new() { Locale = "eng", Entries = new() { new LanguageEntry { Id = "b", Text = "Hello" } } }
+        };
+        Assert.Equal("eng", TextIdTools.PreferredLanguage(englishOnly, null, "b")!.Locale);
+
+        // Без text_id остаётся русская таблица проекта.
+        Assert.Equal("rus", TextIdTools.PreferredLanguage(languages, null, "")!.Locale);
+        Assert.Null(TextIdTools.PreferredLanguage(null, "rus", "a"));
+    }
+
     [Fact]
     public void BindTextId_creates_default_table_then_adds_entry_to_every_locale()
     {

@@ -352,6 +352,9 @@ public static class GamedataScanner
                 foreach (var group in DialogueFiles)
                     foreach (var dialogue in group.Dialogues)
                     {
+                        // Служебные диалоги без реплик (`dm_*` в dialogs.xml) в проект не грузим.
+                        if (DialogueImporter.IsEmpty(dialogue)) continue;
+
                         dialogue.SourcePath = group.Path;
                         dialogue.SourceFile = group.File;
                         // Сканер разбирает XML напрямую, без DialogueImporter: раскладываем узлы здесь,
@@ -465,7 +468,7 @@ public static class GamedataScanner
                 Scripts = Scripts.Count,
                 Textures = Textures.Count,
                 Characters = patch.Characters?.Count ?? 0,
-                Dialogues = DialogueFiles.Sum(group => group.Dialogues.Count),
+                Dialogues = patch.Dialogues?.Count ?? 0,
                 Languages = patch.Languages?.Count ?? 0,
                 Quests = patch.Quests?.Count ?? 0,
                 Items = ItemFiles.Count,

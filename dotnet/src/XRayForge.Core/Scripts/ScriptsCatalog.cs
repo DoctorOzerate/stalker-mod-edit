@@ -1,5 +1,6 @@
 using XRayForge.Core.Lua;
 using XRayForge.Core.Projects;
+using XRayForge.Core.Text;
 
 namespace XRayForge.Core.Scripts;
 
@@ -55,6 +56,57 @@ public static class ScriptsCatalog
     /// <summary>Имя файла по умолчанию (`new_script.lua`).</summary>
     public const string DefaultName = "new_script.lua";
 
+    /// <summary>Папка игровых скриптов, которые грузит движок.</summary>
+    public const string GameScriptsFolder = "gamedata/scripts/";
+
+    /// <summary>
+    /// Игровой ли скрипт: путь внутри `gamedata/scripts`. Всё, что лежит вне этой папки
+    /// (`gamedata/config/scripts`, файлы, добавленные вручную), считается локационным.
+    /// Сканирование gamedata хранит путь относительно неё (`scripts/x.lua`), поэтому
+    /// префикс `scripts/` тоже считается игровой папкой.
+    /// </summary>
+    public static bool IsGameScript(ScriptFile? file)
+    {
+        var path = (file?.Path ?? "").Replace('\\', '/').Trim();
+        if (path.Length == 0) return false;
+        if (path.StartsWith("/", StringComparison.Ordinal)) path = path.TrimStart('/');
+        return path.StartsWith("scripts/", StringComparison.OrdinalIgnoreCase)
+               || path.StartsWith(GameScriptsFolder, StringComparison.OrdinalIgnoreCase)
+               || path.Contains("/" + GameScriptsFolder, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Ключ сравнения путей скриптов: относительный путь нормализуется (`config/scripts/x.lua`),
+    /// абсолютный приводится к прямым слешам. `Paths.Normalize` для абсолютных путей возвращает
+    /// пустую строку, поэтому сравнивать ими нельзя — все файлы выглядели бы одним и тем же.
+    /// </summary>
+    public static string PathKey(string? path)
+    {
+        var normalized = Paths.Normalize(path);
+        return normalized.Length > 0 ? normalized : (path ?? "").Replace('\\', '/');
+    }
+
+    /// <summary>
+    /// Полный путь к файлу скрипта: сканирование `gamedata` хранит пути относительно неё
+    /// (`config/scripts/x.lua`), поэтому относительный путь приклеивается к `gamedataPath`;
+    /// префикс `gamedata/` в таком пути снимается, чтобы не получить `gamedata/gamedata`.
+    /// Результат всегда с прямыми слешами — так его можно сравнивать и показывать в UI.
+    /// </summary>
+    public static string? ResolveFullPath(string? path, string? gamedataPath)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return null;
+        var value = path!.Replace('\\', '/').Trim();
+        if (Path.IsPathRooted(value)) return value;
+
+        var root = gamedataPath?.Replace('\\', '/').Trim().TrimEnd('/');
+        if (string.IsNullOrEmpty(root)) return value;
+
+        var relative = value.StartsWith("gamedata/", StringComparison.OrdinalIgnoreCase)
+            ? value["gamedata/".Length..]
+            : value;
+        return Path.Combine(root, relative).Replace('\\', '/');
+    }
+
     /// <summary>Начальный текст нового файла.</summary>
     public const string DefaultText = "-- X-Ray Forge script\n\nfunction on_game_start()\n\t\nend\n";
 
@@ -65,6 +117,43 @@ public static class ScriptsCatalog
         if (!string.IsNullOrWhiteSpace(file.Name)) return file.Name;
         if (!string.IsNullOrWhiteSpace(file.Path)) return Path.GetFileName(file.Path);
         return "";
+    }
+
+    /// <summary>
+    /// Имя скрипта без пути и расширения (`scripts/level_script.script` → `level_script`).
+    /// По нему вызов `level.actor()` связывается с файлом проекта.
+    /// </summary>
+    /// <remarks>Строковая перегрузка принимает имя и путь; для карточки — `Stem(Name(file))`.</remarks>
+    public static string Stem(string? nameOrPath)
+    {
+        var value = (nameOrPath ?? "").Replace('\\', '/').Trim();
+        var slash = value.LastIndexOf('/');
+        if (slash >= 0) value = value[(slash + 1)..];
+        var dot = value.LastIndexOf('.');
+        if (dot > 0) value = value[..dot];
+        return value.Trim();
+    }
+
+    /// <summary>
+    /// Найти файл скрипта по имени из вызова (`level.actor()` → `level.script`/`level.lua`).
+    /// Сравнение без пути и расширения, без учёта регистра; при нескольких совпадениях
+    /// выигрывает игровой скрипт (`gamedata/scripts`).
+    /// </summary>
+    public static ScriptFile? FindScript(IEnumerable<ScriptFile>? scripts, string? name)
+    {
+        var wanted = Stem(name);
+        if (wanted.Length == 0 || scripts == null) return null;
+
+        ScriptFile? fallback = null;
+        foreach (var script in scripts)
+        {
+            if (script == null) continue;
+            if (!string.Equals(Stem(Name(script)), wanted, StringComparison.OrdinalIgnoreCase)) continue;
+            if (IsGameScript(script)) return script;
+            fallback ??= script;
+        }
+
+        return fallback;
     }
 
     /// <summary>Текущий текст скрипта (`s.text`, отсутствие — пустая строка).</summary>

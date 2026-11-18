@@ -130,10 +130,10 @@ public sealed class SuggestionLibrary
         };
     }
 
-    /// <summary>Подсказки для Lua-редактора (этап 7.3): API, глобалы и функции скриптов.</summary>
+    /// <summary>Подсказки для Lua-редактора (этап 7.3): API, глобалы, функции скриптов и info-порции.</summary>
     public IReadOnlyList<SuggestionEntry> ForLua() =>
         OfKinds(SuggestionKind.LuaApi, SuggestionKind.ScriptFunction,
-            SuggestionKind.ScriptBinding, SuggestionKind.Script);
+            SuggestionKind.ScriptBinding, SuggestionKind.Script, SuggestionKind.InfoPortion);
 
     /// <summary>Подсказки путей для `#include` (редактор `system.ltx`).</summary>
     public IReadOnlyList<SuggestionEntry> ForInclude() => OfKind(SuggestionKind.Include);

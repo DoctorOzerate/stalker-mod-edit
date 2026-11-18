@@ -168,6 +168,21 @@ public class SuggestionLibraryTests
         Assert.Empty(library.ForMetadataField("unknown"));
     }
 
+    /// <summary>Автодополнение Lua-редактора: API, функции скриптов и info-порции.</summary>
+    [Fact]
+    public void ForLua_includes_api_script_functions_and_info_portions()
+    {
+        var project = ProjectWithData();
+        project.InfoPortions = new List<InfoPortion> { new() { Id = "quest_done" } };
+        var library = SuggestionLibrary.Build(project);
+
+        var entries = library.ForLua();
+        Assert.Contains(entries, entry => entry.Value == "actor_init");
+        Assert.Contains(entries, entry => entry.Value == "bind_stalker.actor_init");
+        Assert.Contains(entries, entry => entry.Value == "db.actor:give_info_portion");
+        Assert.Contains(entries, entry => entry.Value == "quest_done");
+    }
+
     [Fact]
     public void Suggest_ranks_prefix_then_segment_boundary_and_honours_kind_filter()
     {

@@ -1,11 +1,14 @@
+using System.Collections;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using XRayForge.Core.Lua;
+using XRayForge.Core.Suggestions;
 
 namespace XRayForge.Controls;
 
@@ -22,6 +25,19 @@ public sealed class LuaEditor : RichTextBox
         new FrameworkPropertyMetadata(string.Empty,
             FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, OnEditorTextChanged));
 
+    /// <summary>
+    /// Источник подсказок (`SuggestionEntry`) для выпадающего списка. Обычно — `Completions`
+    /// вкладки «Скрипты»: API, глобалы, функции скриптов и info-порции.
+    /// </summary>
+    public static readonly DependencyProperty SuggestionsProperty = DependencyProperty.Register(
+        nameof(Suggestions), typeof(IEnumerable), typeof(LuaEditor),
+        new FrameworkPropertyMetadata(null, OnSuggestionsChanged));
+
+    /// <summary>Сколько подсказок максимум показывать (лишние доступны прокруткой).</summary>
+    public static readonly DependencyProperty MaxSuggestionsProperty = DependencyProperty.Register(
+        nameof(MaxSuggestions), typeof(int), typeof(LuaEditor),
+        new FrameworkPropertyMetadata(LuaCompletions.DefaultLimit));
+
     private static readonly Brush CommentBrush = Frozen(0x4A, 0xDE, 0x80);
     private static readonly Brush StringBrush = Frozen(0xFB, 0xBF, 0x24);
     private static readonly Brush NumberBrush = Frozen(0x60, 0xA5, 0xFA);
@@ -30,9 +46,14 @@ public sealed class LuaEditor : RichTextBox
     private readonly List<LineInfo> _lines = new();
     private readonly Stack<Snapshot> _undo = new();
     private readonly Stack<Snapshot> _redo = new();
+    private readonly Popup _suggestionPopup;
+    private readonly ListBox _suggestionList;
+    private IReadOnlyList<SuggestionEntry>? _currentSuggestions;
+    private bool _acceptingSuggestion;
     private bool _suppress;
     private bool _highlightQueued;
     private bool _restoringHistory;
+    private bool _linkCursor;
     private string _appliedText = string.Empty;
     private DateTime _lastTypingPush = DateTime.MinValue;
     private int _lastKnownCaret;
@@ -61,7 +82,70 @@ public sealed class LuaEditor : RichTextBox
         CommandBindings.Add(new CommandBinding(ApplicationCommands.Undo, OnUndo, CanUndoCommand));
         CommandBindings.Add(new CommandBinding(ApplicationCommands.Redo, OnRedo, CanRedoCommand));
         SizeChanged += (_, _) => UpdatePageWidth(_appliedText);
-        SelectionChanged += (_, _) => RememberSelection();
+
+        _suggestionList = new ListBox
+        {
+            MaxHeight = 216,
+            MinWidth = 300,
+            Focusable = false,
+            IsTabStop = false
+        };
+        _suggestionList.SetResourceReference(FontFamilyProperty, "MonoFontFamily");
+        _suggestionList.SetResourceReference(FontSizeProperty, "DensitySmallFontSize");
+        _suggestionList.SetValue(ScrollViewer.HorizontalScrollBarVisibilityProperty, ScrollBarVisibility.Disabled);
+        _suggestionList.SetValue(ScrollViewer.VerticalScrollBarVisibilityProperty, ScrollBarVisibility.Auto);
+        if (Application.Current?.TryFindResource("SuggestionItemTemplate") is DataTemplate template)
+            _suggestionList.ItemTemplate = template;
+        else
+            _suggestionList.DisplayMemberPath = nameof(SuggestionEntry.Value);
+        _suggestionList.PreviewMouseLeftButtonUp += (_, args) =>
+        {
+            if (AcceptSuggestion()) args.Handled = true;
+        };
+
+        var chrome = new Border
+        {
+            Child = _suggestionList,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(6),
+            Padding = new Thickness(1)
+        };
+        chrome.SetResourceReference(Border.BackgroundProperty, "SurfacePanel");
+        chrome.SetResourceReference(Border.BorderBrushProperty, "BorderStrong");
+
+        _suggestionPopup = new Popup
+        {
+            Child = chrome,
+            AllowsTransparency = true,
+            Placement = PlacementMode.Relative,
+            PlacementTarget = this,
+            StaysOpen = true,
+            PopupAnimation = PopupAnimation.Fade,
+            MinWidth = 300
+        };
+
+        Unloaded += (_, _) => CloseSuggestions();
+        LostKeyboardFocus += (_, _) => CloseSuggestions();
+        SelectionChanged += (_, _) =>
+        {
+            RememberSelection();
+            // Каретка сдвинулась, пока список открыт — пересчитать подсказки под новую позицию.
+            if (!_suppress && !_restoringHistory && _suggestionPopup.IsOpen) UpdateSuggestions();
+        };
+    }
+
+    /// <summary>Источник подсказок; `null` отключает выпадающий список.</summary>
+    public IEnumerable? Suggestions
+    {
+        get => (IEnumerable?)GetValue(SuggestionsProperty);
+        set => SetValue(SuggestionsProperty, value);
+    }
+
+    /// <summary>Ограничение числа подсказок в списке.</summary>
+    public int MaxSuggestions
+    {
+        get => (int)GetValue(MaxSuggestionsProperty);
+        set => SetValue(MaxSuggestionsProperty, value);
     }
 
     /// <summary>Текст документа; двусторонняя привязка к `ScriptFile.Text`.</summary>
@@ -108,6 +192,93 @@ public sealed class LuaEditor : RichTextBox
         var target = Math.Max(0, Math.Min(max, line));
         var viewport = Math.Max(1, ViewportHeight);
         ScrollToVerticalOffset(Math.Max(0, target * _lineHeight - viewport / 3));
+    }
+
+    /// <summary>Ctrl+ЛКМ по тексту: смещение в тексте под указателем (переход по ссылке файла).</summary>
+    public event EventHandler<int>? LinkClicked;
+
+    /// <summary>Смещение в тексте по точке в координатах контрола; `null`, если точки нет.</summary>
+    public int? OffsetAtPoint(Point point)
+    {
+        var position = GetPositionFromPoint(point, snapToText: true);
+        return position == null ? null : Math.Clamp(OffsetOf(position), 0, _appliedText.Length);
+    }
+
+    protected override void OnPreviewMouseLeftButtonDown(MouseButtonEventArgs e)
+    {
+        base.OnPreviewMouseLeftButtonDown(e);
+        // Клик в тексте закрывает подсказки: выбор делается мышью только в самом списке.
+        CloseSuggestions();
+
+        if ((Keyboard.Modifiers & ModifierKeys.Control) == 0) return;
+
+        var offset = OffsetAtPoint(e.GetPosition(this));
+        if (offset == null) return;
+
+        // Каретку по Ctrl+ЛКМ не двигаем: клик — это переход, а не правка.
+        e.Handled = true;
+        LinkClicked?.Invoke(this, offset.Value);
+    }
+
+    protected override void OnPreviewKeyDown(KeyEventArgs e)
+    {
+        if (_suggestionPopup.IsOpen)
+        {
+            switch (e.Key)
+            {
+                case Key.Down:
+                    MoveSuggestion(1);
+                    e.Handled = true;
+                    return;
+                case Key.Up:
+                    MoveSuggestion(-1);
+                    e.Handled = true;
+                    return;
+                case Key.PageDown:
+                    MoveSuggestion(5);
+                    e.Handled = true;
+                    return;
+                case Key.PageUp:
+                    MoveSuggestion(-5);
+                    e.Handled = true;
+                    return;
+                case Key.Enter:
+                case Key.Tab:
+                    if (AcceptSuggestion())
+                    {
+                        e.Handled = true;
+                        return;
+                    }
+
+                    CloseSuggestions();
+                    break;
+                case Key.Escape:
+                    CloseSuggestions();
+                    e.Handled = true;
+                    return;
+                case Key.Left:
+                case Key.Right:
+                case Key.Home:
+                case Key.End:
+                    // Каретка уходит из текущего токена — список больше не актуален.
+                    CloseSuggestions();
+                    break;
+            }
+        }
+
+        base.OnPreviewKeyDown(e);
+    }
+
+    protected override void OnPreviewMouseMove(MouseEventArgs e)
+    {
+        base.OnPreviewMouseMove(e);
+
+        // Курсор-«рука» подсказывает, что Ctrl+ЛКМ — переход по ссылке.
+        var linkReady = (Keyboard.Modifiers & ModifierKeys.Control) != 0 && IsMouseOver;
+        if (linkReady == _linkCursor) return;
+
+        _linkCursor = linkReady;
+        Cursor = linkReady ? Cursors.Hand : null;
     }
 
     protected override void OnTextChanged(TextChangedEventArgs e)
@@ -219,6 +390,103 @@ public sealed class LuaEditor : RichTextBox
         Selection.Select(startPointer, endPointer);
         _lastKnownCaret = caret;
         _lastKnownSelectionEnd = end;
+
+        UpdateSuggestions();
+    }
+
+    /// <summary>Источник подсказок изменился (после сборки индекса в ViewModel).</summary>
+    private static void OnSuggestionsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is LuaEditor editor) editor.UpdateSuggestions();
+    }
+
+    /// <summary>Показать/обновить выпадающий список подсказок по токену перед кареткой.</summary>
+    private void UpdateSuggestions()
+    {
+        if (_acceptingSuggestion || _suppress || _restoringHistory) return;
+        if (!IsKeyboardFocusWithin)
+        {
+            CloseSuggestions();
+            return;
+        }
+
+        var matches = LuaCompletions.Suggest(
+            _appliedText, CaretOffset, Suggestions?.OfType<SuggestionEntry>(), MaxSuggestions);
+        if (matches == null)
+        {
+            CloseSuggestions();
+            return;
+        }
+
+        _currentSuggestions = matches;
+        _suggestionList.ItemsSource = matches;
+        _suggestionList.SelectedIndex = 0;
+        _suggestionList.ScrollIntoView(matches[0]);
+        PositionSuggestions();
+        _suggestionPopup.IsOpen = true;
+    }
+
+    /// <summary>Попап подсказок — под кареткой, не шире редактора.</summary>
+    private void PositionSuggestions()
+    {
+        var rect = CaretPosition?.GetCharacterRect(LogicalDirection.Forward) ?? Rect.Empty;
+        _suggestionPopup.HorizontalOffset = rect.IsEmpty ? 0 : rect.Left;
+        _suggestionPopup.VerticalOffset = rect.IsEmpty ? 0 : rect.Bottom;
+        _suggestionPopup.Width = Math.Max(300, Math.Min(460, ActualWidth - 24));
+    }
+
+    private void CloseSuggestions()
+    {
+        _currentSuggestions = null;
+        if (!_suggestionPopup.IsOpen) return;
+
+        _suggestionPopup.IsOpen = false;
+        _suggestionList.ItemsSource = null;
+        _suggestionList.SelectedIndex = -1;
+    }
+
+    private void MoveSuggestion(int delta)
+    {
+        var count = _currentSuggestions?.Count ?? 0;
+        if (count == 0) return;
+
+        var index = _suggestionList.SelectedIndex;
+        index = index < 0 ? (delta > 0 ? 0 : count - 1) : (index + delta + count) % count;
+        _suggestionList.SelectedIndex = index;
+        _suggestionList.ScrollIntoView(_currentSuggestions![index]);
+    }
+
+    /// <summary>Вставить выбранную подсказку вместо введённого токена.</summary>
+    private bool AcceptSuggestion()
+    {
+        if (_currentSuggestions == null || _currentSuggestions.Count == 0) return false;
+
+        var index = Math.Clamp(_suggestionList.SelectedIndex, 0, _currentSuggestions.Count - 1);
+        var entry = _currentSuggestions[index];
+
+        var text = _appliedText;
+        var caret = Math.Clamp(CaretOffset, 0, text.Length);
+        var (start, _) = LuaCompletions.PrefixAt(text, caret);
+        var end = LuaCompletions.TokenEnd(text, caret);
+        var updated = text[..start] + entry.Value + text[end..];
+        var position = start + entry.Value.Length;
+
+        _acceptingSuggestion = true;
+        try
+        {
+            _appliedText = updated;
+            SetCurrentValue(EditorTextProperty, updated);
+            GetBindingExpression(EditorTextProperty)?.UpdateSource();
+            RebuildDocument(updated, position, position);
+        }
+        finally
+        {
+            _acceptingSuggestion = false;
+        }
+
+        CloseSuggestions();
+        Focus();
+        return true;
     }
 
     private void StyleRun(Run run, string cls)

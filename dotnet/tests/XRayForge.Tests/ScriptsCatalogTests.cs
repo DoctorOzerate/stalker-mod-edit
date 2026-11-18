@@ -84,6 +84,56 @@ public class ScriptsCatalogTests
     }
 
     [Fact]
+    public void IsGameScript_splits_engine_and_location_scripts()
+    {
+        Assert.True(ScriptsCatalog.IsGameScript(Script("bind.script", "x")));
+        Assert.True(ScriptsCatalog.IsGameScript(new ScriptFile
+        {
+            Name = "a.lua",
+            Path = @"D:\mods\x\gamedata\scripts\a.lua"
+        }));
+        Assert.True(ScriptsCatalog.IsGameScript(new ScriptFile { Name = "a.lua", Path = "/gamedata/scripts/a.lua" }));
+
+        // Сканирование gamedata пишет путь относительно неё — без префикса `gamedata/`.
+        Assert.True(ScriptsCatalog.IsGameScript(new ScriptFile { Name = "bind.script", Path = "scripts/bind.script" }));
+        Assert.True(ScriptsCatalog.IsGameScript(new ScriptFile { Name = "a.lua", Path = @"scripts\sub\a.lua" }));
+
+        // Локационные скрипты лежат рядом с конфигами локации и внутри `config/scripts`.
+        Assert.False(ScriptsCatalog.IsGameScript(new ScriptFile
+        {
+            Name = "marsh.lua",
+            Path = "gamedata/config/scripts/marsh.lua"
+        }));
+        Assert.False(ScriptsCatalog.IsGameScript(new ScriptFile { Name = "a.lua", Path = "gamedata/scriptsX/a.lua" }));
+        Assert.False(ScriptsCatalog.IsGameScript(new ScriptFile { Name = "a.lua" }));
+        Assert.False(ScriptsCatalog.IsGameScript(null));
+        Assert.Equal("gamedata/scripts/", ScriptsCatalog.GameScriptsFolder);
+    }
+
+    /// <summary>
+    /// Пути скриптов: ключ сравнения не теряет абсолютные пути, а относительный путь
+    /// сканирования (`config/scripts/x.lua`) разворачивается от папки `gamedata`.
+    /// </summary>
+    [Fact]
+    public void Path_helpers_keep_absolute_and_expand_scanned_paths()
+    {
+        Assert.Equal("config/scripts/a.lua", ScriptsCatalog.PathKey(@"config\scripts\a.lua"));
+        Assert.Equal("config/scripts/a.lua", ScriptsCatalog.PathKey("./config//scripts/a.lua"));
+        Assert.Equal("D:/mods/x/gamedata/scripts/a.lua",
+            ScriptsCatalog.PathKey(@"D:\mods\x\gamedata\scripts\a.lua"));
+        Assert.Equal("", ScriptsCatalog.PathKey(null));
+
+        Assert.Equal("D:/game/gamedata/config/scripts/a.lua",
+            ScriptsCatalog.ResolveFullPath("config/scripts/a.lua", @"D:\game\gamedata"));
+        Assert.Equal("D:/game/gamedata/scripts/a.lua",
+            ScriptsCatalog.ResolveFullPath("gamedata/scripts/a.lua", @"D:\game\gamedata\"));
+        Assert.Equal("D:/mods/x/gamedata/scripts/a.lua",
+            ScriptsCatalog.ResolveFullPath(@"D:\mods\x\gamedata\scripts\a.lua", @"D:\game\gamedata"));
+        Assert.Null(ScriptsCatalog.ResolveFullPath("  ", @"D:\game\gamedata"));
+        Assert.Null(ScriptsCatalog.ResolveFullPath(null, null));
+    }
+
+    [Fact]
     public void Line_offsets_support_lf_and_crlf()
     {
         const string text = "one\r\ntwo\nthree";
@@ -147,5 +197,44 @@ public class ScriptsCatalogTests
         Assert.Empty(ScriptsCatalog.Check(""));
         Assert.Empty(ScriptsCatalog.BuildPreview(""));
         Assert.Null(ScriptsCatalog.FindDefinition(new List<ScriptFile>(), "x", 0));
+    }
+
+    /// <summary>`level.actor()` → файл `level` находится без пути и расширения.</summary>
+    [Fact]
+    public void FindScript_matches_call_name_ignoring_path_and_extension()
+    {
+        var scripts = new List<ScriptFile>
+        {
+            new() { Name = "level.script", Path = "scripts/level.script" },
+            new() { Name = "custom_level.lua", Path = @"C:\mod\scripts\custom_level.lua" }
+        };
+
+        Assert.Same(scripts[0], ScriptsCatalog.FindScript(scripts, "level"));
+        Assert.Same(scripts[0], ScriptsCatalog.FindScript(scripts, "Level.Script"));
+        Assert.Same(scripts[1], ScriptsCatalog.FindScript(scripts, "custom_level"));
+        Assert.Null(ScriptsCatalog.FindScript(scripts, "missing"));
+        Assert.Null(ScriptsCatalog.FindScript(null, "level"));
+        Assert.Null(ScriptsCatalog.FindScript(scripts, ""));
+    }
+
+    /// <summary>Игровой скрипт выигрывает у локационного с тем же именем.</summary>
+    [Fact]
+    public void FindScript_prefers_game_scripts()
+    {
+        var local = new ScriptFile { Name = "level.lua", Path = @"C:\mod\config\scripts\level.lua" };
+        var game = new ScriptFile { Name = "level.script", Path = "scripts/level.script" };
+        var scripts = new List<ScriptFile> { local, game };
+
+        Assert.Same(game, ScriptsCatalog.FindScript(scripts, "level"));
+    }
+
+    [Fact]
+    public void Stem_strips_folder_and_extension()
+    {
+        Assert.Equal("level", ScriptsCatalog.Stem("scripts/level.script"));
+        Assert.Equal("level", ScriptsCatalog.Stem(@"gamedata\scripts\level.lua"));
+        Assert.Equal("level", ScriptsCatalog.Stem("level"));
+        Assert.Equal("", ScriptsCatalog.Stem(null));
+        Assert.Equal("", ScriptsCatalog.Stem(""));
     }
 }

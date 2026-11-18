@@ -1228,26 +1228,39 @@ public sealed partial class DialogueGraphViewModel : ObservableObject
         _loadingProps = false;
     }
 
-    /// <summary>Пересобрать список локалей панели и подтянуть перевод активной (`langs.map` в JS).</summary>
+    /// <summary>
+    /// Пересобрать список локалей панели и подтянуть перевод активной (`langs.map` в JS).
+    /// По умолчанию выбирается русская таблица: остальные языки доступны в списке.
+    /// </summary>
     private void RefreshPhraseLanguages()
     {
         PhraseLanguages.Clear();
         foreach (var language in _project.Languages) PhraseLanguages.Add(new PhraseLanguageViewModel(language));
 
-        var active = TextIdTools.ActiveLanguage(_project.Languages, ActivePhraseLocale);
+        var active = TextIdTools.PreferredLanguage(_project.Languages, ActivePhraseLocale, PhraseTextId);
         ActivePhraseLocale = active?.Locale ?? "";
         PhraseTranslation = TextIdTools.TranslationOf(_project.Languages, ActivePhraseLocale, PhraseTextId);
         OnPropertyChanged(nameof(HasPhraseLanguages));
     }
 
-    /// <summary>`resolveTextId`: строка ««перевод» · локаль» под полем `text_id`.</summary>
+    /// <summary>
+    /// `resolveTextId`: строка ««перевод» · локаль · файл таблицы» под полем `text_id`.
+    /// Файл показывает, откуда взят перевод, если языков несколько.
+    /// </summary>
     private void RefreshResolvedText()
     {
         var resolved = PhraseTextId.Length == 0
             ? null
             : TextIdTools.ResolveTextId(_project.Languages, PhraseTextId);
 
-        ResolvedPhraseText = resolved == null ? "" : "«" + resolved.Text + "» · " + resolved.Locale;
+        if (resolved == null)
+        {
+            ResolvedPhraseText = "";
+            return;
+        }
+
+        var source = string.IsNullOrWhiteSpace(resolved.Path) ? "" : " · " + Path.GetFileName(resolved.Path);
+        ResolvedPhraseText = "«" + resolved.Text + "» · " + resolved.Locale + source;
     }
 
     /// <summary>

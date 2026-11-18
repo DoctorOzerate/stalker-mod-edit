@@ -82,4 +82,39 @@ public class DialogueImportTests
         Assert.Empty(result.Imported);
         Assert.Empty(result.Skipped);
     }
+
+    /// <summary>
+    /// `dm_*`-диалоги в `dialogs.xml` состоят только из `precondition`/`action` — реплик нет,
+    /// граф построить не из чего, поэтому в проект они не попадают (и не считаются дублями).
+    /// </summary>
+    [Fact]
+    public void ImportFile_skips_dialogues_without_phrases()
+    {
+        var xml =
+            "<game_dialogs>\n" +
+            "<dialog id=\"dm_init\"><precondition>true</precondition><action>init()</action></dialog>\n" +
+            "<dialog id=\"dm_empty\"><phrase_list /></dialog>\n" +
+            Dialog("esc_d1", "st_esc_1") +
+            "\n</game_dialogs>";
+
+        var result = DialogueImporter.ImportFile(xml, null, "dialogs.xml", "dialogs.xml");
+
+        Assert.Equal(new[] { "esc_d1" }, result.Imported.Select(d => d.Id));
+        // Пустой диалог — не дубль: в `Skipped` попадают только уже загруженные id.
+        Assert.Empty(result.Skipped);
+    }
+
+    /// <summary>Пустым считается граф без единого узла `phrase`; `null` — тоже пусто.</summary>
+    [Fact]
+    public void IsEmpty_checks_phrase_nodes()
+    {
+        var loaded = DialogueImporter.Import(Xml());
+        Assert.All(loaded, dialog => Assert.False(DialogueImporter.IsEmpty(dialog)));
+
+        var empty = DialogueImporter.Import(
+            "<game_dialogs><dialog id=\"dm_x\"><action>go()</action></dialog></game_dialogs>");
+        Assert.Single(empty);
+        Assert.True(DialogueImporter.IsEmpty(empty[0]));
+        Assert.True(DialogueImporter.IsEmpty(null));
+    }
 }

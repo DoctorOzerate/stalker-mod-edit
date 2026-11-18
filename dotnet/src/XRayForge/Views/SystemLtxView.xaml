@@ -8,24 +8,6 @@
       карта секций, проверки LTX/script_binding, дерево и SVG инклюдов, LTX-файлы и all.spawn.
     -->
     <UserControl.Resources>
-        <SolidColorBrush x:Key="SystemRed" Color="#F87171" />
-        <SolidColorBrush x:Key="SystemGreen" Color="#4ADE80" />
-        <SolidColorBrush x:Key="SystemAmber" Color="#FBBF24" />
-
-        <Style x:Key="SystemCard" TargetType="Border" BasedOn="{StaticResource PanelBorder}">
-            <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="Padding" Value="12" />
-            <Setter Property="Margin" Value="0,0,0,10" />
-        </Style>
-        <Style x:Key="SystemLabel" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="Margin" Value="0,0,0,3" />
-        </Style>
-        <Style x:Key="SystemTitle" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="Margin" Value="0,0,0,6" />
-        </Style>
         <Style x:Key="SystemMono" TargetType="TextBlock" BasedOn="{StaticResource MonoText}">
             <Setter Property="FontSize" Value="11" />
         </Style>
@@ -61,13 +43,25 @@
                        Margin="0,3,0,0" TextWrapping="Wrap" />
         </StackPanel>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+        <ScrollViewer Grid.Row="1" x:Name="SystemScroll" VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Margin="16,0,16,16" MaxWidth="1100" HorizontalAlignment="Stretch">
+            <!-- Редактор занимает свободную высоту окна (`*`), остальные карточки — по контенту. -->
+            <Grid Margin="16,0,16,16" MaxWidth="1100" HorizontalAlignment="Stretch"
+                  MinHeight="{Binding ViewportHeight, ElementName=SystemScroll}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" MinHeight="240" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
                 <!-- Редактор и добавление include -->
-                <Border Style="{StaticResource SystemCard}">
-                    <StackPanel>
-                        <Grid Margin="0,0,0,8">
+                <Border Grid.Row="0" Style="{StaticResource SideCard}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid Grid.Row="0" Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
@@ -89,23 +83,24 @@
                                         Command="{Binding SystemLtx.DownloadSystemCommand}" />
                             </WrapPanel>
                         </Grid>
-                        <controls:SuggestionTextBox Style="{StaticResource SystemEditor}" Height="260"
+                        <controls:SuggestionTextBox Grid.Row="1" Style="{StaticResource SystemEditor}"
+                                                    MinHeight="200"
                                                     Text="{Binding SystemLtx.SystemText, Mode=TwoWay,
                                                         UpdateSourceTrigger=PropertyChanged}"
                                                     Suggestions="{Binding SystemLtx.IncludeSuggestions}"
                                                     TokenSeparators="{Binding SystemLtx.IncludeTokenSeparators}"
                                                     TextWrapping="NoWrap"
                                                     SpellCheck.IsEnabled="False" />
-                    </StackPanel>
+                    </Grid>
                 </Border>
 
 
                 <!-- Секции system.ltx -->
-                <Border Style="{StaticResource SystemCard}">
+                <Border Grid.Row="1" Style="{StaticResource SideCard}">
                     <StackPanel>
                         <Grid Margin="0,0,0,6">
                             <TextBlock Text="{Binding SystemLtx.SectionsTitle}"
-                                       Style="{StaticResource SystemTitle}" />
+                                       Style="{StaticResource SideCardTitle}" />
                             <Button Content="{loc:Loc systemSectionAdd}"
                                     Style="{StaticResource ToolbarButton}"
                                     HorizontalAlignment="Right"
@@ -119,7 +114,7 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border BorderBrush="{DynamicResource BorderBevel}"
-                                            BorderThickness="1" CornerRadius="6" Margin="0,0,0,4"
+                                            BorderThickness="1" CornerRadius="{StaticResource CornerSm}" Margin="0,0,0,4"
                                             Padding="4">
                                         <StackPanel>
                                             <Grid>
@@ -163,7 +158,7 @@
                                                                          UpdateSourceTrigger=PropertyChanged}" />
                                                             <Button Grid.Column="2" Content="✕"
                                                                     Style="{StaticResource ToolbarButton}"
-                                                                    Foreground="{StaticResource SystemRed}"
+                                                                    Foreground="{StaticResource StatusDanger}"
                                                                     Padding="6,0" MinHeight="24"
                                                                     Command="{Binding RemoveCommand}" />
                                                         </Grid>
@@ -180,10 +175,10 @@
 
 
                 <!-- Инклюды -->
-                <Border Style="{StaticResource SystemCard}">
+                <Border Style="{StaticResource SideCard}">
                     <StackPanel>
                         <TextBlock Text="{Binding SystemLtx.IncludesTitle}"
-                                   Style="{StaticResource SystemTitle}" />
+                                   Style="{StaticResource SideCardTitle}" />
                         <TextBlock Text="{loc:Loc systemNoIncludes}"
                                    Style="{StaticResource CaptionText}"
                                    Visibility="{Binding SystemLtx.HasIncludes,
@@ -203,11 +198,11 @@
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Foreground"
-                                                            Value="{StaticResource SystemGreen}" />
+                                                            Value="{StaticResource StatusSuccess}" />
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding IsBroken}" Value="True">
                                                             <Setter Property="Foreground"
-                                                                    Value="{StaticResource SystemRed}" />
+                                                                    Value="{StaticResource StatusDanger}" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
@@ -243,7 +238,7 @@
                 </Border>
 
                 <!-- Предпросмотр файла инклюда -->
-                <Border Style="{StaticResource SystemCard}"
+                <Border Grid.Row="2" Style="{StaticResource SideCard}"
                         Visibility="{Binding SystemLtx.HasIncludePreview,
                             Converter={StaticResource BoolToVisibility}}">
                     <StackPanel>
@@ -258,10 +253,10 @@
 
 
                 <!-- Дерево и SVG инклюдов -->
-                <Border Style="{StaticResource SystemCard}">
+                <Border Grid.Row="3" Style="{StaticResource SideCard}">
                     <StackPanel>
                         <TextBlock Text="{loc:Loc systemIncludeTree}"
-                                   Style="{StaticResource SystemTitle}" />
+                                   Style="{StaticResource SideCardTitle}" />
                         <TextBlock Text="{loc:Loc systemNoIncludes}"
                                    Style="{StaticResource CaptionText}"
                                    Visibility="{Binding SystemLtx.HasIncludeTree,
@@ -277,11 +272,11 @@
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding Cyclic}" Value="True">
                                                         <Setter Property="Foreground"
-                                                                Value="{StaticResource SystemRed}" />
+                                                                Value="{StaticResource StatusDanger}" />
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Found}" Value="False">
                                                         <Setter Property="Foreground"
-                                                                Value="{StaticResource SystemAmber}" />
+                                                                Value="{StaticResource StatusWarning}" />
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -299,11 +294,11 @@
 
 
                 <!-- Карта секций во всех загруженных файлах -->
-                <Border Style="{StaticResource SystemCard}">
+                <Border Style="{StaticResource SideCard}">
                     <StackPanel>
                         <Grid Margin="0,0,0,6">
                             <TextBlock Text="{Binding SystemLtx.SectionMapTitle}"
-                                       Style="{StaticResource SystemTitle}" />
+                                       Style="{StaticResource SideCardTitle}" />
                             <TextBox Width="220" Height="26" HorizontalAlignment="Right"
                                      FontSize="11" Padding="4,0"
                                      Text="{Binding SystemLtx.SectionSearch, Mode=TwoWay,
@@ -327,7 +322,7 @@
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding IsDuplicate}" Value="True">
                                                             <Setter Property="Foreground"
-                                                                    Value="{StaticResource SystemAmber}" />
+                                                                    Value="{StaticResource StatusWarning}" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
@@ -342,10 +337,10 @@
 
 
                 <!-- Проверки LTX и script_binding -->
-                <Border Style="{StaticResource SystemCard}">
+                <Border Style="{StaticResource SideCard}">
                     <StackPanel>
                         <TextBlock Text="{Binding SystemLtx.ChecksTitle}"
-                                   Style="{StaticResource SystemTitle}" />
+                                   Style="{StaticResource SideCardTitle}" />
                         <TextBlock Text="{loc:Loc systemNoIssues}"
                                    Style="{StaticResource CaptionText}"
                                    Visibility="{Binding SystemLtx.HasIssues,
@@ -363,11 +358,11 @@
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Foreground"
-                                                            Value="{StaticResource SystemAmber}" />
+                                                            Value="{StaticResource StatusWarning}" />
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding IsError}" Value="True">
                                                             <Setter Property="Foreground"
-                                                                    Value="{StaticResource SystemRed}" />
+                                                                    Value="{StaticResource StatusDanger}" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
@@ -391,10 +386,10 @@
 
 
                 <!-- Файлы LTX (gamedata) -->
-                <Border Style="{StaticResource SystemCard}">
+                <Border Style="{StaticResource SideCard}">
                     <StackPanel>
                         <TextBlock Text="{Binding SystemLtx.LtxFilesTitle}"
-                                   Style="{StaticResource SystemTitle}" />
+                                   Style="{StaticResource SideCardTitle}" />
                         <ListBox ItemsSource="{Binding SystemLtx.LtxFileRows}"
                                  SelectedItem="{Binding SystemLtx.SelectedLtxFile, Mode=TwoWay}"
                                  MaxHeight="150">
@@ -422,7 +417,7 @@
                                         CommandParameter="{Binding SystemLtx.SelectedLtxFile}" />
                                 <Button Content="{loc:Loc scriptDelete}"
                                         Style="{StaticResource ToolbarButton}"
-                                        Foreground="{StaticResource SystemRed}"
+                                        Foreground="{StaticResource StatusDanger}"
                                         Command="{Binding SystemLtx.DeleteLtxFileCommand}"
                                         CommandParameter="{Binding SystemLtx.SelectedLtxFile}" />
                             </WrapPanel>
@@ -437,10 +432,10 @@
                 </Border>
 
                 <!-- all.spawn -->
-                <Border Style="{StaticResource SystemCard}">
+                <Border Style="{StaticResource SideCard}">
                     <StackPanel>
                         <Grid>
-                            <TextBlock Text="{loc:Loc systemSpawn}" Style="{StaticResource SystemTitle}" />
+                            <TextBlock Text="{loc:Loc systemSpawn}" Style="{StaticResource SideCardTitle}" />
                             <Button Content="{loc:Loc systemLoadSpawn}"
                                     Style="{StaticResource ToolbarButton}"
                                     HorizontalAlignment="Right"
@@ -464,7 +459,7 @@
                         </ScrollViewer>
                     </StackPanel>
                 </Border>
-            </StackPanel>
+            </Grid>
         </ScrollViewer>
     </Grid>
 </UserControl>
