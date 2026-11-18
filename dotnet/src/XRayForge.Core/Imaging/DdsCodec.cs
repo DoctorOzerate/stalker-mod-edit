@@ -1,7 +1,7 @@
 namespace XRayForge.Core.Imaging;
 
 /// <summary>
-/// Декодирование и кодирование DDS-текстур — порт `src/lib/dds.js`
+/// Декодирование и кодирование DDS-текстур — порт прежнего JS-модуля `dds.js`
 /// (DXT1/DXT3/DXT5, BC4/BC5, несжатые 24/32-бит).
 /// </summary>
 /// <remarks>

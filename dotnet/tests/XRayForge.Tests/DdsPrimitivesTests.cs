@@ -2,7 +2,7 @@ using XRayForge.Core.Imaging;
 
 namespace XRayForge.Tests;
 
-/// <summary>Примитивы `src/lib/dds.js`: `rgb565`, `rgbTo565`, `maskInfo`.</summary>
+/// <summary>Примитивы прежнего JS-модуля `dds.js`: `rgb565`, `rgbTo565`, `maskInfo`.</summary>
 public class DdsPrimitivesTests
 {
     [Theory]

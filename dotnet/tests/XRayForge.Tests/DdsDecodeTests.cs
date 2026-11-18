@@ -3,7 +3,7 @@ using XRayForge.Core.Imaging;
 
 namespace XRayForge.Tests;
 
-/// <summary>Декодирование `src/lib/dds.js`: блоки DXT1/3/5, BC4/BC5, несжатые форматы, контейнер.</summary>
+/// <summary>Декодирование прежнего JS-модуля `dds.js`: блоки DXT1/3/5, BC4/BC5, несжатые форматы, контейнер.</summary>
 public class DdsDecodeTests
 {
     [Fact]

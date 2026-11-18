@@ -5,7 +5,7 @@ namespace XRayForge.Core.Storage;
 
 /// <summary>
 /// Сохранение проекта файлом (`saves/&lt;имя&gt;.project.json`) — порт IPC-обработчика
-/// `xray:save-project` из `electron/main.cjs`.
+/// `xray:save-project` прежнего Electron-клиента.
 /// </summary>
 public static class ProjectFileService
 {

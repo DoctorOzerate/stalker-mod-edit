@@ -2,14 +2,15 @@
 
 ## 1. Что это и где истина
 
-X-Ray Forge — редактор модов S.T.A.L.K.E.R. (SoC/CS/CoP). Идёт миграция с legacy-клиента
-**Electron + React** (`src/`, `electron/`, `test/`) на **WPF (.NET 9)** в `dotnet/`.
+X-Ray Forge — редактор модов S.T.A.L.K.E.R. (SoC/CS/CoP). Основная версия — **WPF (.NET 9)**
+в `dotnet/`. Прежний клиент Electron + React удалён (18.11.2026), его функции перенесены в WPF.
 
-- Источник истины по WPF-версии: `dotnet/src/XRayForge*`, `dotnet/tests/XRayForge.Tests`,
-  `MIGRATION.md` (прогресс и решения этапов), `dotnet/docs/FEATURE_GAP_AMK.md` (что осталось).
-- `README.md` в корне описывает **старый** React/Electron-клиент — не путать.
-- Legacy-код (`src/`, `test/`) — **референс для портирования**, а не место для новых фич.
-  Менять его можно только по явной просьбе.
+- Источник истины: `dotnet/src/XRayForge*`, `dotnet/tests/XRayForge.Tests`,
+  `MIGRATION.md` (прогресс, решения этапов, карта JS → C#), `dotnet/docs/FEATURE_GAP_AMK.md`
+  (что осталось).
+- `README.md` в корне описывает WPF-версию и команды сборки.
+- Legacy JS-код в репозиторий не возвращать: поведение восстанавливается по `MIGRATION.md` §4
+  и тестам, а не копированием старых модулей.
 - Язык комментариев, XML-документации, коммитов и UI по умолчанию — **русский**
   (EN — вторым языком локализации).
 
@@ -24,7 +25,7 @@ dotnet/
 │  ├─ Text/ Ui/ Validation/ Xml/ Scripts (новые каталоги по домену)
 ├─ src/XRayForge/          net9.0-windows, WPF + CommunityToolkit.Mvvm
 │  ├─ ViewModels/ Views/ Controls/ Converters/ Services/ Themes/ Localization/
-├─ tests/XRayForge.Tests/  xUnit, порт test/*.mjs + тесты новых каталогов
+├─ tests/XRayForge.Tests/  xUnit, тесты портированных модулей и новых каталогов
 └─ docs/                   FEATURE_GAP_AMK.md, ui-references/
 ```
 
@@ -79,7 +80,8 @@ dotnet test dotnet/XRayForge.sln -c Release --no-build
 - 0 предупреждений и 0 ошибок в обеих конфигурациях.
 - Новая логика Core → новые `Fact`-тесты (`<Domain>Tests.cs`, имена методов — предложения
   `DoesX_whenY`, допускается русская формулировка в духе существующих файлов).
-- Порт из JS сопровождается тестами 1:1 с `test/*.mjs` там, где они есть.
+- У портированного модуля сохраняется паритет с прежним JS-модулем: тесты покрывают те же
+  случаи. Карта «JS → C#» и отклонения — в `MIGRATION.md` §4.
 - Для UI-изменений — ручная/зондовая проверка (временный профиль `%APPDATA%\XRayForge`,
   после проверки вернуть профиль), описание результата — в `MIGRATION.md`.
 - Любая завершённая порция работы отражается в `MIGRATION.md` (что сделано, отклонения,
@@ -87,9 +89,9 @@ dotnet test dotnet/XRayForge.sln -c Release --no-build
 
 ## 7. Ограничения и запреты
 
-- Не коммитить `saves/*.project.json`, `ebaniy-link.txt`, `bin/`, `obj/`, `node_modules/`.
+- Не коммитить `saves/*.project.json`, `ebaniy-link.txt`, `bin/`, `obj/`, `artifacts/`.
 - Не ломать JSON-паритет проекта и round-trip реальных `saves/*.project.json`.
 - Не тащить в редактор Level Editor, 3D-рендер, погоду/шейдеры (см. P3 в gap-анализе).
-- Не менять `src/`, `electron/`, `test/` ради WPF-задач: это референс, у него больше нет
-  сборочной обвязки (`package.json`, Vite/Tailwind, `index.html` удалены).
+- Не возвращать legacy JS/Electron-клиент и его сборочную обвязку (`package.json`, Vite,
+  Tailwind): история переноса остаётся в `MIGRATION.md`.
 - Не оставлять «временные» TODO, заглушки команд и неиспользуемые ключи локализации.

@@ -2,7 +2,7 @@ using XRayForge.Core.Ltx;
 
 namespace XRayForge.Tests;
 
-/// <summary>Порт функций `src/lib/ltx.js`, не покрытых `test/ltx.test.mjs`.</summary>
+/// <summary>Порт функций прежнего JS-модуля `ltx.js`, не покрытых прежними тестами.</summary>
 public class LtxUtilsTests
 {
     [Fact]
@@ -224,7 +224,7 @@ public class LtxUtilsTests
         Assert.Equal("1fa78", CodePoints("bloodsucker"));
     }
 
-    /// <summary>Кодовые точки значения COMMUNITY_ICONS через «+» (эталон из src/lib/ltx.js).</summary>
+    /// <summary>Кодовые точки значения COMMUNITY_ICONS через «+» (эталон из прежнего `ltx.js`).</summary>
     private static string CodePoints(string key)
     {
         var s = ItemCatalog.CommunityIcons[key];

@@ -5,7 +5,7 @@ namespace XRayForge.Core.Ltx;
 
 /// <summary>
 /// Текстовые операции над LTX-файлом (правка строк, секций и полей без полного
-/// пересбора) — порт `src/lib/ltx.js`: splitLines, updateLtxLine, removeSection,
+/// пересбора) — порт прежнего JS-модуля `ltx.js`: splitLines, updateLtxLine, removeSection,
 /// addSection, addFieldToSection, removeFieldByLine, renameSection, replaceFieldValues.
 /// </summary>
 public static class LtxTextTools

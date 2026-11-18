@@ -23,7 +23,7 @@ public sealed class IncludeTreeRow
 }
 
 /// <summary>
-/// Работа с деревом `#include` — порт `src/lib/ltx.js`: resolveIncludes,
+/// Работа с деревом `#include` — порт прежнего JS-модуля `ltx.js`: resolveIncludes,
 /// isFileLoaded, findIncludeSuggestion, includeTreeRows, includeGraphSvg.
 /// </summary>
 public static class LtxIncludes

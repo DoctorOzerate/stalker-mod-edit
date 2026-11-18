@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 namespace XRayForge.Core.Ltx;
 
 /// <summary>
-/// Доменные парсеры LTX-файлов игры — порт `src/lib/ltx.js`: parseRatingScales,
+/// Доменные парсеры LTX-файлов игры — порт прежнего JS-модуля `ltx.js`: parseRatingScales,
 /// parseSquadDescr, parseSecrets, parseSpawnSections, parseMonsters, parseActor.
 /// </summary>
 public static class LtxDomainParsers

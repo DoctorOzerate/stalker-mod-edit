@@ -11,14 +11,16 @@ dotnet test dotnet/XRayForge.sln --no-build --nologo -v q
 Если в дереве есть незакоммиченные правки — сначала довести их до зелёных сборки/тестов,
 затем продолжать новую порцию. Число тестов фиксировать в `MIGRATION.md`.
 
-## S2. Портирование вкладки JS → WPF (порядок, проверенный на 7.1–7.3)
+## S2. Новая вкладка редактора (порядок, проверенный на 7.1–7.3)
 
-1. Прочитать legacy: `src/tabs/<Name>Tab.js` + обработчики в `src/App.js`
-   (поиск по именам состояния: `selScript`, `scriptSearch`, `patch`, `say`).
+1. Свериться с `MIGRATION.md` §4 (карта JS → C#) и `dotnet/docs/FEATURE_GAP_AMK.md`:
+   что уже готово в Core и чего не хватает. Legacy-исходников в репозитории больше нет,
+   поведение восстанавливается по описанию этапов и тестам.
 2. Найти готовую логику в `Core` (`Lua*`, `Ltx*`, `Xml*`, `Quests*`, `CharacterCatalog`).
    Недостающее вынести в новый каталог `Core/<Domain>/<Name>Catalog.cs` — чистые функции,
    без WPF, с XML-документацией.
-3. Написать `Core`-тесты **до** ViewModel: паритет с legacy, крайние случаи, пустой проект.
+3. Написать `Core`-тесты **до** ViewModel: паритет с прежним JS-модулем, крайние случаи,
+   пустой проект.
 4. `ViewModels/<Name>ViewModel.cs`: `Attach(project)`, `RefreshLocalization()`, коллекции
    элементов, `[ObservableProperty]`/`[RelayCommand]`; правки — в модель проекта.
    Элемент списка — отдельный маленький VM (`<Name>ItemViewModel`) с кэшем по модели.
@@ -68,7 +70,7 @@ dotnet test dotnet/XRayForge.sln --no-build --nologo -v q
   прокрутку правой панели (`VerticalScrollPercent == 0` при открытии), реакцию на команды.
 - Результат коротко записать в `MIGRATION.md`.
 
-## S7. Работа с legacy-ссылками и ассетами
+## S7. Работа с путями gamedata и ассетами
 
 - Пути gamedata: `config` для SoC/CS, `configs` для CoP — брать из `Paths`/`GameSeriesCatalog`,
   не собирать вручную.

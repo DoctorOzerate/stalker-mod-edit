@@ -3,7 +3,7 @@ using XRayForge.Core.Imaging;
 
 namespace XRayForge.Tests;
 
-/// <summary>Кодирование `src/lib/dds.js`: блоки DXT, mip-цепочка, сборка контейнера.</summary>
+/// <summary>Кодирование прежнего JS-модуля `dds.js`: блоки DXT, mip-цепочка, сборка контейнера.</summary>
 public class DdsEncodeTests
 {
     [Fact]
