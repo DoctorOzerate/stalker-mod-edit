@@ -316,10 +316,10 @@
                         <ItemsControl ItemsSource="{Binding DialogueGraph.DialogueBuckets}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Header}" Style="{StaticResource PropsLabel}"
-                                                   FontWeight="Bold" Margin="0,6,0,4" />
-                                        <ItemsControl ItemsSource="{Binding Items}">
+                                    <!-- Группа диалогов (`dialogueGroup`): свёрнута по умолчанию, чтобы список
+                                         локаций не растягивал панель; состояние задаётся при её пересборке. -->
+                                    <Expander Header="{Binding Header}" IsExpanded="False" Margin="0,6,0,0">
+                                        <ItemsControl ItemsSource="{Binding Items}" Margin="0,4,0,0">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
                                                     <Button Style="{StaticResource GraphCardButton}"
@@ -336,7 +336,7 @@
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
-                                    </StackPanel>
+                                    </Expander>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>

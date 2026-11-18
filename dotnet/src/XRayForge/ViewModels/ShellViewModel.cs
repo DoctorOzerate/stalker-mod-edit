@@ -90,8 +90,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         _autosave.Saved += OnAutosaveSaved;
         _autosave.ApplySettings();
 
-        // Старт всегда пустой: сохранённый проект восстанавливается только кнопкой
-        // «Продолжить» или открытием из списка, а не молча при запуске.
+        // Стартовое состояние — пустой проект; последний сохранённый проект открывается
+        // автопродолжением в конце конструктора, когда профиль его помнит.
         _project = ProjectMigration.Empty();
         _statusText = LocalizationSource.Get("ready");
         _activeTab = Tabs[0];
@@ -116,6 +116,15 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Quests.Attach(_project);
 
         RefreshProjectView();
+
+        // Автопродолжение: если профиль помнит текущий проект (`current.project.json` жив и есть
+        // в списке), он открывается сразу — приветственный экран остаётся только там, где
+        // продолжать нечего (`_isWelcomeOpen` по умолчанию `true`, `Adopt` его закрывает).
+        if (HasCurrentProject && _store.LoadResumableProject() is { } resumable)
+        {
+            Adopt(RestoreGamedata(resumable), dirty: false);
+            StatusText = LocalizationSource.Get("continue");
+        }
     }
 
     // --- коллекции ---

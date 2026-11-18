@@ -131,6 +131,63 @@ public class GraphTests
     }
 
     [Fact]
+    public void LayoutDialogue_makes_room_for_tall_nodes()
+    {
+        var nodes = new List<DialogueNode>
+        {
+            new() { Id = "s", Type = NodeTypes.Start },
+            new() { Id = "tall", Type = NodeTypes.Phrase, Data = new NodeData { Text = new string('ж', 360) } },
+            new() { Id = "short", Type = NodeTypes.Phrase, Data = new NodeData { Text = "Короткая реплика" } }
+        };
+        var edges = new List<DialogueEdge>
+        {
+            new() { Source = "s", Target = "tall" },
+            new() { Source = "s", Target = "short" }
+        };
+
+        GraphLayout.LayoutDialogue(nodes, edges);
+
+        // Оба узла — на уровне 1, в одной колонке.
+        Assert.Equal(380.0, nodes[1].X);
+        Assert.Equal(nodes[1].X, nodes[2].X);
+        Assert.Equal(80.0, nodes[1].Y);
+        // Высокая карточка сдвигает соседа вниз, а не перекрывает его.
+        Assert.True(GraphLayout.NodeHeight(nodes[1]) > GraphLayout.RowStep);
+        Assert.Equal(nodes[1].Y + GraphLayout.NodeHeight(nodes[1]) + GraphLayout.RowGap, nodes[2].Y);
+    }
+
+    [Fact]
+    public void NodeHeight_keeps_base_for_short_nodes_and_grows_with_text()
+    {
+        var shortNode = new DialogueNode
+        {
+            Id = "a", Type = NodeTypes.Phrase, Data = new NodeData { Text = "Привет" }
+        };
+        var tallNode = new DialogueNode
+        {
+            Id = "b", Type = NodeTypes.Phrase, Data = new NodeData { Text = new string('а', 400) }
+        };
+
+        Assert.Equal(90.0, GraphLayout.NodeHeight(shortNode));
+        Assert.True(GraphLayout.NodeHeight(tallNode) > GraphLayout.NodeHeight(shortNode));
+        // Один бейдж укладывается в базовую высоту, два — уже нет.
+        Assert.Equal(90.0, GraphLayout.NodeHeight(new DialogueNode
+        {
+            Id = "c", Type = NodeTypes.Phrase, Data = new NodeData { VoiceId = "voice_1" }
+        }));
+        Assert.True(GraphLayout.NodeHeight(new DialogueNode
+        {
+            Id = "d", Type = NodeTypes.Phrase,
+            Data = new NodeData
+            {
+                VoiceId = "voice_1",
+                Metadata = new Dictionary<string, List<string>> { ["has_info"] = new() { "quest_done" } }
+            }
+        }) > 90.0);
+        Assert.Equal(90.0, GraphLayout.NodeHeight(null));
+    }
+
+    [Fact]
     public void DialogueStats_counts_phrases_branches_and_depth()
     {
         var nodes = new List<DialogueNode>
