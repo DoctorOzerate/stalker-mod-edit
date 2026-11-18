@@ -4,6 +4,7 @@
         xmlns:loc="clr-namespace:XRayForge.Localization"
         xmlns:views="clr-namespace:XRayForge.Views"
         Title="{Binding Title}"
+        Icon="/Assets/app.ico"
         Width="1440" Height="900" MinWidth="1024" MinHeight="640"
         WindowStyle="None" ResizeMode="CanResize"
         WindowStartupLocation="CenterScreen"
@@ -45,14 +46,14 @@
         </DataTemplate>
     </Window.Resources>
 
-    <Grid>
+    <Grid Background="{DynamicResource SurfaceBase}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Панель инструментов: заголовок, действия, кнопки окна -->
+        <!-- Панель инструментов: заголовок, контекстные действия раздела, поиск, кнопки окна -->
         <Border Grid.Row="0" Background="{DynamicResource ChromeBackdrop}" BorderBrush="{DynamicResource BorderBevel}"
                 BorderThickness="0,0,0,1" Padding="10,6" MouseLeftButtonDown="OnHeaderDrag">
             <Grid>
@@ -60,39 +61,47 @@
                     <TextBlock Text="☢" FontSize="16" Foreground="{DynamicResource AccentGlow}" Margin="0,0,8,0" />
                     <TextBlock Text="{loc:Loc appTitle}" Style="{StaticResource TitleText}" VerticalAlignment="Center" />
                     <TextBlock Text="{Binding ProjectName}" Style="{StaticResource MonoText}" Margin="10,0,0,0"
-                               VerticalAlignment="Center" />
+                               VerticalAlignment="Center"
+                               Visibility="{Binding IsProjectOpen, Converter={StaticResource BoolToVisibility}}" />
                     <TextBlock Text="{Binding SeriesLabel}" Style="{StaticResource CaptionText}" Margin="8,0,0,0"
-                               VerticalAlignment="Center" />
+                               VerticalAlignment="Center"
+                               Visibility="{Binding IsProjectOpen, Converter={StaticResource BoolToVisibility}}" />
                     <TextBlock Text="●" Foreground="{DynamicResource StateWarn}" Margin="8,0,0,0"
                                VerticalAlignment="Center" ToolTip="{loc:Loc unsaved}"
                                Visibility="{Binding Dirty, Converter={StaticResource BoolToVisibility}}" />
                 </StackPanel>
 
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc projects}"
-                            Command="{Binding ShowWelcomeCommand}" />
-                    <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc save}"
-                            Command="{Binding SaveCommand}" />
-                    <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc gameExportDialogs}"
-                            Command="{Binding ExportGameDialogsCommand}" />
-                    <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc checkGraph}"
-                            Command="{Binding CheckGraphCommand}" />
-                    <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc exportXml}"
-                            Command="{Binding ExportXmlCommand}"
-                            Visibility="{Binding IsDebugBuild, Converter={StaticResource BoolToVisibility}}" />
-                    <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc globalSearch}"
-                            Command="{Binding OpenSearchCommand}" />
-                    <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc scanGamedata}"
-                            Command="{Binding ScanGamedataCommand}" />
+                <!-- Действия активного редактора (`ToolbarCatalog`): у «Диалогов» — экспорт и проверка
+                     графа, у «Обзора» — сборка игры и самопроверка, у прочих разделов — сохранение -->
+                <ItemsControl ItemsSource="{Binding ToolbarActions}" HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              Visibility="{Binding HasToolbarActions, Converter={StaticResource BoolToVisibility}}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Style="{StaticResource ToolbarButton}" Command="{Binding Command}"
+                                    Content="{Binding Label}" ToolTip="{Binding Label}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <!-- Глобальный поиск по проекту — лупа в правом углу, работает с открытым проектом -->
+                    <Button Style="{StaticResource IconButton}" Content="🔍" FontSize="14"
+                            Command="{Binding OpenSearchCommand}" ToolTip="{loc:Loc globalSearch}"
+                            Visibility="{Binding IsProjectOpen, Converter={StaticResource BoolToVisibility}}" />
                     <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc projectSettings}"
-                            Command="{Binding OpenProjectSettingsCommand}" />
+                            Command="{Binding OpenProjectSettingsCommand}"
+                            Visibility="{Binding IsProjectOpen, Converter={StaticResource BoolToVisibility}}" />
                     <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc programSettings}"
                             Command="{Binding OpenProgramSettingsCommand}" />
                     <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc help}"
                             Command="{Binding OpenHelpCommand}" />
-                </StackPanel>
-
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Rectangle Width="1" Height="18" Margin="6,0" Fill="{DynamicResource BorderBevel}" />
                     <Button Style="{StaticResource IconButton}" Content="—" Click="OnMinimize" />
                     <Button x:Name="MaximizeButton" Style="{StaticResource IconButton}" Content="▢" Click="OnMaximize" />
                     <Button Style="{StaticResource IconButton}" Content="✕" Click="OnClose" />
@@ -102,13 +111,15 @@
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="228" />
+                <!-- Ширина навигации задаётся самой панелью: без проекта она скрыта и занимает 0 -->
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
             <!-- Левая навигация: разделы `NavigationCatalog` со счётчиками и Ctrl+1…9 -->
-            <Border Grid.Column="0" Background="{DynamicResource SurfacePanel}"
-                    BorderBrush="{DynamicResource BorderBevel}" BorderThickness="0,0,1,0">
+            <Border Grid.Column="0" Width="228" Background="{DynamicResource SurfacePanel}"
+                    BorderBrush="{DynamicResource BorderBevel}" BorderThickness="0,0,1,0"
+                    Visibility="{Binding IsProjectOpen, Converter={StaticResource BoolToVisibility}}">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top" Margin="12,10,12,8">
                         <TextBlock Text="{loc:Loc savedProjects}" Style="{StaticResource CaptionText}" />
@@ -143,8 +154,9 @@
                 </DockPanel>
             </Border>
 
-            <!-- Рабочая область: обзор, раздел и приветственный экран поверх -->
-            <Grid Grid.Column="1" Background="{DynamicResource SurfaceBase}">
+            <!-- Рабочая область: обзор и редактор раздела. Без проекта её закрывает экран выбора проекта -->
+            <Grid Grid.Column="1" Background="{DynamicResource SurfaceBase}"
+                  Visibility="{Binding IsProjectOpen, Converter={StaticResource BoolToVisibility}}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="16,14"
                               Visibility="{Binding IsOverviewActive, Converter={StaticResource BoolToVisibility}}">
                     <StackPanel>
@@ -242,17 +254,21 @@
                         </Style>
                     </ContentControl.Style>
                 </ContentControl>
-                <!-- Приветственный экран (`welcomeTitle`): проекты профиля и создание проекта -->
-                <Grid Background="{DynamicResource Scrim}"
-                      Visibility="{Binding IsWelcomeOpen, Converter={StaticResource BoolToVisibility}}">
-                    <Border Style="{StaticResource PanelBorder}" Width="640" Padding="22"
+            </Grid>
+
+            <!-- Приветственный экран (`welcomeTitle`): выбор проекта при старте, без хрома редактора.
+                 Оверлей растянут на обе колонки (навигация скрыта), поэтому ширина навигации не
+                 зависит от карточки: панель ограничена `MaxWidth` и центрируется по окну. -->
+            <Grid Grid.Column="0" Grid.ColumnSpan="2" Background="{DynamicResource Scrim}"
+                  Visibility="{Binding IsWelcomeOpen, Converter={StaticResource BoolToVisibility}}">
+                    <Border Style="{StaticResource PanelBorder}" MaxWidth="720" Padding="22" Margin="24"
                             HorizontalAlignment="Center" VerticalAlignment="Center">
                         <StackPanel>
                             <TextBlock Text="{loc:Loc welcomeTitle}" Style="{StaticResource TitleText}" FontSize="22" />
                             <TextBlock Text="{loc:Loc welcomeSub}" Foreground="{DynamicResource TextMuted}"
                                        TextWrapping="Wrap" Margin="0,4,0,14" />
 
-                            <!-- Акцент старта без проекта: скан gamedata создаёт и открывает проект. -->
+                            <!-- Акцент старта без проекта: настройки, где указывается gamedata и запускается скан. -->
                             <Border Background="{DynamicResource SurfaceSunken}"
                                     BorderBrush="{DynamicResource AccentMain}" BorderThickness="1"
                                     Padding="14" Margin="0,0,0,14"
@@ -276,11 +292,18 @@
                                     </StackPanel>
                                     <Button Grid.Column="1" Content="{loc:Loc welcomeScanAction}"
                                             Style="{StaticResource AccentButton}"
-                                            Command="{Binding ScanGamedataCommand}"
+                                            Command="{Binding OpenProgramSettingsCommand}"
                                             Padding="16,10" Margin="14,0,0,0"
                                             VerticalAlignment="Center" />
                                 </Grid>
                             </Border>
+
+                            <!-- Скан gamedata идёт из окна настроек уже закрытым окном: занятость видна здесь -->
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,14"
+                                        Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}">
+                                <Ellipse Width="8" Height="8" Fill="{DynamicResource StateWarn}" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding BusyText}" Style="{StaticResource MonoText}" Margin="6,0,0,0" />
+                            </StackPanel>
 
                             <TextBlock Text="{loc:Loc noProjects}" Style="{StaticResource CaptionText}"
                                        Visibility="{Binding HasProjects, Converter={StaticResource InverseBoolToVisibility}}" />
@@ -329,20 +352,16 @@
                                 <Button Content="{loc:Loc demoGraph}" Command="{Binding LoadDemoGraphCommand}"
                                         Margin="0,0,8,8"
                                         Visibility="{Binding IsDebugBuild, Converter={StaticResource BoolToVisibility}}" />
-                                <Button Content="{loc:Loc close}" Command="{Binding CloseWelcomeCommand}"
-                                        Margin="0,0,8,8"
-                                        Visibility="{Binding IsProjectOpen,
-                                            Converter={StaticResource BoolToVisibility}}" />
                             </WrapPanel>
                         </StackPanel>
                     </Border>
-                </Grid>
             </Grid>
         </Grid>
 
         <!-- Статусная строка: сообщение, плитки, занятость, метки сохранения -->
         <Border Grid.Row="2" Background="{DynamicResource SurfacePanel}" BorderBrush="{DynamicResource BorderBevel}"
-                BorderThickness="0,1,0,0" Padding="12,4">
+                BorderThickness="0,1,0,0" Padding="12,4"
+                Visibility="{Binding IsProjectOpen, Converter={StaticResource BoolToVisibility}}">
             <Grid>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="{Binding StatusText}" Style="{StaticResource MonoText}" />

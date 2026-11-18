@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -65,6 +66,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         Rows = new ObservableCollection<SectionRow>();
         SearchHits = new ObservableCollection<ProjectSearchHit>();
         Backups = new ObservableCollection<BackupItemViewModel>();
+        ToolbarActions = new ObservableCollection<ToolbarActionViewModel>();
         DialogueGraph = new DialogueGraphViewModel(this, _dialogs);
         Characters = new CharactersViewModel(this);
         Items = new ItemsViewModel(this, _dialogs);
@@ -141,6 +143,12 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
     /// <summary>История точек сохранения («Копии»: восстановление и удаление снимков).</summary>
     public ObservableCollection<BackupItemViewModel> Backups { get; }
+
+    /// <summary>
+    /// Действия верхней панели активного раздела (`ToolbarCatalog`): «Диалоги» — экспорт
+    /// реплик и проверка графа, «Обзор» — игровой ZIP и самопроверка, прочие — сохранение.
+    /// </summary>
+    public ObservableCollection<ToolbarActionViewModel> ToolbarActions { get; }
 
     /// <summary>Текущий проект (запросы ViewModels просмотров).</summary>
     /// <summary>Вкладка «Диалоги» (этап 6): редактор графа диалога (`DialoguesTab.js`).</summary>
@@ -263,6 +271,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     /// <summary>В профиле есть сохранённые проекты.</summary>
     public bool HasProjects => Projects.Count > 0;
 
+    /// <summary>В активном разделе есть контекстные действия панели инструментов.</summary>
+    public bool HasToolbarActions => ToolbarActions.Count > 0;
+
     /// <summary>В проекте есть данные (иначе — подсказка `noData`).</summary>
     public bool HasData => _summary.Total > 0;
 
@@ -295,8 +306,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         // Использование text_id могло измениться после правок диалогов; кэш обновляем при входе.
         if (value?.Id == NavigationCatalog.LanguagesId) Languages.RefreshUsage();
         RefreshRows();
+        RefreshToolbar();
     }
-
 
     // --- проект и welcome-экран ---
 
@@ -310,21 +321,6 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
         // LoadResumableProject заодно вычищает current.project.json удалённого проекта.
         HasCurrentProject = _store.LoadResumableProject() != null;
-    }
-
-    /// <summary>Открыть welcome-экран (кнопка «Проекты»).</summary>
-    [RelayCommand]
-    private void ShowWelcome()
-    {
-        LoadWelcomeList();
-        IsWelcomeOpen = true;
-    }
-
-    /// <summary>Закрыть welcome-экран и вернуться к текущему проекту (только если он открыт).</summary>
-    [RelayCommand]
-    private void CloseWelcome()
-    {
-        if (IsProjectOpen) IsWelcomeOpen = false;
     }
 
     /// <summary>`continueProject`: продолжить сохранённый текущий проект.</summary>
@@ -604,6 +600,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
         RefreshRows();
         RefreshIssues();
+        RefreshToolbar();
 
         OnPropertyChanged(nameof(HasData));
         OnPropertyChanged(nameof(TotalText));
@@ -696,6 +693,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         SystemLtx.RefreshLocalization();
         Languages.RefreshLocalization();
         Quests.RefreshLocalization();
+        RefreshToolbar();
 
         // До открытия проекта серия не показывается (иначе в пустом старте висел бы «SoC · …»).
         SeriesLabel = IsProjectOpen ? GameSeriesCatalog.Label(_project.Series) : "";
@@ -822,6 +820,53 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
         StatusText = LocalizationSource.Get("programSettings");
         StatusDetail = LocalizationSource.Get("savedAt") + " " + DateTime.Now.ToString("t", CultureInfo.CurrentCulture);
     }
+
+    // --- контекстные действия верхней панели ---
+
+    /// <summary>
+    /// Пересобрать кнопки верхней панели под активный раздел. Если набор действий не
+    /// изменился (частые правки редактора), обновляются только подписи — `ItemsControl`
+    /// не пересоздаёт кнопки и не мигает.
+    /// </summary>
+    private void RefreshToolbar()
+    {
+        var actions = ToolbarCatalog.Actions(IsProjectOpen ? ActiveTab?.Id : null, IsDebugBuild);
+
+        if (actions.Select(action => action.Id).SequenceEqual(ToolbarActions.Select(item => item.Id)))
+        {
+            for (var i = 0; i < actions.Count; i++)
+            {
+                var label = LocalizationSource.Get(actions[i].LabelKey);
+                if (ToolbarActions[i].Label == label) continue;
+
+                ToolbarActions[i] = new ToolbarActionViewModel(
+                    actions[i].Id, actions[i].Glyph, label, ToolbarActions[i].Command);
+            }
+
+            return;
+        }
+
+        ToolbarActions.Clear();
+        foreach (var action in actions)
+        {
+            ToolbarActions.Add(new ToolbarActionViewModel(
+                action.Id, action.Glyph, LocalizationSource.Get(action.LabelKey), ToolbarCommand(action.Id)));
+        }
+
+        OnPropertyChanged(nameof(HasToolbarActions));
+    }
+
+    /// <summary>Команда оболочки для действия <see cref="ToolbarCatalog"/>.</summary>
+    private ICommand? ToolbarCommand(string id) => id switch
+    {
+        ToolbarCatalog.SaveId => SaveCommand,
+        ToolbarCatalog.ExportGameDialogsId => ExportGameDialogsCommand,
+        ToolbarCatalog.CheckGraphId => CheckGraphCommand,
+        ToolbarCatalog.ExportXmlId => ExportXmlCommand,
+        ToolbarCatalog.ExportGameZipId => ExportGameZipCommand,
+        ToolbarCatalog.SelfCheckId => RunSelfCheckCommand,
+        _ => null
+    };
 
     /// <summary>Окно настроек программы (`programSettings`): тема, акцент, плотность, автосейв, клавиши.</summary>
     [RelayCommand]

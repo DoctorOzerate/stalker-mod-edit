@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -49,6 +51,10 @@ public sealed partial class SettingsViewModel : ObservableObject
         _showNodeText = Settings.ShowNodeText;
         _syncUrl = Settings.SyncUrl;
         Hotkeys = new ObservableCollection<HotkeyBinding>(shell.Hotkeys);
+
+        // Список проектов и путь к gamedata живут в оболочке: окно показывает их вживую.
+        shell.Projects.CollectionChanged += OnProjectsChanged;
+        shell.PropertyChanged += OnShellPropertyChanged;
     }
 
     /// <summary>Настройки программы (правятся на месте).</summary>
@@ -80,6 +86,96 @@ public sealed partial class SettingsViewModel : ObservableObject
     public ICommand SyncNowCommand => _shell.SyncNowCommand;
     public ICommand SyncLoadCommand => _shell.SyncLoadCommand;
     public ICommand RunPluginsCommand => _shell.RunPluginsCommand;
+
+    // --- проекты профиля и gamedata: перенесено из верхней панели ---
+
+    /// <summary>Сохранённые проекты профиля (тот же список, что на экране выбора проекта).</summary>
+    public ObservableCollection<ProjectItemViewModel> Projects => _shell.Projects;
+
+    /// <summary>В профиле есть сохранённые проекты.</summary>
+    public bool HasProjects => _shell.HasProjects;
+
+    /// <summary>Выбранный проект списка.</summary>
+    public ProjectItemViewModel? SelectedProject
+    {
+        get => _shell.SelectedProject;
+        set
+        {
+            if (ReferenceEquals(_shell.SelectedProject, value)) return;
+
+            _shell.SelectedProject = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>Путь к gamedata для сканирования (общий с оболочкой).</summary>
+    public string GamedataPath
+    {
+        get => _shell.GamedataPath;
+        set
+        {
+            if (_shell.GamedataPath == value) return;
+
+            _shell.GamedataPath = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>Удаление проекта из списка (`deleteProject`).</summary>
+    public ICommand DeleteProjectCommand => _shell.DeleteProjectCommand;
+
+    /// <summary>
+    /// Окно настроек просит закрыться: открытие проекта и скан gamedata возвращают
+    /// пользователя в редактор, а не оставляют модальное окно сверху.
+    /// </summary>
+    public event Action? CloseRequested;
+
+    /// <summary>`openProject` из окна настроек: закрыть настройки и открыть проект профиля.</summary>
+    [RelayCommand]
+    private void OpenProject(ProjectItemViewModel? item)
+    {
+        var target = item ?? SelectedProject;
+        if (target == null) return;
+
+        CloseRequested?.Invoke();
+        _shell.OpenProjectCommand.Execute(target);
+    }
+
+    /// <summary>`scanGamedata` из окна настроек: закрыть настройки и запустить скан оболочки.</summary>
+    [RelayCommand]
+    private void ScanGamedata()
+    {
+        CloseRequested?.Invoke();
+        _shell.ScanGamedataCommand.Execute(null);
+    }
+
+    /// <summary>Отписаться от оболочки при закрытии окна настроек.</summary>
+    public void Dispose()
+    {
+        _shell.Projects.CollectionChanged -= OnProjectsChanged;
+        _shell.PropertyChanged -= OnShellPropertyChanged;
+    }
+
+    /// <summary>Список проектов изменился (скан, импорт, удаление) — обновить `HasProjects`.</summary>
+    private void OnProjectsChanged(object? sender, NotifyCollectionChangedEventArgs e) =>
+        OnPropertyChanged(nameof(HasProjects));
+
+    /// <summary>Проброс изменений оболочки, которые показывает окно настроек.</summary>
+    private void OnShellPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        switch (e.PropertyName)
+        {
+            case nameof(ShellViewModel.GamedataPath):
+                OnPropertyChanged(nameof(GamedataPath));
+                break;
+            case nameof(ShellViewModel.SelectedProject):
+                OnPropertyChanged(nameof(SelectedProject));
+                break;
+            case nameof(ShellViewModel.HasProjects):
+                OnPropertyChanged(nameof(HasProjects));
+                break;
+        }
+    }
 
     /// <summary>Применить текущие значения к оболочке (кнопка «Применить»).</summary>
     public void Apply() => _shell.ApplyProgramSettings();

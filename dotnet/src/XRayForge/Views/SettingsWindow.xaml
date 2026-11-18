@@ -97,13 +97,53 @@
 
                         <TextBlock Text="{loc:Loc language}" Style="{StaticResource CaptionText}" />
                         <ListBox ItemsSource="{Binding Locales}" SelectedItem="{Binding SelectedLocale}"
-                                 MaxHeight="72" Margin="0,4,0,0">
+                                 MaxHeight="72" Margin="0,4,0,14">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <TextBlock Text="{Binding Label}" />
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
+
+                        <!-- Проекты профиля: открытие и удаление без экрана выбора проекта -->
+                        <TextBlock Text="{loc:Loc savedProjects}" Style="{StaticResource CaptionText}" />
+                        <TextBlock Text="{loc:Loc noProjects}" Style="{StaticResource CaptionText}"
+                                   Foreground="{DynamicResource TextMuted}" Margin="0,4,0,0"
+                                   Visibility="{Binding HasProjects, Converter={StaticResource InverseBoolToVisibility}}" />
+                        <ListBox ItemsSource="{Binding Projects}" SelectedItem="{Binding SelectedProject}"
+                                 MaxHeight="150" Margin="0,4,0,14"
+                                 Visibility="{Binding HasProjects, Converter={StaticResource BoolToVisibility}}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontFamily="{DynamicResource MonoFontFamily}" />
+                                            <TextBlock Text="{Binding CountText}" Style="{StaticResource CaptionText}"
+                                                       Margin="8,0,0,0" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <Button Grid.Column="1" Content="{loc:Loc openProject}" Margin="0,0,6,0"
+                                                Command="{Binding DataContext.OpenProjectCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}" />
+                                        <Button Grid.Column="2" Content="{loc:Loc deleteProject}"
+                                                Style="{StaticResource DangerButton}"
+                                                Command="{Binding DataContext.DeleteProjectCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <!-- gamedata: путь и скан. Скан открывает проект и закрывает окно настроек. -->
+                        <TextBlock Text="{loc:Loc gamedataPath}" Style="{StaticResource CaptionText}" />
+                        <TextBox Text="{Binding GamedataPath, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,0,6" />
+                        <Button Content="{loc:Loc scanGamedata}" Command="{Binding ScanGamedataCommand}"
+                                HorizontalAlignment="Left" ToolTip="{loc:Loc welcomeScanHint}" />
                     </StackPanel>
 
                     <!-- Узлы, автосейв, шрифт, синхронизация, плагины, горячие клавиши -->

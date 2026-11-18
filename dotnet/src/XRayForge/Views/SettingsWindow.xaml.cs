@@ -20,8 +20,13 @@ public partial class SettingsWindow : Window
         InitializeComponent();
 
         _model = new SettingsViewModel(shell);
+        _model.CloseRequested += Close;
         DataContext = _model;
+        Closed += OnWindowClosed;
     }
+
+    /// <summary>Окно закрыто: отписаться от событий оболочки.</summary>
+    private void OnWindowClosed(object? sender, EventArgs e) => _model?.Dispose();
 
     private void OnHeaderDrag(object sender, MouseButtonEventArgs e)
     {
