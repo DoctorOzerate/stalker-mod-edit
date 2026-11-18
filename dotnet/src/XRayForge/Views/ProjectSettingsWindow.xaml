@@ -14,15 +14,13 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <Border Grid.Row="0" Background="{DynamicResource SurfaceRaised}" BorderBrush="{DynamicResource BorderBevel}"
-                    BorderThickness="0,0,0,1" Padding="12,6" MouseLeftButtonDown="OnHeaderDrag">
+            <Border Grid.Row="0" Style="{StaticResource DialogHeader}" MouseLeftButtonDown="OnHeaderDrag">
                 <Grid>
                     <StackPanel>
                         <TextBlock Text="{loc:Loc projectSettingsTitle}" Style="{StaticResource TitleText}" />
                         <TextBlock Text="{loc:Loc overviewSub}" Style="{StaticResource CaptionText}" />
                     </StackPanel>
-                    <Button Content="✕" Style="{StaticResource IconButton}" HorizontalAlignment="Right"
-                            VerticalAlignment="Top" IsCancel="True" />
+                    <Button Style="{StaticResource DialogCloseButton}" IsCancel="True" />
                 </Grid>
             </Border>
 

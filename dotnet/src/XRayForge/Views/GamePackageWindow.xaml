@@ -15,14 +15,11 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <Border Grid.Row="0" Background="{DynamicResource SurfaceRaised}"
-                    BorderBrush="{DynamicResource BorderBevel}" BorderThickness="0,0,0,1"
-                    Padding="12,6" MouseLeftButtonDown="OnHeaderDrag">
+            <Border Grid.Row="0" Style="{StaticResource DialogHeader}" MouseLeftButtonDown="OnHeaderDrag">
                 <Grid>
                     <TextBlock Text="{loc:Loc gamePackageTitle}" Style="{StaticResource TitleText}"
                                VerticalAlignment="Center" />
-                    <Button Content="✕" Style="{StaticResource IconButton}"
-                            HorizontalAlignment="Right" IsCancel="True" />
+                    <Button Style="{StaticResource DialogCloseButton}" IsCancel="True" />
                 </Grid>
             </Border>
 
@@ -94,7 +91,7 @@
                     </Grid>
 
                     <Border Grid.Row="1" BorderBrush="{DynamicResource StateDanger}" BorderThickness="1"
-                            CornerRadius="6" Padding="8" Margin="0,4,0,6">
+                            CornerRadius="{StaticResource CornerSm}" Padding="8" Margin="0,4,0,6">
                         <Border.Style>
                             <Style TargetType="Border">
                                 <Setter Property="Visibility" Value="Collapsed" />

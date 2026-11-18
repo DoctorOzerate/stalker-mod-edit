@@ -60,7 +60,7 @@
             <Setter Property="Background" Value="{DynamicResource SurfaceRaised}" />
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBevel}" />
             <Setter Property="BorderThickness" Value="2" />
-            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="CornerRadius" Value="{StaticResource CornerMd}" />
             <Style.Triggers>
                 <!-- Узел в групповом выделении: `border-blue-500` (одиночное выделение сильнее — ниже) -->
                 <DataTrigger Binding="{Binding IsMultiSelected}" Value="True">
@@ -106,7 +106,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Card" CornerRadius="10" Padding="8" BorderThickness="1"
+                        <Border x:Name="Card" CornerRadius="{StaticResource CornerMd}" Padding="8" BorderThickness="1"
                                 Background="{DynamicResource SurfaceRaised}"
                                 BorderBrush="{DynamicResource BorderBevel}">
                             <ContentPresenter HorizontalAlignment="Stretch" />
@@ -130,7 +130,7 @@
         <Style x:Key="PaletteIcon" TargetType="Border">
             <Setter Property="Width" Value="28" />
             <Setter Property="Height" Value="28" />
-            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="CornerRadius" Value="{StaticResource CornerMd}" />
             <Setter Property="Margin" Value="0,0,8,0" />
         </Style>
 
@@ -499,7 +499,7 @@
                     <!-- Подсказка взведённого порта (`absolute top-4 left-4 … accent text-white text-xs`):
                          живёт вне transform-слоя, поэтому её размер не зависит от зума. -->
                     <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16,16,0,0"
-                            CornerRadius="8" Padding="12,8" IsHitTestVisible="False"
+                            CornerRadius="{StaticResource CornerMd}" Padding="12,8" IsHitTestVisible="False"
                             Background="{DynamicResource AccentMain}"
                             Visibility="{Binding DialogueGraph.IsConnecting, Converter={StaticResource BoolToVisibility}}">
                         <TextBlock Text="{loc:Loc graphConnectHint}" Foreground="White" FontSize="12" />
@@ -509,7 +509,7 @@
                          max-h-[70%] overflow-auto rounded-xl border p-3>`): текущая реплика,
                          варианты перехода и число пройденных нод. -->
                     <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16,16,0,0" Width="288"
-                            CornerRadius="12" Padding="12"
+                            CornerRadius="{StaticResource CornerMd}" Padding="12"
                             Background="{DynamicResource SurfacePanel}"
                             BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
                             Visibility="{Binding DialogueGraph.IsPlaythrough, Converter={StaticResource BoolToVisibility}}">
@@ -564,7 +564,7 @@
 
                     <!-- Масштаб и центрирование (`absolute left-4 bottom-4`): вне transform-слоя -->
                     <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="16,0,0,16"
-                            CornerRadius="12" Padding="6"
+                            CornerRadius="{StaticResource CornerMd}" Padding="6"
                             Background="{DynamicResource SurfacePanel}"
                             BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1">
                         <StackPanel Orientation="Horizontal">
@@ -601,7 +601,7 @@
                          области холста, клик — переход на точку. Живёт вне transform-слоя, поэтому её
                          размер не зависит от зума. -->
                     <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,16,16"
-                            CornerRadius="12" ClipToBounds="True"
+                            CornerRadius="{StaticResource CornerMd}" ClipToBounds="True"
                             Background="{DynamicResource SurfacePanel}"
                             BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
                             ToolTip="{loc:Loc graphMiniMap}"
@@ -681,11 +681,6 @@
 
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                         <Grid>
-                            <TextBlock Text="{loc:Loc graphPropsEmpty}"
-                                       Style="{StaticResource PropsLabel}"
-                                       HorizontalAlignment="Center" Margin="0,60,0,0"
-                                       Visibility="{Binding DialogueGraph.HasSelection, Converter={StaticResource InverseBoolToVisibility}}" />
-
                             <StackPanel Visibility="{Binding DialogueGraph.HasSelection, Converter={StaticResource BoolToVisibility}}">
                                 <TextBlock Text="{Binding DialogueGraph.PropsHeader}" Style="{StaticResource MonoText}"
                                            FontSize="11" Margin="0,0,0,8" TextWrapping="Wrap" />
@@ -830,6 +825,14 @@
                             </StackPanel>
                         </Grid>
                     </ScrollViewer>
+
+                    <!-- Пустое состояние панели свойств: центрируется по высоте панели -->
+                    <StackPanel Grid.Row="1" Style="{StaticResource EmptyStateHost}"
+                                Visibility="{Binding DialogueGraph.HasSelection, Converter={StaticResource InverseBoolToVisibility}}">
+                        <TextBlock Text="&#xE70F;" Style="{StaticResource EmptyStateGlyph}" />
+                        <TextBlock Text="{loc:Loc graphPropsEmpty}" Style="{StaticResource EmptyStateTitle}" />
+                        <TextBlock Text="{loc:Loc graphPropsEmptyHint}" Style="{StaticResource EmptyStateHint}" />
+                    </StackPanel>
                 </Grid>
             </Border>
 

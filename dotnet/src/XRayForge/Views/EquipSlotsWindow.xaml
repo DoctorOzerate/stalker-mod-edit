@@ -12,7 +12,7 @@
         <DataTemplate x:Key="SlotPreviewTemplate">
             <Border Background="{DynamicResource SurfaceSunken}"
                     BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
-                    CornerRadius="4" ClipToBounds="True">
+                    CornerRadius="{StaticResource CornerSm}" ClipToBounds="True">
                 <Grid>
                     <Image Source="{Binding Icon}" Stretch="Uniform" Margin="6"
                            RenderOptions.BitmapScalingMode="HighQuality"
@@ -47,9 +47,7 @@
             </Grid.RowDefinitions>
 
             <!-- Заголовок: перетаскивание + закрытие -->
-            <Border Grid.Row="0" Background="{DynamicResource SurfaceRaised}"
-                    BorderBrush="{DynamicResource BorderBevel}" BorderThickness="0,0,0,1"
-                    Padding="12,6" MouseLeftButtonDown="OnHeaderDrag">
+            <Border Grid.Row="0" Style="{StaticResource DialogHeader}" MouseLeftButtonDown="OnHeaderDrag">
                 <Grid>
                     <StackPanel>
                         <TextBlock Text="{loc:Loc itemSlotEditorTitle}"
@@ -57,9 +55,8 @@
                         <TextBlock Text="{loc:Loc itemSlotEditorHint}"
                                    Style="{StaticResource CaptionText}" />
                     </StackPanel>
-                    <Button Content="✕" Style="{StaticResource IconButton}"
-                            HorizontalAlignment="Right" VerticalAlignment="Top"
-                            IsCancel="True" ToolTip="{loc:Loc close}" />
+                    <Button Style="{StaticResource DialogCloseButton}" IsCancel="True"
+                            ToolTip="{loc:Loc close}" />
                 </Grid>
             </Border>
 
@@ -73,7 +70,7 @@
                 <!-- Общий прямоугольник раскладки: то же поле, что и на вкладке «Предметы» -->
                 <Border Grid.Column="0" Background="{DynamicResource SurfaceSunken}"
                         BorderBrush="{DynamicResource BorderStrong}" BorderThickness="1"
-                        CornerRadius="6" Padding="6">
+                        CornerRadius="{StaticResource CornerSm}" Padding="6">
                     <Viewbox Stretch="Uniform" StretchDirection="DownOnly"
                              HorizontalAlignment="Left" VerticalAlignment="Top">
                         <ItemsControl ItemsSource="{Binding EquipSlots}"
@@ -128,7 +125,7 @@
 
                     <Border Grid.Row="2" Background="{DynamicResource SurfaceRaised}"
                             BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
-                            CornerRadius="8" Padding="10"
+                            CornerRadius="{StaticResource CornerMd}" Padding="10"
                             IsEnabled="{Binding HasSelectedEquipSlot}">
                         <Grid>
                             <Grid.ColumnDefinitions>

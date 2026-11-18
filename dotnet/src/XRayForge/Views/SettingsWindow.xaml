@@ -14,15 +14,13 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <Border Grid.Row="0" Background="{DynamicResource SurfaceRaised}" BorderBrush="{DynamicResource BorderBevel}"
-                    BorderThickness="0,0,0,1" Padding="12,6" MouseLeftButtonDown="OnHeaderDrag">
+            <Border Grid.Row="0" Style="{StaticResource DialogHeader}" MouseLeftButtonDown="OnHeaderDrag">
                 <Grid>
                     <StackPanel>
                         <TextBlock Text="{loc:Loc programSettingsTitle}" Style="{StaticResource TitleText}" />
                         <TextBlock Text="{loc:Loc programSettingsSub}" Style="{StaticResource CaptionText}" />
                     </StackPanel>
-                    <Button Content="✕" Style="{StaticResource IconButton}" HorizontalAlignment="Right"
-                            VerticalAlignment="Top" Click="OnCancel" />
+                    <Button Style="{StaticResource DialogCloseButton}" Click="OnCancel" />
                 </Grid>
             </Border>
 
@@ -47,7 +45,7 @@
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
                                         <Border Grid.Column="0" Width="52" Height="30" Margin="0,0,9,0"
-                                                BorderThickness="1" CornerRadius="3" ClipToBounds="True"
+                                                BorderThickness="1" CornerRadius="{StaticResource CornerSm}" ClipToBounds="True"
                                                 Background="{Binding Tokens.SurfaceBase, Converter={StaticResource HexBrush}}"
                                                 BorderBrush="{Binding Tokens.BorderBevel, Converter={StaticResource HexBrush}}">
                                             <Grid>

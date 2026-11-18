@@ -15,11 +15,10 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <Border Grid.Row="0" Background="{DynamicResource SurfaceRaised}" BorderBrush="{DynamicResource BorderBevel}"
-                    BorderThickness="0,0,0,1" Padding="12,6" MouseLeftButtonDown="OnHeaderDrag">
+            <Border Grid.Row="0" Style="{StaticResource DialogHeader}" MouseLeftButtonDown="OnHeaderDrag">
                 <Grid>
                     <TextBlock Text="{loc:Loc backups}" Style="{StaticResource TitleText}" VerticalAlignment="Center" />
-                    <Button Content="✕" Style="{StaticResource IconButton}" HorizontalAlignment="Right" IsCancel="True" />
+                    <Button Style="{StaticResource DialogCloseButton}" IsCancel="True" />
                 </Grid>
             </Border>
 

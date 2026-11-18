@@ -10,11 +10,10 @@
     <Border Background="{DynamicResource SurfacePanel}" BorderBrush="{DynamicResource BorderStrong}" BorderThickness="1">
         <StackPanel>
             <!-- Заголовок окна: перетаскивание + закрытие -->
-            <Border Background="{DynamicResource SurfaceRaised}" BorderBrush="{DynamicResource BorderBevel}"
-                    BorderThickness="0,0,0,1" Padding="12,6" MouseLeftButtonDown="OnHeaderDrag">
+            <Border Style="{StaticResource DialogHeader}" MouseLeftButtonDown="OnHeaderDrag">
                 <Grid>
                     <TextBlock Text="{Binding Caption}" Style="{StaticResource TitleText}" VerticalAlignment="Center" />
-                    <Button Content="✕" Style="{StaticResource IconButton}" HorizontalAlignment="Right"
+                    <Button Style="{StaticResource DialogCloseButton}"
                             IsCancel="True" ToolTip="{loc:Loc close}" />
                 </Grid>
             </Border>
