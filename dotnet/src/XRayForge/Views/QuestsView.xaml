@@ -9,30 +9,6 @@
       связанные диалоги, diff, предпросмотр и дерево/граф цепочек.
     -->
     <UserControl.Resources>
-        <SolidColorBrush x:Key="QuestRed" Color="#F87171" />
-        <SolidColorBrush x:Key="QuestAmber" Color="#FBBF24" />
-        <SolidColorBrush x:Key="QuestGreen" Color="#4ADE80" />
-        <SolidColorBrush x:Key="QuestPurple" Color="#C084FC" />
-        <Style x:Key="QuestCard" TargetType="Border" BasedOn="{StaticResource PanelBorder}">
-            <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="Padding" Value="12" />
-            <Setter Property="Margin" Value="0,0,0,10" />
-        </Style>
-        <Style x:Key="QuestTitle" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="Margin" Value="0,0,0,6" />
-        </Style>
-        <Style x:Key="QuestLabel" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="Margin" Value="0,0,0,3" />
-        </Style>
-        <Style x:Key="QuestEditorBox" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="Height" Value="28" />
-            <Setter Property="Padding" Value="5,0" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
-        </Style>
         <Style x:Key="QuestListItem" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="Padding" Value="0" />
@@ -40,7 +16,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Card" CornerRadius="10" Padding="8" BorderThickness="1"
+                        <Border x:Name="Card" CornerRadius="{StaticResource CornerMd}" Padding="8" BorderThickness="1"
                                 Background="{DynamicResource SurfaceRaised}"
                                 BorderBrush="{DynamicResource BorderBevel}">
                             <ContentPresenter HorizontalAlignment="Stretch" />
@@ -117,7 +93,7 @@
                                 Style="{StaticResource ToolbarButton}" Margin="2,0,0,0"
                                 Command="{Binding Quests.ShowChainsCommand}" />
                     </Grid>
-                    <TextBox Style="{StaticResource QuestEditorBox}" Margin="0,0,0,6"
+                    <TextBox Style="{StaticResource CompactInput}" Margin="0,0,0,6"
                              Text="{Binding Quests.Search, Mode=TwoWay,
                                  UpdateSourceTrigger=PropertyChanged}"
                              ToolTip="{loc:Loc questsSearch}" />
@@ -155,7 +131,7 @@
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Grid.Column="0" Text="{Binding Id}" FontSize="11"
                                                        FontWeight="Bold" TextTrimming="CharacterEllipsis" />
-                                            <Border Grid.Column="1" CornerRadius="4" Padding="4,0"
+                                            <Border Grid.Column="1" CornerRadius="{StaticResource CornerSm}" Padding="4,0"
                                                     Background="{DynamicResource SurfaceSunken}"
                                                     Visibility="{Binding HasCategory,
                                                         Converter={StaticResource BoolToVisibility}}">
@@ -167,7 +143,7 @@
                                                    TextWrapping="Wrap" Margin="0,2,0,0" />
                                         <TextBlock Grid.Row="1" Text="{Binding IssuesText}"
                                                    HorizontalAlignment="Right" FontSize="10"
-                                                   Foreground="{StaticResource QuestAmber}"
+                                                   Foreground="{StaticResource StatusWarning}"
                                                    Visibility="{Binding HasIssues,
                                                        Converter={StaticResource BoolToVisibility}}" />
                                     </Grid>
@@ -185,13 +161,39 @@
             <Grid Margin="16">
                 <StackPanel Visibility="{Binding Quests.IsEditView,
                     Converter={StaticResource BoolToVisibility}}">
-                    <TextBlock Text="{Binding Quests.NoQuestsText}" Style="{StaticResource CaptionText}"
-                               Visibility="{Binding Quests.HasSelection,
-                                   Converter={StaticResource InverseBoolToVisibility}}" />
+                    <!-- Пустой проект: подсказка вместо редактора -->
+                    <StackPanel Style="{StaticResource EmptyStateHost}"
+                                Visibility="{Binding Quests.HasQuests,
+                                    Converter={StaticResource InverseBoolToVisibility}}">
+                        <TextBlock Text="&#xE8FD;" Style="{StaticResource EmptyStateGlyph}" />
+                        <TextBlock Text="{loc:Loc questsEmptyTitle}" Style="{StaticResource EmptyStateTitle}" />
+                        <TextBlock Text="{loc:Loc questsEmptyHint}" Style="{StaticResource EmptyStateHint}" />
+                    </StackPanel>
+
+                    <!-- Квесты есть, но ни один не выбран -->
+                    <StackPanel>
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel" BasedOn="{StaticResource EmptyStateHost}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding Quests.HasQuests}" Value="True" />
+                                            <Condition Binding="{Binding Quests.HasSelection}" Value="False" />
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </MultiDataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <TextBlock Text="&#xE8FD;" Style="{StaticResource EmptyStateGlyph}" />
+                        <TextBlock Text="{loc:Loc questsEditorEmpty}" Style="{StaticResource EmptyStateTitle}" />
+                        <TextBlock Text="{loc:Loc questsEditorEmptyHint}" Style="{StaticResource EmptyStateHint}" />
+                    </StackPanel>
                     <StackPanel Visibility="{Binding Quests.HasSelection,
                         Converter={StaticResource BoolToVisibility}}" MaxWidth="900"
                                 HorizontalAlignment="Stretch">
-                        <Border Style="{StaticResource QuestCard}">
+                        <Border Style="{StaticResource SideCard}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -210,7 +212,7 @@
                                             Command="{Binding Quests.BindToLocalesCommand}" />
                                     <Button Content="{loc:Loc questsDeleteQuest}"
                                             Style="{StaticResource ToolbarButton}"
-                                            Foreground="{StaticResource QuestRed}"
+                                            Foreground="{StaticResource StatusDanger}"
                                             Command="{Binding Quests.DeleteQuestCommand}" />
                                 </WrapPanel>
                             </Grid>
@@ -218,7 +220,7 @@
 
 
 
-                        <Border Style="{StaticResource QuestCard}">
+                        <Border Style="{StaticResource SideCard}">
                             <StackPanel>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -227,21 +229,21 @@
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" Margin="0,0,6,0">
-                                        <TextBlock Text="ID" Style="{StaticResource QuestLabel}" />
-                                        <TextBox Style="{StaticResource QuestEditorBox}"
+                                        <TextBlock Text="ID" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Style="{StaticResource CompactInput}"
                                                  Text="{Binding Quests.SelectedEditor.Id, Mode=TwoWay,
                                                      UpdateSourceTrigger=PropertyChanged}" />
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Margin="0,0,6,0">
                                         <TextBlock Text="{loc:Loc questsPriority}"
-                                                   Style="{StaticResource QuestLabel}" />
-                                        <TextBox Style="{StaticResource QuestEditorBox}"
+                                                   Style="{StaticResource FieldLabel}" />
+                                        <TextBox Style="{StaticResource CompactInput}"
                                                  Text="{Binding Quests.SelectedEditor.Prior, Mode=TwoWay,
                                                      UpdateSourceTrigger=PropertyChanged}" />
                                     </StackPanel>
                                     <StackPanel Grid.Column="2">
                                         <TextBlock Text="{loc:Loc questsCategory}"
-                                                   Style="{StaticResource QuestLabel}" />
+                                                   Style="{StaticResource FieldLabel}" />
                                         <ComboBox Height="28"
                                                   ItemsSource="{Binding Quests.Categories}"
                                                   SelectedItem="{Binding Quests.SelectedEditor.Category,
@@ -249,15 +251,15 @@
                                     </StackPanel>
                                 </Grid>
                                 <TextBlock Text="{loc:Loc questsTitle}"
-                                           Style="{StaticResource QuestLabel}" Margin="0,8,0,3" />
-                                <TextBox Style="{StaticResource QuestEditorBox}"
+                                           Style="{StaticResource FieldLabel}" Margin="0,8,0,3" />
+                                <TextBox Style="{StaticResource CompactInput}"
                                          Text="{Binding Quests.SelectedEditor.Title, Mode=TwoWay,
                                              UpdateSourceTrigger=PropertyChanged}" />
                                 <TextBlock Text="{Binding Quests.SelectedEditor.TitleTranslation}"
                                            Style="{StaticResource CaptionText}" Margin="0,2,0,0" />
                                 <TextBlock Text="{loc:Loc questsText}"
-                                           Style="{StaticResource QuestLabel}" Margin="0,8,0,3" />
-                                <TextBox Style="{StaticResource QuestEditorBox}" Height="64"
+                                           Style="{StaticResource FieldLabel}" Margin="0,8,0,3" />
+                                <TextBox Style="{StaticResource CompactInput}" Height="64"
                                          AcceptsReturn="True" TextWrapping="Wrap"
                                          VerticalContentAlignment="Top"
                                          Text="{Binding Quests.SelectedEditor.Text, Mode=TwoWay,
@@ -265,13 +267,13 @@
                                 <TextBlock Text="{Binding Quests.SelectedEditor.TextTranslation}"
                                            Style="{StaticResource CaptionText}" Margin="0,2,0,0" />
                                 <TextBlock Text="{loc:Loc questsRequires}"
-                                           Style="{StaticResource QuestLabel}" Margin="0,8,0,3" />
-                                <TextBox Style="{StaticResource QuestEditorBox}"
+                                           Style="{StaticResource FieldLabel}" Margin="0,8,0,3" />
+                                <TextBox Style="{StaticResource CompactInput}"
                                          Text="{Binding Quests.SelectedEditor.RequiresText, Mode=TwoWay,
                                              UpdateSourceTrigger=PropertyChanged}" />
                                 <TextBlock Text="{loc:Loc questsReward}"
-                                           Style="{StaticResource QuestLabel}" Margin="0,8,0,3" />
-                                <TextBox Style="{StaticResource QuestEditorBox}"
+                                           Style="{StaticResource FieldLabel}" Margin="0,8,0,3" />
+                                <TextBox Style="{StaticResource CompactInput}"
                                          Text="{Binding Quests.SelectedEditor.Reward, Mode=TwoWay,
                                              UpdateSourceTrigger=PropertyChanged}" />
                             </StackPanel>
@@ -279,12 +281,12 @@
 
 
                         <!-- Поля task_manager -->
-                        <Border Style="{StaticResource QuestCard}"
+                        <Border Style="{StaticResource SideCard}"
                                 Visibility="{Binding Quests.IsTaskManager,
                                     Converter={StaticResource BoolToVisibility}}">
                             <StackPanel>
-                                <TextBlock Text="task_manager" Style="{StaticResource QuestTitle}"
-                                           Foreground="{StaticResource QuestPurple}" />
+                                <TextBlock Text="task_manager" Style="{StaticResource SideCardTitle}"
+                                           Foreground="{StaticResource StatusSpecial}" />
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -292,15 +294,15 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" Margin="0,0,6,0">
                                         <TextBlock Text="{loc:Loc questsStoryline}"
-                                                   Style="{StaticResource QuestLabel}" />
-                                        <TextBox Style="{StaticResource QuestEditorBox}"
+                                                   Style="{StaticResource FieldLabel}" />
+                                        <TextBox Style="{StaticResource CompactInput}"
                                                  Text="{Binding Quests.SelectedEditor.Storyline, Mode=TwoWay,
                                                      UpdateSourceTrigger=PropertyChanged}" />
                                     </StackPanel>
                                     <StackPanel Grid.Column="1">
                                         <TextBlock Text="{loc:Loc questsRewardMoney}"
-                                                   Style="{StaticResource QuestLabel}" />
-                                        <TextBox Style="{StaticResource QuestEditorBox}"
+                                                   Style="{StaticResource FieldLabel}" />
+                                        <TextBox Style="{StaticResource CompactInput}"
                                                  Text="{Binding Quests.SelectedEditor.RewardMoney, Mode=TwoWay,
                                                      UpdateSourceTrigger=PropertyChanged}" />
                                     </StackPanel>
@@ -312,15 +314,15 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" Margin="0,0,6,0">
                                         <TextBlock Text="{loc:Loc questsRewardItem}"
-                                                   Style="{StaticResource QuestLabel}" />
-                                        <TextBox Style="{StaticResource QuestEditorBox}"
+                                                   Style="{StaticResource FieldLabel}" />
+                                        <TextBox Style="{StaticResource CompactInput}"
                                                  Text="{Binding Quests.SelectedEditor.RewardItem, Mode=TwoWay,
                                                      UpdateSourceTrigger=PropertyChanged}" />
                                     </StackPanel>
                                     <StackPanel Grid.Column="1">
                                         <TextBlock Text="{loc:Loc questsRewardTreasure}"
-                                                   Style="{StaticResource QuestLabel}" />
-                                        <TextBox Style="{StaticResource QuestEditorBox}"
+                                                   Style="{StaticResource FieldLabel}" />
+                                        <TextBox Style="{StaticResource CompactInput}"
                                                  Text="{Binding Quests.SelectedEditor.RewardTreasure, Mode=TwoWay,
                                                      UpdateSourceTrigger=PropertyChanged}" />
                                     </StackPanel>
@@ -330,11 +332,11 @@
 
 
                         <!-- Цели -->
-                        <Border Style="{StaticResource QuestCard}">
+                        <Border Style="{StaticResource SideCard}">
                             <StackPanel>
                                 <Grid Margin="0,0,0,6">
                                     <TextBlock Text="{loc:Loc questsObjectives}"
-                                               Style="{StaticResource QuestTitle}" />
+                                               Style="{StaticResource SideCardTitle}" />
                                     <Button Content="{Binding Quests.SelectedEditor.AddObjectiveText}"
                                             Style="{StaticResource ToolbarButton}"
                                             HorizontalAlignment="Right"
@@ -348,7 +350,7 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <Border BorderBrush="{DynamicResource BorderBevel}"
-                                                    BorderThickness="1" CornerRadius="6"
+                                                    BorderThickness="1" CornerRadius="{StaticResource CornerSm}"
                                                     Padding="8" Margin="0,0,0,4">
                                                 <StackPanel>
                                                     <Grid>
@@ -357,12 +359,12 @@
                                                             <ColumnDefinition Width="Auto" />
                                                         </Grid.ColumnDefinitions>
                                                         <TextBox Grid.Column="0"
-                                                                 Style="{StaticResource QuestEditorBox}"
+                                                                 Style="{StaticResource CompactInput}"
                                                                  Text="{Binding Text, Mode=TwoWay,
                                                                      UpdateSourceTrigger=PropertyChanged}" />
                                                         <Button Grid.Column="1" Content="✕"
                                                                 Style="{StaticResource ToolbarButton}"
-                                                                Foreground="{StaticResource QuestRed}"
+                                                                Foreground="{StaticResource StatusDanger}"
                                                                 Command="{Binding RemoveCommand}" />
                                                     </Grid>
                                                     <TextBlock Text="{Binding Translation}"
@@ -377,15 +379,15 @@
                                                             <ColumnDefinition Width="*" />
                                                         </Grid.ColumnDefinitions>
                                                         <TextBox Grid.Column="0" Margin="0,0,4,0"
-                                                                 Style="{StaticResource QuestEditorBox}"
+                                                                 Style="{StaticResource CompactInput}"
                                                                  Text="{Binding Icon, Mode=TwoWay,
                                                                      UpdateSourceTrigger=PropertyChanged}" />
                                                         <TextBox Grid.Column="1" Margin="0,0,4,0"
-                                                                 Style="{StaticResource QuestEditorBox}"
+                                                                 Style="{StaticResource CompactInput}"
                                                                  Text="{Binding Infoportion, Mode=TwoWay,
                                                                      UpdateSourceTrigger=PropertyChanged}" />
                                                         <TextBox Grid.Column="2"
-                                                                 Style="{StaticResource QuestEditorBox}"
+                                                                 Style="{StaticResource CompactInput}"
                                                                  Text="{Binding Article, Mode=TwoWay,
                                                                      UpdateSourceTrigger=PropertyChanged}" />
                                                     </Grid>
@@ -399,13 +401,13 @@
 
 
                         <!-- condlist -->
-                        <Border Style="{StaticResource QuestCard}"
+                        <Border Style="{StaticResource SideCard}"
                                 Visibility="{Binding Quests.IsTaskManager,
                                     Converter={StaticResource BoolToVisibility}}">
                             <StackPanel>
                                 <Grid Margin="0,0,0,6">
                                     <TextBlock Text="{loc:Loc questsCondlist}"
-                                               Style="{StaticResource QuestTitle}" />
+                                               Style="{StaticResource SideCardTitle}" />
                                     <Button Content="{Binding Quests.SelectedEditor.AddCondText}"
                                             Style="{StaticResource ToolbarButton}"
                                             HorizontalAlignment="Right"
@@ -425,16 +427,16 @@
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
                                                 <TextBox Grid.Column="0" Margin="0,0,4,0"
-                                                         Style="{StaticResource QuestEditorBox}"
+                                                         Style="{StaticResource CompactInput}"
                                                          Text="{Binding Cond, Mode=TwoWay,
                                                              UpdateSourceTrigger=PropertyChanged}" />
                                                 <TextBox Grid.Column="1" Margin="0,0,4,0"
-                                                         Style="{StaticResource QuestEditorBox}"
+                                                         Style="{StaticResource CompactInput}"
                                                          Text="{Binding Action, Mode=TwoWay,
                                                              UpdateSourceTrigger=PropertyChanged}" />
                                                 <Button Grid.Column="2" Content="✕"
                                                         Style="{StaticResource ToolbarButton}"
-                                                        Foreground="{StaticResource QuestRed}"
+                                                        Foreground="{StaticResource StatusDanger}"
                                                         Padding="6,0" MinHeight="24"
                                                         Command="{Binding RemoveCommand}" />
                                             </Grid>
@@ -446,7 +448,7 @@
 
 
                         <!-- Завершение, иконка, локация, статья -->
-                        <Border Style="{StaticResource QuestCard}">
+                        <Border Style="{StaticResource SideCard}">
                             <StackPanel>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -455,15 +457,15 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" Margin="0,0,6,0">
                                         <TextBlock Text="{loc:Loc questsCompleteInfo}"
-                                                   Style="{StaticResource QuestLabel}" />
-                                        <TextBox Style="{StaticResource QuestEditorBox}"
+                                                   Style="{StaticResource FieldLabel}" />
+                                        <TextBox Style="{StaticResource CompactInput}"
                                                  Text="{Binding Quests.SelectedEditor.InfoportionComplete,
                                                      Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                     </StackPanel>
                                     <StackPanel Grid.Column="1">
                                         <TextBlock Text="{loc:Loc questsFailInfo}"
-                                                   Style="{StaticResource QuestLabel}" />
-                                        <TextBox Style="{StaticResource QuestEditorBox}"
+                                                   Style="{StaticResource FieldLabel}" />
+                                        <TextBox Style="{StaticResource CompactInput}"
                                                  Text="{Binding Quests.SelectedEditor.InfoportionFail,
                                                      Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                     </StackPanel>
@@ -475,22 +477,22 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" Margin="0,0,6,0">
                                         <TextBlock Text="{loc:Loc questsIcon}"
-                                                   Style="{StaticResource QuestLabel}" />
-                                        <TextBox Style="{StaticResource QuestEditorBox}"
+                                                   Style="{StaticResource FieldLabel}" />
+                                        <TextBox Style="{StaticResource CompactInput}"
                                                  Text="{Binding Quests.SelectedEditor.Icon, Mode=TwoWay,
                                                      UpdateSourceTrigger=PropertyChanged}" />
                                     </StackPanel>
                                     <StackPanel Grid.Column="1">
                                         <TextBlock Text="{loc:Loc questsLocation}"
-                                                   Style="{StaticResource QuestLabel}" />
-                                        <TextBox Style="{StaticResource QuestEditorBox}"
+                                                   Style="{StaticResource FieldLabel}" />
+                                        <TextBox Style="{StaticResource CompactInput}"
                                                  Text="{Binding Quests.SelectedEditor.Location, Mode=TwoWay,
                                                      UpdateSourceTrigger=PropertyChanged}" />
                                     </StackPanel>
                                 </Grid>
                                 <TextBlock Text="{loc:Loc questsArticle}"
-                                           Style="{StaticResource QuestLabel}" Margin="0,6,0,3" />
-                                <TextBox Style="{StaticResource QuestEditorBox}"
+                                           Style="{StaticResource FieldLabel}" Margin="0,6,0,3" />
+                                <TextBox Style="{StaticResource CompactInput}"
                                          Text="{Binding Quests.SelectedEditor.Article, Mode=TwoWay,
                                              UpdateSourceTrigger=PropertyChanged}" />
                             </StackPanel>
@@ -498,18 +500,18 @@
 
 
                         <!-- Проверка -->
-                        <Border Style="{StaticResource QuestCard}"
+                        <Border Style="{StaticResource SideCard}"
                                 Visibility="{Binding Quests.HasIssues,
                                     Converter={StaticResource BoolToVisibility}}">
                             <StackPanel>
                                 <TextBlock Text="{Binding Quests.IssuesTitle}"
-                                           Style="{StaticResource QuestTitle}" />
+                                           Style="{StaticResource SideCardTitle}" />
                                 <ItemsControl ItemsSource="{Binding Quests.Issues}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <TextBlock Text="{Binding Text}" FontSize="11"
                                                        TextWrapping="Wrap" Padding="0,1"
-                                                       Foreground="{StaticResource QuestAmber}" />
+                                                       Foreground="{StaticResource StatusWarning}" />
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
@@ -517,10 +519,10 @@
                         </Border>
 
                         <!-- Связанные диалоги -->
-                        <Border Style="{StaticResource QuestCard}">
+                        <Border Style="{StaticResource SideCard}">
                             <StackPanel>
                                 <TextBlock Text="{Binding Quests.RelatedTitle}"
-                                           Style="{StaticResource QuestTitle}" />
+                                           Style="{StaticResource SideCardTitle}" />
                                 <TextBlock Text="{loc:Loc questsNoRelated}"
                                            Style="{StaticResource CaptionText}"
                                            Visibility="{Binding Quests.HasRelated,
@@ -539,12 +541,12 @@
                         </Border>
 
                         <!-- Diff -->
-                        <Border Style="{StaticResource QuestCard}"
+                        <Border Style="{StaticResource SideCard}"
                                 Visibility="{Binding Quests.HasDiff,
                                     Converter={StaticResource BoolToVisibility}}">
                             <StackPanel>
                                 <TextBlock Text="{Binding Quests.DiffTitle}"
-                                           Style="{StaticResource QuestTitle}" />
+                                           Style="{StaticResource SideCardTitle}" />
                                 <ItemsControl ItemsSource="{Binding Quests.DiffRows}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
@@ -557,11 +559,11 @@
                                                 <TextBlock Grid.Column="0" Text="{Binding Label}"
                                                            Style="{StaticResource CaptionText}" />
                                                 <TextBlock Grid.Column="1" Text="{Binding Before}"
-                                                           Foreground="{StaticResource QuestRed}"
+                                                           Foreground="{StaticResource StatusDanger}"
                                                            TextTrimming="CharacterEllipsis"
                                                            FontSize="11" />
                                                 <TextBlock Grid.Column="2" Text="{Binding After}"
-                                                           Foreground="{StaticResource QuestGreen}"
+                                                           Foreground="{StaticResource StatusSuccess}"
                                                            TextTrimming="CharacterEllipsis"
                                                            FontSize="11" />
                                             </Grid>
@@ -573,11 +575,11 @@
 
 
                         <!-- Предпросмотр переводов -->
-                        <Border Style="{StaticResource QuestCard}">
+                        <Border Style="{StaticResource SideCard}">
                             <StackPanel>
                                 <Grid Margin="0,0,0,6">
                                     <TextBlock Text="{Binding Quests.PreviewTitle}"
-                                               Style="{StaticResource QuestTitle}" />
+                                               Style="{StaticResource SideCardTitle}" />
                                     <ComboBox Width="150" Height="26" HorizontalAlignment="Right"
                                               ItemsSource="{Binding Quests.LanguageLocales}"
                                               SelectedItem="{Binding Quests.PreviewLocale, Mode=TwoWay}" />
@@ -608,10 +610,10 @@
                             HorizontalAlignment="Stretch">
                     <TextBlock Text="{Binding Quests.ChainsTitle}"
                                Style="{StaticResource TitleText}" Margin="0,0,0,8" />
-                    <Border Style="{StaticResource QuestCard}">
+                    <Border Style="{StaticResource SideCard}">
                         <StackPanel>
                             <TextBlock Text="{loc:Loc questsDependencies}"
-                                       Style="{StaticResource QuestTitle}" />
+                                       Style="{StaticResource SideCardTitle}" />
                             <TextBlock Text="{loc:Loc questsChainsEmpty}"
                                        Style="{StaticResource CaptionText}"
                                        Visibility="{Binding Quests.HasChains,
@@ -624,7 +626,7 @@
                                                 Padding="{Binding Indent}"
                                                 Command="{Binding SelectCommand}">
                                             <TextBlock Text="{Binding Text}" FontSize="11"
-                                                       FontFamily="Consolas" />
+                                                       FontFamily="{StaticResource MonoFontFamily}" />
                                         </Button>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>

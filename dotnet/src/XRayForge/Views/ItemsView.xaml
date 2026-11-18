@@ -9,23 +9,6 @@
       с наследованием, атласом, быстрыми полями, деревом, ссылками и слотами экипировки.
     -->
     <UserControl.Resources>
-        <SolidColorBrush x:Key="ItemRed" Color="#F87171" />
-        <SolidColorBrush x:Key="ItemGreen" Color="#4ADE80" />
-        <SolidColorBrush x:Key="ItemAmber" Color="#FBBF24" />
-
-        <!-- Подпись поля (`text-xs font-mono`) -->
-        <Style x:Key="ItemLabel" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="Margin" Value="0,0,0,3" />
-        </Style>
-
-        <!-- Заголовок карточки (`text-[10px] uppercase tracking-widest font-bold`) -->
-        <Style x:Key="ItemCardTitle" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
-            <Setter Property="FontSize" Value="10" />
-            <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="Margin" Value="0,0,0,6" />
-        </Style>
-
         <!-- Карточка списка (`rounded-xl border p-3 ui.card ui.hover`), выбранная — акцентом -->
         <Style x:Key="ItemCardButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -34,7 +17,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Card" CornerRadius="10" Padding="8" BorderThickness="1"
+                        <Border x:Name="Card" CornerRadius="{StaticResource CornerMd}" Padding="8" BorderThickness="1"
                                 Background="{DynamicResource SurfaceRaised}"
                                 BorderBrush="{DynamicResource BorderBevel}">
                             <ContentPresenter HorizontalAlignment="Stretch" />
@@ -67,31 +50,6 @@
         </Style>
 
         <!-- Выпадающий список в тёмной теме -->
-        <Style x:Key="ItemComboItem" TargetType="ComboBoxItem">
-            <Setter Property="Background" Value="{DynamicResource SurfacePanel}" />
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
-            <Setter Property="Padding" Value="8,4" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ComboBoxItem">
-                        <Border x:Name="Chrome" Background="{TemplateBinding Background}"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsHighlighted" Value="True">
-                                <Setter TargetName="Chrome" Property="Background"
-                                        Value="{DynamicResource SurfaceRaised}" />
-                            </Trigger>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Chrome" Property="Background"
-                                        Value="{DynamicResource AccentDim}" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
 
 
         <Style x:Key="ItemCombo" TargetType="ComboBox">
@@ -100,7 +58,6 @@
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBevel}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="8,0" />
-            <Setter Property="ItemContainerStyle" Value="{StaticResource ItemComboItem}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ComboBox">
@@ -163,22 +120,18 @@
 
 
         <!-- Поле значения: наследуемые/закрытые значения только для чтения, ошибка — красным -->
-        <Style x:Key="ItemFieldInput" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-            <Setter Property="FontFamily" Value="Consolas" />
-            <Setter Property="FontSize" Value="11" />
+        <Style x:Key="ItemFieldInput" TargetType="TextBox" BasedOn="{StaticResource CompactMonoInput}">
             <Setter Property="Height" Value="26" />
-            <Setter Property="Padding" Value="6,0" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsEditable}" Value="False">
                     <Setter Property="IsReadOnly" Value="True" />
                     <Setter Property="Opacity" Value="0.62" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding HasError}" Value="True">
-                    <Setter Property="BorderBrush" Value="{StaticResource ItemRed}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource StatusDanger}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsOverridden}" Value="True">
-                    <Setter Property="BorderBrush" Value="{StaticResource ItemAmber}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource StatusWarning}" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -197,8 +150,8 @@
             <Setter Property="Margin" Value="0,0,4,4" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsPresent}" Value="True">
-                    <Setter Property="Foreground" Value="{StaticResource ItemGreen}" />
-                    <Setter Property="Background" Value="#204ADE80" />
+                    <Setter Property="Foreground" Value="{StaticResource StatusSuccess}" />
+                    <Setter Property="Background" Value="{StaticResource StatusSuccessFill}" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -207,7 +160,7 @@
         <Style x:Key="ItemTreeButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="HorizontalContentAlignment" Value="Left" />
             <Setter Property="HorizontalAlignment" Value="Left" />
-            <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}" />
             <Setter Property="FontSize" Value="11" />
             <Setter Property="Padding" Value="4,2" />
             <Setter Property="Margin" Value="0,0,0,1" />
@@ -226,7 +179,7 @@
             <Setter Property="Margin" Value="0,0,4,0" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Exists}" Value="False">
-                    <Setter Property="Foreground" Value="{StaticResource ItemRed}" />
+                    <Setter Property="Foreground" Value="{StaticResource StatusDanger}" />
                     <Setter Property="IsEnabled" Value="False" />
                 </DataTrigger>
             </Style.Triggers>
@@ -254,7 +207,7 @@
                             </Trigger>
                             <DataTrigger Binding="{Binding IsActive}" Value="True">
                                 <Setter TargetName="Cell" Property="BorderBrush"
-                                        Value="{StaticResource ItemGreen}" />
+                                        Value="{StaticResource StatusSuccess}" />
                                 <Setter TargetName="Cell" Property="BorderThickness" Value="2" />
                             </DataTrigger>
                         </ControlTemplate.Triggers>
@@ -304,7 +257,7 @@
                         <Button Content="{loc:Loc itemExportCsv}" Style="{StaticResource ToolbarButton}"
                                 Margin="0,6,0,0" Command="{Binding Items.ExportCsvCommand}" />
 
-                        <TextBlock Text="{loc:Loc itemMassEdit}" Style="{StaticResource ItemCardTitle}"
+                        <TextBlock Text="{loc:Loc itemMassEdit}" Style="{StaticResource SideCardTitle}"
                                    Margin="0,12,0,4" />
                         <Button Content="{loc:Loc itemRename}" Style="{StaticResource ToolbarButton}"
                                 Command="{Binding Items.RenameCommand}" />
@@ -346,7 +299,7 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel>
-                                        <TextBlock Text="{Binding Header}" Style="{StaticResource ItemCardTitle}"
+                                        <TextBlock Text="{Binding Header}" Style="{StaticResource SideCardTitle}"
                                                    Margin="0,6,0,4" />
                                         <ItemsControl ItemsSource="{Binding Items}">
                                             <ItemsControl.ItemTemplate>
@@ -385,17 +338,20 @@
             <ScrollViewer Grid.Column="2" x:Name="DetailsScroll"
                           VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <Grid Margin="16">
-                    <TextBlock Text="{loc:Loc itemEditorEmpty}" Style="{StaticResource CaptionText}"
-                               VerticalAlignment="Top"
-                               Visibility="{Binding Items.HasSelection,
-                                   Converter={StaticResource InverseBoolToVisibility}}" />
+                    <StackPanel Style="{StaticResource EmptyStateHost}"
+                                Visibility="{Binding Items.HasSelection,
+                                    Converter={StaticResource InverseBoolToVisibility}}">
+                        <TextBlock Text="&#xE7B8;" Style="{StaticResource EmptyStateGlyph}" />
+                        <TextBlock Text="{loc:Loc itemEditorEmpty}" Style="{StaticResource EmptyStateTitle}" />
+                        <TextBlock Text="{loc:Loc itemEditorEmptyHint}" Style="{StaticResource EmptyStateHint}" />
+                    </StackPanel>
 
                     <StackPanel DataContext="{Binding Items}" MaxWidth="820" HorizontalAlignment="Left"
                                 Visibility="{Binding HasSelection, Converter={StaticResource BoolToVisibility}}">
                         <!-- Шапка редактора: имя, категория и действия секции -->
                         <Border Background="{DynamicResource SurfaceRaised}"
                                 BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
-                                CornerRadius="10" Padding="12" Margin="0,0,0,10">
+                                CornerRadius="{StaticResource CornerMd}" Padding="12" Margin="0,0,0,10">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -405,7 +361,7 @@
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="{Binding Selected.Name}" FontSize="17"
                                                    FontWeight="Bold" TextTrimming="CharacterEllipsis" />
-                                        <Border Background="{DynamicResource AccentDim}" CornerRadius="8"
+                                        <Border Background="{DynamicResource AccentDim}" CornerRadius="{StaticResource CornerMd}"
                                                 Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding Selected.Category}" FontSize="10"
                                                        Foreground="{DynamicResource AccentMain}" />
@@ -425,17 +381,17 @@
                                             Command="{Binding AddFieldCommand}" Margin="0,0,4,0" />
                                     <Button Content="{loc:Loc itemDelete}" Style="{StaticResource ToolbarButton}"
                                             Command="{Binding DeleteCommand}"
-                                            Foreground="{StaticResource ItemRed}" />
+                                            Foreground="{StaticResource StatusDanger}" />
                                 </StackPanel>
                             </Grid>
                         </Border>
                         <!-- Наследование: сводка, кнопки родителей и отсутствующие родители -->
                         <Border Background="{DynamicResource SurfacePanel}"
                                 BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
-                                CornerRadius="10" Padding="10" Margin="0,0,0,10">
+                                CornerRadius="{StaticResource CornerMd}" Padding="10" Margin="0,0,0,10">
                             <StackPanel>
                                 <TextBlock Text="{loc:Loc itemInheritsFrom}"
-                                           Style="{StaticResource ItemCardTitle}" />
+                                           Style="{StaticResource SideCardTitle}" />
                                 <TextBlock Text="{Binding InheritanceSummary}" FontSize="11"
                                            TextWrapping="Wrap"
                                            Foreground="{DynamicResource TextMuted}" />
@@ -457,7 +413,7 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                                 <TextBlock Text="{Binding BrokenParentsText}" FontSize="11"
-                                           Foreground="{StaticResource ItemRed}" TextWrapping="Wrap"
+                                           Foreground="{StaticResource StatusDanger}" TextWrapping="Wrap"
                                            Margin="0,6,0,0"
                                            Visibility="{Binding HasBrokenParents,
                                                Converter={StaticResource BoolToVisibility}}" />
@@ -466,7 +422,7 @@
                         <!-- Иконка предмета: превью, кнопка выбора и раскрываемая сетка атласа -->
                         <Border Background="{DynamicResource SurfacePanel}"
                                 BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
-                                CornerRadius="10" Padding="10" Margin="0,0,0,10"
+                                CornerRadius="{StaticResource CornerMd}" Padding="10" Margin="0,0,0,10"
                                 Visibility="{Binding HasAtlas,
                                     Converter={StaticResource BoolToVisibility}}">
                             <StackPanel>
@@ -479,7 +435,7 @@
                                     <Border Grid.Column="0"
                                             Width="{Binding IconPreviewWidth}"
                                             Height="{Binding IconPreviewHeight}"
-                                            MinWidth="88" MinHeight="88" CornerRadius="6"
+                                            MinWidth="88" MinHeight="88" CornerRadius="{StaticResource CornerSm}"
                                             Background="{DynamicResource SurfaceSunken}"
                                             BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1">
                                         <Grid>
@@ -503,7 +459,7 @@
                                         <TextBlock Text="{loc:Loc itemIcon}" FontWeight="Bold" FontSize="12" />
                                         <TextBlock Text="{Binding AtlasTitle}" Style="{StaticResource CaptionText}"
                                                    TextWrapping="Wrap" Margin="0,2,0,0" />
-                                        <TextBlock Text="{Binding GridCoordsText}" FontFamily="Consolas"
+                                        <TextBlock Text="{Binding GridCoordsText}" FontFamily="{StaticResource MonoFontFamily}"
                                                    FontSize="11" Margin="0,3,0,0"
                                                    Foreground="{DynamicResource AccentMain}"
                                                    Visibility="{Binding HasGridCoords,
@@ -520,12 +476,12 @@
 
                                 <Border Background="{DynamicResource SurfaceSunken}"
                                         BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
-                                        CornerRadius="8" Padding="8" Margin="0,8,0,0"
+                                        CornerRadius="{StaticResource CornerMd}" Padding="8" Margin="0,8,0,0"
                                         Visibility="{Binding IsIconPickerOpen,
                                             Converter={StaticResource BoolToVisibility}}">
                                     <StackPanel>
                                         <TextBlock Text="{loc:Loc itemIconPicker}"
-                                                   Style="{StaticResource ItemCardTitle}" />
+                                                   Style="{StaticResource SideCardTitle}" />
                                         <ScrollViewer HorizontalScrollBarVisibility="Auto"
                                                       VerticalScrollBarVisibility="Auto" MaxHeight="360">
                                             <ItemsControl ItemsSource="{Binding AtlasCells}" HorizontalAlignment="Left">
@@ -548,8 +504,8 @@
                             </StackPanel>
                         </Border>
                         <!-- Защита корневой секции: предупреждение и разблокировка -->
-                        <Border Background="#18FBBF24" BorderBrush="{StaticResource ItemAmber}"
-                                BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,10"
+                        <Border Background="{StaticResource StatusWarningFill}" BorderBrush="{StaticResource StatusWarning}"
+                                BorderThickness="1" CornerRadius="{StaticResource CornerMd}" Padding="10" Margin="0,0,0,10"
                                 Visibility="{Binding IsLocked,
                                     Converter={StaticResource BoolToVisibility}}">
                             <Grid>
@@ -558,7 +514,7 @@
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="{loc:Loc itemLockedRoot}"
-                                           FontSize="11" Foreground="{StaticResource ItemAmber}"
+                                           FontSize="11" Foreground="{StaticResource StatusWarning}"
                                            VerticalAlignment="Center" TextWrapping="Wrap" />
                                 <Button Grid.Column="1" Content="{loc:Loc itemUnlockSection}"
                                         Style="{StaticResource ToolbarButton}"
@@ -569,12 +525,12 @@
                         <!-- Быстрые поля выбранной категории: чип добавляет отсутствующее поле -->
                         <Border Background="{DynamicResource SurfacePanel}"
                                 BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
-                                CornerRadius="10" Padding="10" Margin="0,0,0,10"
+                                CornerRadius="{StaticResource CornerMd}" Padding="10" Margin="0,0,0,10"
                                 Visibility="{Binding HasQuickFields,
                                     Converter={StaticResource BoolToVisibility}}">
                             <StackPanel>
                                 <TextBlock Text="{Binding QuickFieldsTitle}"
-                                           Style="{StaticResource ItemCardTitle}" />
+                                           Style="{StaticResource SideCardTitle}" />
                                 <ItemsControl ItemsSource="{Binding QuickFields}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
@@ -595,7 +551,7 @@
                         <!-- Поля секции: собственные и унаследованные, правка значения на месте -->
                         <Border Background="{DynamicResource SurfacePanel}"
                                 BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
-                                CornerRadius="10" Padding="10" Margin="0,0,0,10">
+                                CornerRadius="{StaticResource CornerMd}" Padding="10" Margin="0,0,0,10">
                             <StackPanel>
                                 <Grid Margin="0,0,0,6">
                                     <Grid.ColumnDefinitions>
@@ -603,7 +559,7 @@
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Text="{Binding FieldsCaption}"
-                                               Style="{StaticResource ItemCardTitle}" Margin="0" />
+                                               Style="{StaticResource SideCardTitle}" Margin="0" />
                                     <Button Grid.Column="1" Content="{loc:Loc itemAddField}"
                                             Style="{StaticResource ItemFieldAction}"
                                             Command="{Binding AddFieldCommand}" />
@@ -618,7 +574,7 @@
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="{Binding Label}"
-                                                           ToolTip="{Binding Tooltip}" FontFamily="Consolas"
+                                                           ToolTip="{Binding Tooltip}" FontFamily="{StaticResource MonoFontFamily}"
                                                            FontSize="11" VerticalAlignment="Center"
                                                            Margin="0,0,6,0" TextTrimming="CharacterEllipsis" />
                                                 <controls:SuggestionTextBox Grid.Column="1"
@@ -658,11 +614,11 @@
                         <!-- Дерево наследования: цепочка предков и вложенные дочерние секции -->
                         <Border Background="{DynamicResource SurfacePanel}"
                                 BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
-                                CornerRadius="10" Padding="10" Margin="0,0,0,10"
+                                CornerRadius="{StaticResource CornerMd}" Padding="10" Margin="0,0,0,10"
                                 Visibility="{Binding HasTree,
                                     Converter={StaticResource BoolToVisibility}}">
                             <StackPanel>
-                                <TextBlock Text="{Binding TreeTitle}" Style="{StaticResource ItemCardTitle}" />
+                                <TextBlock Text="{Binding TreeTitle}" Style="{StaticResource SideCardTitle}" />
                                 <ItemsControl ItemsSource="{Binding TreeRows}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
@@ -684,10 +640,10 @@
                         <!-- Ссылки: секции, которые ссылаются на текущую -->
                         <Border Background="{DynamicResource SurfacePanel}"
                                 BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
-                                CornerRadius="10" Padding="10" Margin="0,0,0,10">
+                                CornerRadius="{StaticResource CornerMd}" Padding="10" Margin="0,0,0,10">
                             <StackPanel>
                                 <TextBlock Text="{Binding ReferencesTitle}"
-                                           Style="{StaticResource ItemCardTitle}" />
+                                           Style="{StaticResource SideCardTitle}" />
                                 <ItemsControl ItemsSource="{Binding References}"
                                               Visibility="{Binding HasReferences,
                                                   Converter={StaticResource BoolToVisibility}}">
@@ -714,11 +670,11 @@
                         <!-- Раскладка слотов экипировки: общий прямоугольник + настройка -->
                         <Border Background="{DynamicResource SurfacePanel}"
                                 BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
-                                CornerRadius="10" Padding="10" Margin="0,0,0,10">
+                                CornerRadius="{StaticResource CornerMd}" Padding="10" Margin="0,0,0,10">
                             <StackPanel>
                                 <Grid Margin="0,0,0,6">
                                     <TextBlock Text="{Binding EquipCaption}"
-                                               Style="{StaticResource ItemCardTitle}" Margin="0" />
+                                               Style="{StaticResource SideCardTitle}" Margin="0" />
                                     <Button Content="{loc:Loc itemSlotSettings}"
                                             Style="{StaticResource ToolbarButton}"
                                             HorizontalAlignment="Right" VerticalAlignment="Center"
@@ -727,7 +683,7 @@
 
                                 <Border Background="{DynamicResource SurfaceSunken}"
                                         BorderBrush="{DynamicResource BorderStrong}" BorderThickness="1"
-                                        CornerRadius="6" Padding="4">
+                                        CornerRadius="{StaticResource CornerSm}" Padding="4">
                                     <Viewbox Stretch="Uniform" StretchDirection="DownOnly"
                                              MaxHeight="460" HorizontalAlignment="Left"
                                              VerticalAlignment="Top">

@@ -1432,6 +1432,226 @@ UI-прогон собранного приложения на временно�
 - **Проверка:** Debug/Release build — 0 предупреждений / 0 ошибок, `dotnet test` — **464/464**
   в обеих конфигурациях.
 
+**Скрипты: вкладки открытых файлов, разделение игры и локаций, переход по ссылкам (18.11.2026).**
+- Импорт пустых диалогов: `DialogueImporter` и `GamedataScanner` больше не заводят диалог без
+  единого узла `phrase` (пустой `dialog` в XML и `null` в модели считаются пустыми) — в списке
+  «Загруженные диалоги» не остаётся пустых карточек после сканирования gamedata.
+- `ScriptsCatalog.IsGameScript` делит скрипты на игровые (`gamedata/scripts/`, включая
+  абсолютные пути с этим сегментом и путь сканирования `scripts/x.lua` — он хранится
+  относительно `gamedata`) и локационные (всё остальное, в том числе
+  `gamedata/config/scripts`). Панель «Скрипты» показывает два списка с заголовками
+  `scriptGroupGame`/`scriptGroupLocation`; пустые группы скрыты.
+- Открытые файлы — сессионные вкладки: `ScriptsViewModel.OpenScripts` хранит только те карточки,
+  что открыли (`SelectItem`), переключение вкладки меняет `Selected`, крестик вкладки —
+  `ScriptItemViewModel.Close` (файл остаётся в списке, `Attach`/смена проекта очищают вкладки).
+  Полоса вкладок скрыта, пока не открыт ни один файл.
+- Проверка Lua (`scriptCheckLua`, диагностика, граф вызовов, скобки) считается только для
+  открытых вкладок — раньше анализ бежал по всем файлам проекта.
+- Переход по ссылкам Ctrl+ЛКМ: `Core/Scripts/ScriptLinks` разбирает `#include "x.lua"`,
+  `dofile('x')`, `require "x"` и любые токены с расширением `.lua`/`.script`/`.ltx`/`.xml`
+  (включая комментарии), `ScriptLinks.At` отдаёт ссылку под курсором (курсор сразу за кавычкой
+  тоже попадает). `LuaEditor` получил событие `LinkClicked` + `OffsetAtPoint`, `ScriptsView`
+  обрабатывает Ctrl+ЛКМ и вызывает `ScriptsViewModel.OpenFileLinkAt`: путь ищется как полный,
+  относительно папки текущего файла и от корня `gamedata`; путь без расширения проверяется
+  с `.lua`/`.script`; `.ltx`/`.xml` не открываются, а найденный файл добавляется карточкой и
+  вкладкой. Статусы: `scriptLinkOpened`, `scriptLinkMissing`, `scriptLinkNotScript`.
+- `ScriptsCatalog.PathKey`/`ScriptsCatalog.ResolveFullPath` — общий разбор путей для скриптов:
+  сканирование хранит путь относительно `gamedata` (`config/scripts/x.lua`), поэтому сравнение
+  карточек и переход по ссылке разворачивают его от `GamedataPath` (иначе `AddFile` считал
+  такие файлы дубликатами, а `Path.GetDirectoryName` давал пустую папку).
+- Локализация: RU/EN ключи `scriptGroupGame`, `scriptGroupLocation`, `scriptCloseTab`,
+  `scriptLinkOpened`, `scriptLinkMissing`, `scriptLinkNotScript`, `scriptLinkHint`.
+- Тесты: `DialogueImportTests`, `ScriptsCatalogTests` (`IsGameScript_splits_engine_and_location_scripts`
+  — в том числе путь сканирования `scripts/bind.script` считается игровым, а `config/scripts`
+  локационным; `Path_helpers_keep_absolute_and_expand_scanned_paths`), `ScriptLinksTests` (5 фактов:
+  директивы, отсутствие дублей токенов внутри директив, попадание курсора, `require` без
+  расширения, пустой текст).
+- UI-зонд (временный проект `xf-scripts-probe`, профиль в `%TEMP%`, после проверки удалён):
+  11 проверок зелёные — 2 игровых + 1 локационный скрипт разложены по спискам, вкладок до
+  выбора 0, выбор даёт одну вкладку, активный фильтр поиска не мешает переходу по ссылке
+  (после открытия фильтр сбрасывается, чтобы карточка была видна), Ctrl+ЛКМ по
+  `#include "scripts/side.lua"` открывает файл, лежащий только на диске (добавляется
+  четвёртым скриптом проекта), ссылка на файл проекта активирует существующую карточку без
+  дубля, `#include "config/system.ltx"` отклоняется статусом «Не скрипт», крестик закрывает
+  вкладку возвратом на соседнюю, повторный переход по ссылке на закрытый файл снова даёт
+  одну вкладку, а не дубль.
+- **Проверка:** Debug/Release build — 0 предупреждений / 0 ошибок, `dotnet test` — **473/473**
+  в обеих конфигурациях.
+
+---
+
+## Шаг 7.5. Скрипты: автодополнение и переход по вызовам; раскладка; переводы
+
+- `ScriptLinks` разбирает вызовы `скрипт.функция(`/`скрипт:функция(` (`level.actor()`,
+  `xr_effects.give_items(...)`): поля `IsCall`, `Script`, `Member`. Исключены `self`/`this`,
+  стандартные библиотеки Lua и локальные объекты (`obj`, `npc`, `actor`), а также расширения
+  файлов (`.lua`/`.script`/`.ltx`/`.xml`). Ctrl+ЛКМ открывает файл скрипта
+  (`ScriptsCatalog.FindScript` — по имени без пути и расширения, приоритет `gamedata/scripts`;
+  если файла нет в проекте, он берётся из gamedata) и ставит каретку на `function member(`.
+  Статусы: `scriptDefinition`, `scriptDefinitionMissing`, `scriptLinkMissing`.
+- `LuaCompletions` (Core): `PrefixAt` (`.`, `:`, буквы/цифры/`_`; знаки `+`/`-` в токен не
+  входят, чтобы info-порции подставлялись сразу после знака), `TokenEnd`, `IsComment`
+  (внутри строковых литералов `--` комментарием не считается), `Suggest` (минимум 2 символа,
+  отсев комментариев, приоритет хвоста: `db.actor:give_info` → `db.actor:give_info_portion`).
+- `LuaEditor`: свойства `Suggestions`/`MaxSuggestions`, popup у каретки, прокручиваемый список
+  (`SuggestionItemTemplate`), навигация ↑/↓/PageUp/PageDown, вставка по Enter/Tab, закрытие по
+  Esc/клику; пересчёт после правки и при сдвиге каретки. Источник — `ScriptsViewModel.Completions`
+  (`SuggestionLibrary.ForLua`, теперь с info-порциями), пересобирается при смене набора файлов.
+- Каталог API пополнен `level.actor`, `xr_effects.give_item`/`give_items`/`disable_items`.
+- Раскладка: редактор скриптов и `system.ltx` тянется на свободную высоту окна
+  (`Grid` со строкой `*` и `MinHeight` от `ViewportHeight`), панели diff тоже растягиваются —
+  при большом окне пустого места внизу нет.
+- Диалоги: `TextIdTools.ResolveTextId` предпочитает русскую таблицу и возвращает `Path`;
+  `TextIdTools.PreferredLanguage` открывает панель на локали с переводом (а не на пустой
+  `unknown`), остальные языки — в списке локалей; подпись под `text_id` — ««текст» · rus · файл».
+- Тема: собственный implicit-шаблон `ComboBox`/`ComboBoxItem` (тёмное поле, popup, подсветка
+  строки, поддержка `IsEditable` через `PART_EditableTextBox`).
+- Тесты: `ScriptLinksTests` (+3: вызовы, отсев библиотек/локальных объектов, попадание курсора
+  в вызов), `ScriptsCatalogTests` (+3: `FindScript` по имени, приоритет игровых, `Stem`),
+  `LuaCompletionsTests` (7 фактов), `DialogsTests` (+2: русская локаль и файл-источник,
+  `PreferredLanguage`), `SuggestionLibraryTests` (+1: `ForLua` с info-порциями), `LuaTests`
+  (каталог `give_info`/`give_items`/`level.actor`).
+- UI-зонд (временный проект `xf-ui-probe`): 16 проверок — редактор скриптов 675 px при окне
+  1040 (растянут), `level.actor()` → `level.script` с кареткой на `function actor`, popup
+  подсказок открыт, `db.actor:give_info_portion` первым и вставляется, `system.ltx` 722 px,
+  диалоги: локаль `rus`, перевод «Привет», файл `dialogues.xml`, ComboBox по теме в
+  «Персонажах» и «Предметах».
+- **Проверка:** Debug/Release build — 0 предупреждений / 0 ошибок, `dotnet test` — **489/489**
+  в обеих конфигурациях.
+
+---
+
+## Шаг 7.6. Современный слой интерфейса (тема, типографика, контролы)
+
+- Токены `Themes/Tokens.xaml`: добавлены `CornerSm`/`CornerMd`/`CornerPill`,
+  `ControlMinHeight` (32), `ScrollBarThickness` (12), `PopupShadow` (мягкая тень popup и
+  подсказок). Цветовых ключей не добавляли: `ThemeService` перезаписывает только 20
+  семантических токенов, поэтому новые ресурсы работают во всех 7 темах, включая светлую
+  `arctic`, без правок `ThemeCatalog`.
+- Метрики плотности: `DensityTitleFontSize` поднят с 12 до 15 (`compact`/`normal`/`roomy` —
+  13/15/16), заголовки панелей теперь крупнее подписей и масштабируются вместе с плотностью.
+- Шрифты (`Themes/Fonts.xaml`): `UiFontFamily` — `Segoe UI Variable Text, Segoe UI`,
+  добавлен `DisplayFontFamily` (`Segoe UI Variable Display`) для заголовков. `TitleText` —
+  светлый SemiBold дисплейной гарнитуры, `CaptionText` — интерфейсный шрифт (моноширинный
+  `MonoText` остался только для кодов, путей и HEX), добавлен `OverlineText` для надписей
+  над блоками.
+- Контролы (`Themes/Controls.xaml`):
+  - `Button` — радиус 6, высота 32, плавная акцентная подсветка при наведении (`Opacity`
+    0→0.10 за 0.12 с, обратно 0.16 с), рамка фокуса акцентом, `Opacity 0.45` у недоступных.
+  - `AccentButton` — заливка `AccentMain` с текстом `TextInverted` и hover `AccentHover`;
+    `DangerButton` — красная заливка при наведении; `ToolbarButton`/`IconButton` — плоские,
+    интерфейсным шрифтом; `NavButton` — плитка с чипом иконки, акцентной полосой слева и
+    фоном `AccentDim` у активной вкладки.
+  - `TextBox` — радиус 6, высота 32, hover-рамка, акцентная рамка в фокусе, интерфейсный шрифт.
+  - `ComboBox` — высота 32, тень и радиус popup; `CheckBox` — 16×16 с галочкой `✓`;
+    `ListBoxItem` — скруглённая строка с акцентной рамкой у выбранной; `ScrollBar` — 12 px,
+    «таблетка» без желобов, подсветка при наведении и перетаскивании; `ToolTip` — карточка с
+    тенью; `Expander` — скруглённая шапка с `AccentDim` при наведении; новый шаблон `Slider`
+    (тонкий трек, круглая ручка).
+- Оболочка (`MainWindow.xaml`): логотип в акцентном чипе, системные глифы окна
+  `Segoe MDL2 Assets` (`E921`/`E922`/`E923`/`E8BB`), красная подсветка кнопки закрытия,
+  навигация шире (240 px) с «пилюлями» счётчиков и скрытием пустых значений, в обзоре —
+  крупные числа (`MetricValue`, 22 px), статусная строка с увеличенными отступами.
+- Отклонения от прежнего вида: заголовки разделов больше не акцентный моноширинный текст —
+  акцент оставлен кнопкам, навигации и графу; метрики `TitleFontSize` сдвинуты (см. выше),
+  чтобы плотность продолжала управлять заголовками.
+- Проверка: Debug/Release build — 0 предупреждений / 0 ошибок, `dotnet test` — **489/489**
+  в обеих конфигурациях. UI-зонд: скриншоты Debug и Release, тёмная `cobalt` и светлая
+  `arctic` — кнопки, поля, списки, скроллбары и popup не «белеют», контраст текста сохранён;
+  временный каталог со снимками удалён.
+
+---
+
+## Шаг 7.7. Единая статусная палитра, окна и пустые состояния
+
+- Статусные токены (`Themes/Tokens.xaml`): `StatusDanger` (`#F87171`), `StatusSuccess`
+  (`#4ADE80`), `StatusWarning` (`#FBBF24`), `StatusInfo` (`#60A5FA`), `StatusSpecial`
+  (`#C084FC`) плюс полупрозрачные заливки `StatusSuccessFill`/`StatusWarningFill`.
+  Ключи не входят в `ThemeTokens.Keys`, поэтому тема их не перезаписывает — оттенки
+  проверок одинаковы во всех 7 палитрах.
+- Из вкладок удалены локальные дубли (`ScriptRed`/`ScriptGreen`/`ScriptAmber`/`ScriptBlue`/
+  `ScriptPurple`, `ItemRed|Green|Amber`, `QuestRed|Amber|Green|Purple`, `SystemRed|Green|Amber`,
+  `CharRed|Green`, `LangRed|Amber|Green`, `IconRed` — 25 ключей в 7 файлах): 47 использований
+  переведены на общие `Status*`. Попутно убраны тёмные литералы (`CharChip` `#2A2A2A` →
+  `SurfaceRaised`, `CharPlaceholder` `#262626` → `SurfaceSunken`) — они не перекрашивались
+  в светлой `arctic`; заливки `#204ADE80`/`#18FBBF24` заменены токенами.
+- Геометрия: все литеральные `CornerRadius` в `Views/*`, `MainWindow.xaml` и шаблонах
+  `Controls.xaml` сведены к `CornerSm` (3/4/6) и `CornerMd` (8/10/12) — 60 вхождений,
+  включая `Setter Property="CornerRadius"` карточек вкладок.
+- Шрифты: `FontFamily="Consolas"`/`Value="Consolas"` в разметке (9 мест) заменены на
+  `{StaticResource MonoFontFamily}`; `SvgPreview` берёт гарнитуру подписей схем из того же
+  ресурса (`TryFindResource` с откатом на Consolas), поэтому подписи инклюдов и цепочек
+  совпадают с редактором кода.
+- Диалоговые окна: общие стили `DialogHeader` (фон `SurfaceRaised`, разделитель, отступ
+  `14,8`) и `DialogCloseButton` (глиф `E8BB` из `Segoe MDL2 Assets`, красная подсветка
+  `#C42B1C` при наведении, как в Win11). Применены в 9 окнах (настройки, свойства проекта,
+  копии, справка, поиск, самопроверка, пакет игры, слоты экипировки, ввод строки);
+  текстовый `✕` в шапках больше не используется.
+- Пустые состояния: стили `EmptyStateHost`/`EmptyStateGlyph`/`EmptyStateTitle`/
+  `EmptyStateHint` в `Controls.xaml`. Панель свойств графа, редактор скриптов и редактор
+  предметов показывают центрированный глиф (`E70F`, `E943`, `E7B8`), заголовок и подсказку
+  вместо одинокой строки сверху. Новые ключи локализации: `graphPropsEmptyHint`,
+  `scriptEditorEmptyHint`, `itemEditorEmptyHint` (RU + EN).
+- Исправлен найденный при сверке ключей дефект: `ScriptsView.xaml` ссылался на
+  несуществующий `TextSecondary` (`DynamicResource` молча не применялся) — заменён на
+  `TextMuted`.
+- В `DialoguesView.xaml` цветовые литералы остались только у графа (`GraphPortHover`,
+  `GraphMultiSelect`, `GraphMarqueeBorder/Fill`, `GraphMiniMapViewport` и свечение портов):
+  это паритет с SVG-отрисовкой из JS, менять их вместе с палитрой нельзя.
+- Проверка: Debug/Release build — 0 предупреждений / 0 ошибок, `dotnet test` — **489/489**
+  в обеих конфигурациях. Скриптовая сверка разметки: все `{StaticResource}`/`{DynamicResource}`
+  в `Views/*` и `Themes/*` разрешаются (после правки — 0 ненайденных ключей).
+  UI-зонд (Debug и Release, профиль `%APPDATA%\XRayForge` без изменений: `cobalt`/`green`/
+  `roomy`): вкладки «Диалоги» и «Скрипты» — пустые состояния по центру панели, глифы
+  отрисовываются, скроллбары и поля без «белых» системных элементов; окно настроек открыто
+  через UI Automation — новая шапка, кнопка закрытия по центру шапки, нижняя панель кнопок
+  не перекрывает содержимое.
+
+---
+
+## Шаг 7.8. Общие стили боковых панелей и пустые состояния вкладок
+
+- В `Themes/Controls.xaml` добавлены стили, которые до этого дублировались в каждой вкладке:
+  `SideCard` (карточка на базе `PanelBorder`: `Padding 12`, `Margin 0,0,0,10`),
+  `SideCardTitle` (заголовок карточки: 11 px, `Bold`), `FieldLabel` (подпись поля: 11 px,
+  `Margin 0,0,0,3`), `CompactInput` (поле ввода 28 px, `Padding 5,0`, контент по центру)
+  и `CompactMonoInput` (то же в `MonoFontFamily` для id/путей/hex).
+- Из вкладок удалено 22 локальных стиля-дубля: `CharLabel`, `CharCardTitle`, `CharComboItem`,
+  `ItemLabel`, `ItemCardTitle`, `ItemComboItem`, `ItemFieldInput` (оставлены только триггеры
+  `IsEditable`/`HasError`/`IsOverridden` на базе `CompactMonoInput`), `ScriptLabel`,
+  `ScriptCardTitle`, `ScriptInput`, `IconLabel`, `IconCardTitle`, `IconInput`, `IconComboItem`,
+  `LangCard`, `LangTitle`, `LangLabel`, `LangEntryBox`, `QuestCard`, `QuestTitle`, `QuestLabel`,
+  `QuestEditorBox`, `SystemCard`, `SystemTitle`, `SystemLabel`. Ссылки в разметке переведены
+  на общие ключи, поэтому высоты полей (было 26/28), отступы (5/6) и размеры заголовков
+  (10/11 px) больше не расходятся между вкладками.
+- Строки `ComboBox` больше не задают `ItemContainerStyle`: в теме уже есть неявный
+  `ComboBoxItem` с подсветкой и `CornerSm`, локальные копии шаблона были избыточны.
+- Исправлен системный дефект темы: неявный `Style TargetType="TextBlock"`
+  (`Foreground = TextPrimary`) перекрывал `Foreground` кнопки, поэтому текст
+  `AccentButton`/`DangerButton` рисовался светлым на ярком фоне. В шаблоне `Button`
+  контент теперь наследует `Foreground` кнопки (`ContentPresenter.Resources` + binding
+  на `AncestorType=Button`); проверено зондом на «Создать предмет», «Загрузить DDS»,
+  «Создать файл», «Создать квест» и «Создать диалог» — текст тёмный (`TextInverted`).
+- Пустые состояния доведены до общего вида (`EmptyStateHost`/`Glyph`/`Title`/`Hint`):
+  персонажи показывают два состояния («Персонажей нет» и «Выберите персонажа»,
+  глиф `E77B`, условие через `MultiDataTrigger` по `HasCharacters`/`HasSelection`),
+  языки — «Таблиц нет» (`E774`), иконки — «Атлас не открыт» (`E8B9`),
+  квесты — «Квестов нет» / «Выберите квест» (`E8FD`). `EmptyStateTitle` получил
+  `TextWrapping`, иначе длинный заголовок обрезался по краям (дефект найден зондом).
+  Ключ `charEmpty` сокращён до «Персонажей нет.» — подробности ушли в подсказку.
+- Новые ключи локализации (RU + EN): `charEmptyHint`, `charEditorEmpty`,
+  `charEditorEmptyHint`, `languagesEmptyHint`, `iconEmptyTitle`, `questsEmptyHint`,
+  `questsEmptyTitle`, `questsEditorEmpty`, `questsEditorEmptyHint`.
+- Литералы, пропущенные прошлой порцией: `GraphCard` `CornerRadius 12` и `PaletteIcon` `8`
+  → `CornerMd`, заливка чипа `#204ADE80` → `StatusSuccessFill`.
+- Проверка: Debug/Release build — 0 предупреждений / 0 ошибок, `dotnet test` — **489/489**
+  в обеих конфигурациях; сверка разметки — все `{StaticResource}`/`{DynamicResource}`
+  разрешаются. UI-зонд (Debug, временный профиль `%APPDATA%\XRayForge` с возвратом копии):
+  все 8 вкладок на рабочем проекте (переключение `Ctrl+1…8`) и 7 вкладок на пустом
+  проекте, созданном через «Создать проект». Проверено: пустые состояния по центру,
+  скругления и шрифты совпадают между вкладками, текст акцентных кнопок контрастный,
+  «белых» системных элементов нет. Временные каталоги зонда удалены, профиль восстановлен.
+
 ---
 
 ## 8. Стратегия тестирования

@@ -9,28 +9,6 @@
       предупреждения, иконка/визуал, связанные диалоги, diff с оригиналом и исходный XML.
     -->
     <UserControl.Resources>
-        <!-- `bg-slate-200 dark:bg-zinc-800` чипов группировок -->
-        <SolidColorBrush x:Key="CharChip" Color="#2A2A2A" />
-        <!-- `bg-amber-50 / border-amber-300` блока предупреждений -->
-        <SolidColorBrush x:Key="CharWarnTint" Color="#1AFFB020" />
-        <SolidColorBrush x:Key="CharWarnBorder" Color="#806B4A" />
-        <SolidColorBrush x:Key="CharRed" Color="#F87171" />
-        <SolidColorBrush x:Key="CharGreen" Color="#4ADE80" />
-        <SolidColorBrush x:Key="CharPlaceholder" Color="#262626" />
-
-        <!-- Подпись поля редактора (`text-xs`) -->
-        <Style x:Key="CharLabel" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="Margin" Value="0,0,0,3" />
-        </Style>
-
-        <!-- Заголовок карточки (`text-[10px] uppercase tracking-widest font-bold`) -->
-        <Style x:Key="CharCardTitle" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
-            <Setter Property="FontSize" Value="10" />
-            <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="Margin" Value="0,0,0,6" />
-        </Style>
-
         <!-- Многострочное поле (`textarea`): био и снаряжение -->
         <Style x:Key="CharArea" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
             <Setter Property="AcceptsReturn" Value="True" />
@@ -47,7 +25,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Card" CornerRadius="10" Padding="8" BorderThickness="1"
+                        <Border x:Name="Card" CornerRadius="{StaticResource CornerMd}" Padding="8" BorderThickness="1"
                                 Background="{DynamicResource SurfaceRaised}"
                                 BorderBrush="{DynamicResource BorderBevel}">
                             <ContentPresenter HorizontalAlignment="Stretch" />
@@ -67,7 +45,7 @@
                             </DataTrigger>
                             <DataTrigger Binding="{Binding IsDuplicate}" Value="True">
                                 <Setter TargetName="Card" Property="BorderBrush"
-                                        Value="{StaticResource CharRed}" />
+                                        Value="{StaticResource StatusDanger}" />
                             </DataTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -79,37 +57,12 @@
         <Style x:Key="CharCardSubtitle" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsDuplicate}" Value="True">
-                    <Setter Property="Foreground" Value="{StaticResource CharRed}" />
+                    <Setter Property="Foreground" Value="{StaticResource StatusDanger}" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
 
         <!-- Выпадающий список в тёмной теме (системный шаблон иначе оставляет белый фон) -->
-        <Style x:Key="CharComboItem" TargetType="ComboBoxItem">
-            <Setter Property="Background" Value="{DynamicResource SurfacePanel}" />
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
-            <Setter Property="Padding" Value="8,4" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ComboBoxItem">
-                        <Border x:Name="Chrome" Background="{TemplateBinding Background}"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsHighlighted" Value="True">
-                                <Setter TargetName="Chrome" Property="Background"
-                                        Value="{DynamicResource SurfaceRaised}" />
-                            </Trigger>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Chrome" Property="Background"
-                                        Value="{DynamicResource AccentDim}" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
 
         <Style x:Key="CharCombo" TargetType="ComboBox">
             <Setter Property="Background" Value="{DynamicResource SurfaceSunken}" />
@@ -117,7 +70,6 @@
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBevel}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="8,0" />
-            <Setter Property="ItemContainerStyle" Value="{StaticResource CharComboItem}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ComboBox">
@@ -199,7 +151,7 @@
 
         <!-- Кнопка `×` в шапке XML (`text-red-400`) -->
         <Style x:Key="CharCloseButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
-            <Setter Property="Foreground" Value="{StaticResource CharRed}" />
+            <Setter Property="Foreground" Value="{StaticResource StatusDanger}" />
             <Setter Property="Padding" Value="4,0" />
         </Style>
     </UserControl.Resources>
@@ -269,7 +221,7 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel>
-                                        <TextBlock Text="{Binding Header}" Style="{StaticResource CharCardTitle}"
+                                        <TextBlock Text="{Binding Header}" Style="{StaticResource SideCardTitle}"
                                                    Margin="0,6,0,4" />
                                         <ItemsControl ItemsSource="{Binding Items}">
                                             <ItemsControl.ItemTemplate>
@@ -310,10 +262,10 @@
                           HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Margin="20" MaxWidth="768" HorizontalAlignment="Stretch">
                     <!-- `game_relations`: чипы community, матрица отношений и монстры -->
-                    <Border Style="{StaticResource PanelBorder}" CornerRadius="10" Margin="0,0,0,16"
+                    <Border Style="{StaticResource PanelBorder}" CornerRadius="{StaticResource CornerMd}" Margin="0,0,0,16"
                             Visibility="{Binding Characters.HasGroups, Converter={StaticResource BoolToVisibility}}">
                         <StackPanel>
-                            <TextBlock Text="{Binding Characters.CommunitiesTitle}" Style="{StaticResource CharCardTitle}" />
+                            <TextBlock Text="{Binding Characters.CommunitiesTitle}" Style="{StaticResource SideCardTitle}" />
                             <ItemsControl ItemsSource="{Binding Characters.CommunityChips}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
@@ -322,7 +274,7 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Background="{StaticResource CharChip}" CornerRadius="3"
+                                        <Border Background="{StaticResource SurfaceRaised}" CornerRadius="{StaticResource CornerSm}"
                                                 Padding="7,2" Margin="0,0,4,4" ToolTip="{Binding Tooltip}">
                                             <TextBlock Text="{Binding Text}" Style="{StaticResource MonoText}"
                                                        FontSize="11" />
@@ -332,7 +284,7 @@
                             </ItemsControl>
                             <StackPanel Margin="0,6,0,0"
                                         Visibility="{Binding Characters.HasRelations, Converter={StaticResource BoolToVisibility}}">
-                                <TextBlock Text="{loc:Loc charRelationsTitle}" Style="{StaticResource CharCardTitle}" />
+                                <TextBlock Text="{loc:Loc charRelationsTitle}" Style="{StaticResource SideCardTitle}" />
                                 <ScrollViewer HorizontalScrollBarVisibility="Auto"
                                               VerticalScrollBarVisibility="Disabled">
                                     <StackPanel>
@@ -388,7 +340,7 @@
 
                             <StackPanel Margin="0,8,0,0"
                                         Visibility="{Binding Characters.HasMonsterChips, Converter={StaticResource BoolToVisibility}}">
-                                <TextBlock Text="{Binding Characters.MonstersTitle}" Style="{StaticResource CharCardTitle}" />
+                                <TextBlock Text="{Binding Characters.MonstersTitle}" Style="{StaticResource SideCardTitle}" />
                                 <ItemsControl ItemsSource="{Binding Characters.MonsterChips}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
@@ -397,7 +349,7 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border Background="{StaticResource CharChip}" CornerRadius="3"
+                                            <Border Background="{StaticResource SurfaceRaised}" CornerRadius="{StaticResource CornerSm}"
                                                     Padding="7,2" Margin="0,0,4,4" ToolTip="{Binding Tooltip}">
                                                 <TextBlock Text="{Binding Text}" Style="{StaticResource MonoText}"
                                                            FontSize="11" />
@@ -411,11 +363,35 @@
                     </Border>
 
 
-                    <!-- Подсказка при пустом проекте (`Персонажей нет…`) -->
-                    <TextBlock Text="{loc:Loc charEmpty}" Style="{StaticResource CaptionText}"
-                               TextWrapping="Wrap" FontSize="13" Margin="0,8,0,0"
-                               Visibility="{Binding Characters.HasCharacters,
-                                   Converter={StaticResource InverseBoolToVisibility}}" />
+                    <!-- Пустой проект: подсказка вместо редактора (`Персонажей нет…`) -->
+                    <StackPanel Style="{StaticResource EmptyStateHost}"
+                                Visibility="{Binding Characters.HasCharacters,
+                                    Converter={StaticResource InverseBoolToVisibility}}">
+                        <TextBlock Text="&#xE77B;" Style="{StaticResource EmptyStateGlyph}" />
+                        <TextBlock Text="{loc:Loc charEmpty}" Style="{StaticResource EmptyStateTitle}" />
+                        <TextBlock Text="{loc:Loc charEmptyHint}" Style="{StaticResource EmptyStateHint}" />
+                    </StackPanel>
+
+                    <!-- Персонажи есть, но ни один не выбран -->
+                    <StackPanel>
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel" BasedOn="{StaticResource EmptyStateHost}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding Characters.HasCharacters}" Value="True" />
+                                            <Condition Binding="{Binding Characters.HasSelection}" Value="False" />
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </MultiDataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <TextBlock Text="&#xE77B;" Style="{StaticResource EmptyStateGlyph}" />
+                        <TextBlock Text="{loc:Loc charEditorEmpty}" Style="{StaticResource EmptyStateTitle}" />
+                        <TextBlock Text="{loc:Loc charEditorEmptyHint}" Style="{StaticResource EmptyStateHint}" />
+                    </StackPanel>
 
                     <!-- Редактор выбранного персонажа (`max-w-2xl grid gap-3`) -->
                     <StackPanel Visibility="{Binding Characters.HasSelection,
@@ -424,8 +400,8 @@
                                    Margin="0,0,0,10" />
 
                         <!-- Предупреждения `validateCharacter` -->
-                        <Border Background="{StaticResource CharWarnTint}" BorderBrush="{StaticResource CharWarnBorder}"
-                                BorderThickness="1" CornerRadius="8" Padding="8" Margin="0,0,0,10"
+                        <Border Background="{StaticResource StatusWarningFill}" BorderBrush="{StaticResource StateWarn}"
+                                BorderThickness="1" CornerRadius="{StaticResource CornerMd}" Padding="8" Margin="0,0,0,10"
                                 Visibility="{Binding Characters.Selected.HasWarnings,
                                     Converter={StaticResource BoolToVisibility}}">
                             <ItemsControl ItemsSource="{Binding Characters.Selected.Warnings}">
@@ -439,22 +415,22 @@
                         </Border>
 
                         <StackPanel Margin="0,0,0,8">
-                            <TextBlock Text="ID" Style="{StaticResource CharLabel}" />
+                            <TextBlock Text="ID" Style="{StaticResource FieldLabel}" />
                             <TextBox Text="{Binding Characters.Selected.Id, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
                         <StackPanel Margin="0,0,0,8">
-                            <TextBlock Text="{loc:Loc charFieldName}" Style="{StaticResource CharLabel}" />
+                            <TextBlock Text="{loc:Loc charFieldName}" Style="{StaticResource FieldLabel}" />
                             <TextBox Text="{Binding Characters.Selected.Name, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
                         <StackPanel Margin="0,0,0,8">
-                            <TextBlock Text="{loc:Loc charFieldCommunity}" Style="{StaticResource CharLabel}" />
+                            <TextBlock Text="{loc:Loc charFieldCommunity}" Style="{StaticResource FieldLabel}" />
                             <ComboBox IsEditable="True" Style="{StaticResource CharCombo}"
                                       Text="{Binding Characters.Selected.Community, UpdateSourceTrigger=PropertyChanged}"
                                       ItemsSource="{Binding Characters.CommunityOptions}"
                                       ToolTip="{loc:Loc charCommunityHint}" />
                         </StackPanel>
                         <StackPanel Margin="0,0,0,8">
-                            <TextBlock Text="{loc:Loc charFieldRank}" Style="{StaticResource CharLabel}" />
+                            <TextBlock Text="{loc:Loc charFieldRank}" Style="{StaticResource FieldLabel}" />
                             <controls:SuggestionTextBox Style="{StaticResource {x:Type TextBox}}"
                                                         Text="{Binding Characters.Selected.Rank, UpdateSourceTrigger=PropertyChanged}"
                                                         Suggestions="{Binding Characters.Selected.RankSuggestions}" />
@@ -468,7 +444,7 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Background="{StaticResource CharChip}" CornerRadius="3"
+                                        <Border Background="{StaticResource SurfaceRaised}" CornerRadius="{StaticResource CornerSm}"
                                                 Padding="5,1" Margin="0,0,4,4" ToolTip="{Binding Tooltip}">
                                             <TextBlock Text="{Binding Text}" Style="{StaticResource MonoText}"
                                                        FontSize="10" />
@@ -478,7 +454,7 @@
                             </ItemsControl>
                         </StackPanel>
                         <StackPanel Margin="0,0,0,8">
-                            <TextBlock Text="{loc:Loc charFieldReputation}" Style="{StaticResource CharLabel}" />
+                            <TextBlock Text="{loc:Loc charFieldReputation}" Style="{StaticResource FieldLabel}" />
                             <controls:SuggestionTextBox Style="{StaticResource {x:Type TextBox}}"
                                                         Text="{Binding Characters.Selected.Reputation, UpdateSourceTrigger=PropertyChanged}"
                                                         Suggestions="{Binding Characters.Selected.ReputationSuggestions}" />
@@ -492,7 +468,7 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Background="{StaticResource CharChip}" CornerRadius="3"
+                                        <Border Background="{StaticResource SurfaceRaised}" CornerRadius="{StaticResource CornerSm}"
                                                 Padding="5,1" Margin="0,0,4,4" ToolTip="{Binding Tooltip}">
                                             <TextBlock Text="{Binding Text}" Style="{StaticResource MonoText}"
                                                        FontSize="10" />
@@ -502,51 +478,51 @@
                             </ItemsControl>
                         </StackPanel>
                         <StackPanel Margin="0,0,0,8">
-                            <TextBlock Text="{loc:Loc charFieldNpcRank}" Style="{StaticResource CharLabel}" />
+                            <TextBlock Text="{loc:Loc charFieldNpcRank}" Style="{StaticResource FieldLabel}" />
                             <controls:SuggestionTextBox Style="{StaticResource {x:Type TextBox}}"
                                                         Text="{Binding Characters.Selected.NpcRank, UpdateSourceTrigger=PropertyChanged}"
                                                         Suggestions="{Binding Characters.Selected.NpcRankSuggestions}" />
                         </StackPanel>
                         <StackPanel Margin="0,0,0,8">
-                            <TextBlock Text="{loc:Loc charFieldBio}" Style="{StaticResource CharLabel}" />
+                            <TextBlock Text="{loc:Loc charFieldBio}" Style="{StaticResource FieldLabel}" />
                             <TextBox Style="{StaticResource CharArea}" Height="62"
                                      Text="{Binding Characters.Selected.Bio, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
                         <StackPanel Margin="0,0,0,8">
-                            <TextBlock Text="{loc:Loc charFieldSupplies}" Style="{StaticResource CharLabel}" />
+                            <TextBlock Text="{loc:Loc charFieldSupplies}" Style="{StaticResource FieldLabel}" />
                             <TextBox Style="{StaticResource CharArea}" Height="78" FontSize="11"
                                      Text="{Binding Characters.Selected.Supplies, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
                         <StackPanel Margin="0,0,0,8">
-                            <TextBlock Text="{loc:Loc charFieldIcon}" Style="{StaticResource CharLabel}" />
+                            <TextBlock Text="{loc:Loc charFieldIcon}" Style="{StaticResource FieldLabel}" />
                             <controls:SuggestionTextBox Style="{StaticResource {x:Type TextBox}}"
                                                         Text="{Binding Characters.Selected.Icon, UpdateSourceTrigger=PropertyChanged}"
                                                         Suggestions="{Binding Characters.Selected.IconSuggestions}" />
                         </StackPanel>
                         <StackPanel Margin="0,0,0,8">
-                            <TextBlock Text="{loc:Loc charFieldVisual}" Style="{StaticResource CharLabel}" />
+                            <TextBlock Text="{loc:Loc charFieldVisual}" Style="{StaticResource FieldLabel}" />
                             <controls:SuggestionTextBox Style="{StaticResource {x:Type TextBox}}"
                                                         Text="{Binding Characters.Selected.Visual, UpdateSourceTrigger=PropertyChanged}"
                                                         Suggestions="{Binding Characters.Selected.VisualSuggestions}" />
                         </StackPanel>
 
                         <!-- «Иконка и визуал»: вырезка `textureMap[icon]` или заглушка 👤 -->
-                        <Border Style="{StaticResource PanelBorder}" CornerRadius="10" Margin="0,2,0,10">
+                        <Border Style="{StaticResource PanelBorder}" CornerRadius="{StaticResource CornerMd}" Margin="0,2,0,10">
                             <StackPanel>
-                                <TextBlock Text="{loc:Loc charIconTitle}" Style="{StaticResource CharCardTitle}" />
+                                <TextBlock Text="{loc:Loc charIconTitle}" Style="{StaticResource SideCardTitle}" />
                                 <StackPanel Orientation="Horizontal">
                                     <Border Width="66" Height="{Binding Characters.IconPreviewHeight}"
-                                            CornerRadius="4" BorderThickness="1"
+                                            CornerRadius="{StaticResource CornerSm}" BorderThickness="1"
                                             BorderBrush="{DynamicResource BorderStrong}"
-                                            Background="{StaticResource CharPlaceholder}"
+                                            Background="{StaticResource SurfaceSunken}"
                                             Visibility="{Binding Characters.HasIconPreview,
                                                 Converter={StaticResource BoolToVisibility}}">
                                         <Image Source="{Binding Characters.IconPreview}" Stretch="Fill"
                                                RenderOptions.BitmapScalingMode="NearestNeighbor" />
                                     </Border>
-                                    <Border Width="40" Height="40" CornerRadius="4" BorderThickness="1"
+                                    <Border Width="40" Height="40" CornerRadius="{StaticResource CornerSm}" BorderThickness="1"
                                             BorderBrush="{DynamicResource BorderStrong}"
-                                            Background="{StaticResource CharPlaceholder}"
+                                            Background="{StaticResource SurfaceSunken}"
                                             Visibility="{Binding Characters.HasIconPreview,
                                                 Converter={StaticResource InverseBoolToVisibility}}">
                                         <TextBlock Text="👤" FontSize="20" HorizontalAlignment="Center"
@@ -565,7 +541,7 @@
                         </Border>
 
                         <StackPanel Margin="0,0,0,10">
-                            <TextBlock Text="{loc:Loc charFieldStartDialog}" Style="{StaticResource CharLabel}" />
+                            <TextBlock Text="{loc:Loc charFieldStartDialog}" Style="{StaticResource FieldLabel}" />
                             <controls:SuggestionTextBox Style="{StaticResource {x:Type TextBox}}"
                                                         Text="{Binding Characters.Selected.StartDialogText,
                                                 UpdateSourceTrigger=PropertyChanged}"
@@ -574,9 +550,9 @@
                         </StackPanel>
 
                         <!-- «Диалоги персонажа»: `start_dialog` + `actor_dialog` -->
-                        <Border Style="{StaticResource PanelBorder}" CornerRadius="10" Margin="0,0,0,10">
+                        <Border Style="{StaticResource PanelBorder}" CornerRadius="{StaticResource CornerMd}" Margin="0,0,0,10">
                             <StackPanel>
-                                <TextBlock Text="{loc:Loc charRelatedTitle}" Style="{StaticResource CharCardTitle}" />
+                                <TextBlock Text="{loc:Loc charRelatedTitle}" Style="{StaticResource SideCardTitle}" />
                                 <ItemsControl ItemsSource="{Binding Characters.Related}"
                                               Visibility="{Binding Characters.HasRelated,
                                                   Converter={StaticResource BoolToVisibility}}">
@@ -597,10 +573,10 @@
                         </Border>
 
                         <!-- «Изменения от оригинала» (`c.original` и непустой diff) -->
-                        <Border Style="{StaticResource PanelBorder}" CornerRadius="10" Margin="0,0,0,10"
+                        <Border Style="{StaticResource PanelBorder}" CornerRadius="{StaticResource CornerMd}" Margin="0,0,0,10"
                                 Visibility="{Binding Characters.HasDiff, Converter={StaticResource BoolToVisibility}}">
                             <StackPanel>
-                                <TextBlock Text="{loc:Loc charDiffTitle}" Style="{StaticResource CharCardTitle}" />
+                                <TextBlock Text="{loc:Loc charDiffTitle}" Style="{StaticResource SideCardTitle}" />
                                 <ItemsControl ItemsSource="{Binding Characters.DiffRows}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
@@ -616,10 +592,10 @@
                                                            TextTrimming="CharacterEllipsis" />
                                                 <TextBlock Grid.Column="1" Text="{Binding BeforeText}"
                                                            TextDecorations="Strikethrough" FontSize="11"
-                                                           Foreground="{StaticResource CharRed}"
+                                                           Foreground="{StaticResource StatusDanger}"
                                                            TextTrimming="CharacterEllipsis" Margin="0,0,6,0" />
                                                 <TextBlock Grid.Column="2" Text="{Binding AfterText}" FontSize="11"
-                                                           Foreground="{StaticResource CharGreen}"
+                                                           Foreground="{StaticResource StatusSuccess}"
                                                            TextTrimming="CharacterEllipsis" />
                                             </Grid>
                                         </DataTemplate>
@@ -631,11 +607,11 @@
                         <!-- Исходный XML из `ltxFiles` (`extractCharacterXml`) -->
                         <Button Content="{loc:Loc charXmlShow}" Style="{StaticResource ToolbarButton}"
                                 HorizontalAlignment="Left" Command="{Binding Characters.ShowXmlCommand}" />
-                        <Border Style="{StaticResource PanelBorder}" CornerRadius="10" Margin="0,10,0,0"
+                        <Border Style="{StaticResource PanelBorder}" CornerRadius="{StaticResource CornerMd}" Margin="0,10,0,0"
                                 Visibility="{Binding Characters.IsXmlOpen, Converter={StaticResource BoolToVisibility}}">
                             <StackPanel>
                                 <Grid Margin="0,0,0,6">
-                                    <TextBlock Text="{loc:Loc charXmlTitle}" Style="{StaticResource CharCardTitle}"
+                                    <TextBlock Text="{loc:Loc charXmlTitle}" Style="{StaticResource SideCardTitle}"
                                                Margin="0" VerticalAlignment="Center" />
                                     <Button Content="×" Style="{StaticResource CharCloseButton}"
                                             HorizontalAlignment="Right"

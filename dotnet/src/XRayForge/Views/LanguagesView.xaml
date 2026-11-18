@@ -7,30 +7,6 @@
       редактор string_table по языкам, импорт XML, проверка text_id и покрытие реплик.
     -->
     <UserControl.Resources>
-        <SolidColorBrush x:Key="LangRed" Color="#F87171" />
-        <SolidColorBrush x:Key="LangAmber" Color="#FBBF24" />
-        <SolidColorBrush x:Key="LangGreen" Color="#4ADE80" />
-        <Style x:Key="LangCard" TargetType="Border" BasedOn="{StaticResource PanelBorder}">
-            <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="Padding" Value="12" />
-            <Setter Property="Margin" Value="0,0,0,10" />
-        </Style>
-        <Style x:Key="LangTitle" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="Margin" Value="0,0,0,6" />
-        </Style>
-        <Style x:Key="LangLabel" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="Margin" Value="0,0,0,3" />
-        </Style>
-        <Style x:Key="LangEntryBox" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="Height" Value="28" />
-            <Setter Property="Padding" Value="5,0" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
-        </Style>
-
         <!-- Виртуализированный список: строки string_table могут исчисляться десятками тысяч. -->
         <Style x:Key="LangVirtualList" TargetType="ListBox">
             <Setter Property="Background" Value="Transparent" />
@@ -104,19 +80,19 @@
             </Grid.RowDefinitions>
 
             <!-- Проверка text_id -->
-            <Border Grid.Row="0" Style="{StaticResource LangCard}"
+            <Border Grid.Row="0" Style="{StaticResource SideCard}"
                     Visibility="{Binding Languages.HasIssues,
                         Converter={StaticResource BoolToVisibility}}">
                 <StackPanel>
-                    <TextBlock Text="{Binding Languages.IssuesTitle}" Style="{StaticResource LangTitle}"
-                               Foreground="{StaticResource LangRed}" />
+                    <TextBlock Text="{Binding Languages.IssuesTitle}" Style="{StaticResource SideCardTitle}"
+                               Foreground="{StaticResource StatusDanger}" />
                     <ListBox Style="{StaticResource LangVirtualList}"
                              ItemsSource="{Binding Languages.Issues}" MaxHeight="150">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding Text}" FontSize="11"
                                            TextWrapping="Wrap" Padding="0,1"
-                                           Foreground="{StaticResource LangAmber}" />
+                                           Foreground="{StaticResource StatusWarning}" />
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
@@ -124,7 +100,7 @@
             </Border>
 
             <!-- Сводная таблица -->
-            <Border Grid.Row="1" Style="{StaticResource LangCard}"
+            <Border Grid.Row="1" Style="{StaticResource SideCard}"
                     Visibility="{Binding Languages.SummaryMode,
                         Converter={StaticResource BoolToVisibility}}">
                 <Grid>
@@ -134,7 +110,7 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
                     <TextBlock Grid.Row="0" Text="{loc:Loc languagesSummary}"
-                               Style="{StaticResource LangTitle}" />
+                               Style="{StaticResource SideCardTitle}" />
                     <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,4">
                         <TextBlock Text="{loc:Loc languagesId}" Width="220" FontSize="11"
                                    FontWeight="Bold" />
@@ -164,7 +140,7 @@
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal" Margin="0,1">
                                         <TextBlock Text="{Binding Id}" Width="220" FontSize="11"
-                                                   FontFamily="Consolas" VerticalAlignment="Center"
+                                                   FontFamily="{StaticResource MonoFontFamily}" VerticalAlignment="Center"
                                                    TextTrimming="CharacterEllipsis" />
                                         <ItemsControl ItemsSource="{Binding Cells}">
                                             <ItemsControl.ItemsPanel>
@@ -176,7 +152,7 @@
                                                 <DataTemplate>
                                                     <Border Width="180" Margin="0,0,4,0" BorderThickness="1"
                                                             BorderBrush="{DynamicResource BorderBevel}">
-                                                        <TextBox Style="{StaticResource LangEntryBox}"
+                                                        <TextBox Style="{StaticResource CompactInput}"
                                                                  Text="{Binding Text, Mode=TwoWay,
                                                                      UpdateSourceTrigger=PropertyChanged}"
                                                                  BorderThickness="0" />
@@ -196,15 +172,18 @@
             <!-- Редактор по языкам -->
             <Grid Grid.Row="1" Visibility="{Binding Languages.SummaryMode,
                 Converter={StaticResource InverseBoolToVisibility}}">
-                <TextBlock Text="{loc:Loc languagesEmpty}" Style="{StaticResource CaptionText}"
-                           VerticalAlignment="Top"
-                           Visibility="{Binding Languages.HasLanguages,
-                               Converter={StaticResource InverseBoolToVisibility}}" />
+                <StackPanel Style="{StaticResource EmptyStateHost}"
+                            Visibility="{Binding Languages.HasLanguages,
+                                Converter={StaticResource InverseBoolToVisibility}}">
+                    <TextBlock Text="&#xE774;" Style="{StaticResource EmptyStateGlyph}" />
+                    <TextBlock Text="{loc:Loc languagesEmpty}" Style="{StaticResource EmptyStateTitle}" />
+                    <TextBlock Text="{loc:Loc languagesEmptyHint}" Style="{StaticResource EmptyStateHint}" />
+                </StackPanel>
                 <ListBox Style="{StaticResource LangVirtualList}"
                          ItemsSource="{Binding Languages.Languages}">
                     <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border Style="{StaticResource LangCard}">
+                                <Border Style="{StaticResource SideCard}">
                                     <StackPanel>
                                         <Grid>
                                             <Grid.ColumnDefinitions>
@@ -214,15 +193,15 @@
                                             </Grid.ColumnDefinitions>
                                             <StackPanel Grid.Column="0" Margin="0,0,6,0">
                                                 <TextBlock Text="{Binding LocaleLabel}"
-                                                           Style="{StaticResource LangLabel}" />
-                                                <TextBox Style="{StaticResource LangEntryBox}"
+                                                           Style="{StaticResource FieldLabel}" />
+                                                <TextBox Style="{StaticResource CompactInput}"
                                                          Text="{Binding Locale, Mode=TwoWay,
                                                              UpdateSourceTrigger=PropertyChanged}" />
                                             </StackPanel>
                                             <StackPanel Grid.Column="1">
                                                 <TextBlock Text="{Binding NameLabel}"
-                                                           Style="{StaticResource LangLabel}" />
-                                                <TextBox Style="{StaticResource LangEntryBox}"
+                                                           Style="{StaticResource FieldLabel}" />
+                                                <TextBox Style="{StaticResource CompactInput}"
                                                          Text="{Binding Name, Mode=TwoWay,
                                                              UpdateSourceTrigger=PropertyChanged}" />
                                             </StackPanel>
@@ -233,7 +212,7 @@
                                                            VerticalAlignment="Center" Margin="0,0,8,0" />
                                                 <Button Content="{Binding DeleteText}"
                                                         Style="{StaticResource ToolbarButton}"
-                                                        Foreground="{StaticResource LangRed}"
+                                                        Foreground="{StaticResource StatusDanger}"
                                                         Command="{Binding DeleteTableCommand}" />
                                             </StackPanel>
                                         </Grid>
@@ -260,12 +239,12 @@
                                                                         <DataTrigger Binding="{Binding IsDuplicate}"
                                                                                      Value="True">
                                                                             <Setter Property="BorderBrush"
-                                                                                    Value="{StaticResource LangRed}" />
+                                                                                    Value="{StaticResource StatusDanger}" />
                                                                         </DataTrigger>
                                                                     </Style.Triggers>
                                                                 </Style>
                                                             </Border.Style>
-                                                            <TextBox Style="{StaticResource LangEntryBox}"
+                                                            <TextBox Style="{StaticResource CompactInput}"
                                                                      Text="{Binding Id, Mode=TwoWay,
                                                                          UpdateSourceTrigger=PropertyChanged}"
                                                                      BorderThickness="0" />
@@ -280,12 +259,12 @@
                                                                         <DataTrigger Binding="{Binding IsEmpty}"
                                                                                      Value="True">
                                                                             <Setter Property="BorderBrush"
-                                                                                    Value="{StaticResource LangAmber}" />
+                                                                                    Value="{StaticResource StatusWarning}" />
                                                                         </DataTrigger>
                                                                     </Style.Triggers>
                                                                 </Style>
                                                             </Border.Style>
-                                                            <TextBox Style="{StaticResource LangEntryBox}"
+                                                            <TextBox Style="{StaticResource CompactInput}"
                                                                      Text="{Binding Text, Mode=TwoWay,
                                                                          UpdateSourceTrigger=PropertyChanged}"
                                                                      BorderThickness="0" />
@@ -299,7 +278,7 @@
                                                                            Converter={StaticResource BoolToVisibility}}" />
                                                             <Button Content="✕"
                                                                     Style="{StaticResource ToolbarButton}"
-                                                                    Foreground="{StaticResource LangRed}"
+                                                                    Foreground="{StaticResource StatusDanger}"
                                                                     Padding="6,0" MinHeight="24"
                                                                     Command="{Binding RemoveCommand}" />
                                                         </StackPanel>
