@@ -148,7 +148,7 @@ public class GamePackagePlanTests
         // Кириллица в windows-1251 — один байт на символ, а не два (UTF-8).
         var russian = plan.Entries.Single(entry =>
             entry.Path.EndsWith("text/rus/st_mod.xml", StringComparison.Ordinal));
-        Assert.Contains("Привет", Encoding.GetEncoding(1251).GetString(
+        Assert.Contains("Привет", GameEncoding.DecodeCp1251(
             GameEncoding.Encode(plan.Files[russian.Path], "windows-1251")));
     }
 
