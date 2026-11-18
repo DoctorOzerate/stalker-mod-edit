@@ -49,7 +49,7 @@ public partial class MainWindow : Window
     private void OnClose(object sender, RoutedEventArgs e) => Close();
 
     private void OnStateChanged(object sender, EventArgs e) =>
-        MaximizeButton.Content = WindowState == WindowState.Maximized ? "❐" : "▢";
+        MaximizeButton.Content = WindowState == WindowState.Maximized ? "\uE923" : "\uE922";
 
     private void ToggleMaximize() =>
         WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;

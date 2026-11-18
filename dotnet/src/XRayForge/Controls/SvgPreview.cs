@@ -143,11 +143,18 @@ public sealed class SvgPreview : FrameworkElement
             ? FontWeights.Bold
             : FontWeights.Normal;
         var formatted = new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
-            new Typeface(new FontFamily("Consolas"), FontStyles.Normal, weight, FontStretches.Normal),
+            new Typeface(MonoTypeface(), FontStyles.Normal, weight, FontStretches.Normal),
             size, Brush(element, "fill") ?? Brushes.White, 1.0);
         context.DrawText(formatted,
             new Point(Number(element, "x"), Number(element, "y") - formatted.Height * 0.82));
     }
+
+    /// <summary>
+    /// Моноширинная гарнитура из токенов темы (JetBrains Mono → Consolas) — та же, что
+    /// в редакторах кода, чтобы подписи схем не выбивались из остального интерфейса.
+    /// </summary>
+    private static FontFamily MonoTypeface() =>
+        Application.Current?.TryFindResource("MonoFontFamily") as FontFamily ?? new FontFamily("Consolas");
 
 
     private static StreamGeometry? BuildPath(string? d)

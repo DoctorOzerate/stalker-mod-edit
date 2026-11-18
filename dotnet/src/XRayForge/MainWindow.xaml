@@ -44,6 +44,42 @@
         <DataTemplate x:Key="QuestsTemplate">
             <views:QuestsView />
         </DataTemplate>
+
+        <!-- Кнопка закрытия окна: красная подсветка при наведении (как в Windows 11) -->
+        <Style x:Key="CloseButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource StateDanger}" />
+                    <Setter Property="Foreground" Value="{DynamicResource TextInverted}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Системные глифы окна (Segoe MDL2 Assets): свернуть, развернуть, закрыть -->
+        <Style x:Key="WindowGlyphButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="MinWidth" Value="42" />
+            <Setter Property="Height" Value="30" />
+        </Style>
+
+        <!-- Глиф закрытия: красная подсветка -->
+        <Style x:Key="CloseGlyphButton" TargetType="Button" BasedOn="{StaticResource WindowGlyphButton}">
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource StateDanger}" />
+                    <Setter Property="Foreground" Value="{DynamicResource TextInverted}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Крупное число в карточке обзора -->
+        <Style x:Key="MetricValue" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{DynamicResource DisplayFontFamily}" />
+            <Setter Property="FontSize" Value="22" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+        </Style>
     </Window.Resources>
 
     <Grid Background="{DynamicResource SurfaceBase}">
@@ -55,12 +91,16 @@
 
         <!-- Панель инструментов: заголовок, контекстные действия раздела, поиск, кнопки окна -->
         <Border Grid.Row="0" Background="{DynamicResource ChromeBackdrop}" BorderBrush="{DynamicResource BorderBevel}"
-                BorderThickness="0,0,0,1" Padding="10,6" MouseLeftButtonDown="OnHeaderDrag">
+                BorderThickness="0,0,0,1" Padding="14,6" MouseLeftButtonDown="OnHeaderDrag">
             <Grid>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="☢" FontSize="16" Foreground="{DynamicResource AccentGlow}" Margin="0,0,8,0" />
+                    <Border Width="26" Height="26" CornerRadius="{StaticResource CornerSm}"
+                            Background="{DynamicResource AccentDim}" Margin="0,0,10,0">
+                        <TextBlock Text="☢" FontSize="14" Foreground="{DynamicResource AccentGlow}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
                     <TextBlock Text="{loc:Loc appTitle}" Style="{StaticResource TitleText}" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding ProjectName}" Style="{StaticResource MonoText}" Margin="10,0,0,0"
+                    <TextBlock Text="{Binding ProjectName}" Style="{StaticResource MonoText}" Margin="12,0,0,0"
                                VerticalAlignment="Center"
                                Visibility="{Binding IsProjectOpen, Converter={StaticResource BoolToVisibility}}" />
                     <TextBlock Text="{Binding SeriesLabel}" Style="{StaticResource CaptionText}" Margin="8,0,0,0"
@@ -101,10 +141,11 @@
                             Command="{Binding OpenProgramSettingsCommand}" />
                     <Button Style="{StaticResource ToolbarButton}" Content="{loc:Loc help}"
                             Command="{Binding OpenHelpCommand}" />
-                    <Rectangle Width="1" Height="18" Margin="6,0" Fill="{DynamicResource BorderBevel}" />
-                    <Button Style="{StaticResource IconButton}" Content="—" Click="OnMinimize" />
-                    <Button x:Name="MaximizeButton" Style="{StaticResource IconButton}" Content="▢" Click="OnMaximize" />
-                    <Button Style="{StaticResource IconButton}" Content="✕" Click="OnClose" />
+                    <Rectangle Width="1" Height="18" Margin="8,0" Fill="{DynamicResource BorderBevel}" />
+                    <Button Style="{StaticResource WindowGlyphButton}" Content="&#xE921;" Click="OnMinimize" />
+                    <Button x:Name="MaximizeButton" Style="{StaticResource WindowGlyphButton}"
+                            Content="&#xE922;" Click="OnMaximize" />
+                    <Button Style="{StaticResource CloseGlyphButton}" Content="&#xE8BB;" Click="OnClose" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -117,18 +158,18 @@
             </Grid.ColumnDefinitions>
 
             <!-- Левая навигация: разделы `NavigationCatalog` со счётчиками и Ctrl+1…9 -->
-            <Border Grid.Column="0" Width="228" Background="{DynamicResource SurfacePanel}"
+            <Border Grid.Column="0" Width="240" Background="{DynamicResource SurfacePanel}"
                     BorderBrush="{DynamicResource BorderBevel}" BorderThickness="0,0,1,0"
                     Visibility="{Binding IsProjectOpen, Converter={StaticResource BoolToVisibility}}">
                 <DockPanel>
-                    <StackPanel DockPanel.Dock="Top" Margin="12,10,12,8">
-                        <TextBlock Text="{loc:Loc savedProjects}" Style="{StaticResource CaptionText}" />
-                        <TextBlock Text="{Binding ProjectName}" Style="{StaticResource MonoText}" Margin="0,2,0,0"
+                    <StackPanel DockPanel.Dock="Top" Margin="14,12,14,8">
+                        <TextBlock Text="{loc:Loc projectSettings}" Style="{StaticResource OverlineText}" />
+                        <TextBlock Text="{Binding ProjectName}" FontWeight="SemiBold" Margin="0,3,0,0"
                                    TextTrimming="CharacterEllipsis" />
                     </StackPanel>
                     <ScrollViewer VerticalScrollBarVisibility="Auto"
                                   IsEnabled="{Binding IsProjectOpen}">
-                        <ItemsControl ItemsSource="{Binding Tabs}" Margin="6,0,6,8">
+                        <ItemsControl ItemsSource="{Binding Tabs}" Margin="8,4,8,8">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Button Style="{StaticResource NavButton}" ToolTip="{Binding Hotkey}"
@@ -140,11 +181,28 @@
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" Text="{Binding Glyph}" Margin="0,0,8,0"
-                                                       Foreground="{Binding AccentHex, Converter={StaticResource HexBrush}}" />
-                                            <TextBlock Grid.Column="1" Text="{Binding Label}" />
-                                            <TextBlock Grid.Column="2" Text="{Binding CountText}"
-                                                       Style="{StaticResource CaptionText}" />
+                                            <Border Grid.Column="0" Width="24" Height="24" Margin="0,0,9,0"
+                                                    CornerRadius="{StaticResource CornerSm}"
+                                                    Background="{DynamicResource SurfaceRaised}">
+                                                <TextBlock Text="{Binding Glyph}" FontSize="12"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           Foreground="{Binding AccentHex, Converter={StaticResource HexBrush}}" />
+                                            </Border>
+                                            <TextBlock Grid.Column="1" Text="{Binding Label}" VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <Border Grid.Column="2">
+                                                <Border.Style>
+                                                    <Style TargetType="Border" BasedOn="{StaticResource CountPill}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding CountText}" Value="">
+                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <TextBlock Text="{Binding CountText}" FontSize="10"
+                                                           Foreground="{DynamicResource TextMuted}" />
+                                            </Border>
                                         </Grid>
                                     </Button>
                                 </DataTemplate>
@@ -172,15 +230,15 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Style="{StaticResource PanelBorder}" Margin="0,0,10,10" MinWidth="132">
+                                    <Border Style="{StaticResource PanelBorder}" Margin="0,0,10,10" MinWidth="150">
                                         <StackPanel>
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding Glyph}" Margin="0,0,6,0" />
+                                                <TextBlock Text="{Binding Glyph}" Margin="0,0,6,0" FontSize="13" />
                                                 <TextBlock Text="{Binding LabelKey, Converter={StaticResource LocKey}}"
-                                                           Style="{StaticResource CaptionText}" />
+                                                           Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
                                             </StackPanel>
-                                            <TextBlock Text="{Binding CountText}" Style="{StaticResource TitleText}"
-                                                       Margin="0,4,0,0" />
+                                            <TextBlock Text="{Binding CountText}" Style="{StaticResource MetricValue}"
+                                                       Margin="0,6,0,0" />
                                         </StackPanel>
                                     </Border>
                                 </DataTemplate>
@@ -360,7 +418,7 @@
 
         <!-- Статусная строка: сообщение, плитки, занятость, метки сохранения -->
         <Border Grid.Row="2" Background="{DynamicResource SurfacePanel}" BorderBrush="{DynamicResource BorderBevel}"
-                BorderThickness="0,1,0,0" Padding="12,4"
+                BorderThickness="0,1,0,0" Padding="14,5"
                 Visibility="{Binding IsProjectOpen, Converter={StaticResource BoolToVisibility}}">
             <Grid>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">

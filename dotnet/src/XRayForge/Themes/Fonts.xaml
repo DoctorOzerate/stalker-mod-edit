@@ -6,8 +6,11 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- Интерфейсные подписи -->
-    <FontFamily x:Key="UiFontFamily">Segoe UI</FontFamily>
+    <!-- Интерфейсные подписи: Windows 11 — Segoe UI Variable, ниже — привычный Segoe UI -->
+    <FontFamily x:Key="UiFontFamily">Segoe UI Variable Text, Segoe UI</FontFamily>
+
+    <!-- Крупные заголовки (обзор, шапка раздела): дисплейная гарнитура -->
+    <FontFamily x:Key="DisplayFontFamily">Segoe UI Variable Display, Segoe UI Semibold, Segoe UI</FontFamily>
 
     <!-- Моноширинный шрифт: навигация, коды, HEX-значения; fallback на случай отсутствия файла -->
     <FontFamily x:Key="MonoFontFamily">./Fonts/#JetBrains Mono, Consolas, Segoe UI</FontFamily>

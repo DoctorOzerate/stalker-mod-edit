@@ -38,6 +38,19 @@
     <SolidColorBrush x:Key="StateDanger" Color="#E03A3A" />
     <SolidColorBrush x:Key="StateOk" Color="#2FE06A" />
 
+    <!-- Семантические цвета проверок, diff и уровней важности.
+         Общие для всех вкладок: локальные дубли вида `ScriptRed`/`ItemGreen`
+         заменены на эти ключи, чтобы оттенки не расходились по экранам. -->
+    <SolidColorBrush x:Key="StatusDanger" Color="#F87171" />
+    <SolidColorBrush x:Key="StatusSuccess" Color="#4ADE80" />
+    <SolidColorBrush x:Key="StatusWarning" Color="#FBBF24" />
+    <SolidColorBrush x:Key="StatusInfo" Color="#60A5FA" />
+    <SolidColorBrush x:Key="StatusSpecial" Color="#C084FC" />
+
+    <!-- Полупрозрачные заливки тех же статусов (бейджи, предупреждающие блоки) -->
+    <SolidColorBrush x:Key="StatusSuccessFill" Color="#4ADE80" Opacity="0.13" />
+    <SolidColorBrush x:Key="StatusWarningFill" Color="#FBBF24" Opacity="0.10" />
+
     <!-- Служебные цвета хрома (металл, сетка, затемнение оверлеев) -->
     <SolidColorBrush x:Key="ChromeBackdrop" Color="#202020" />
     <SolidColorBrush x:Key="GridLine" Color="#27272A" />
@@ -51,6 +64,18 @@
     <sys:Double x:Key="DensityControlPaddingY">5</sys:Double>
     <sys:Double x:Key="DensityFontSize">13</sys:Double>
     <sys:Double x:Key="DensitySmallFontSize">11</sys:Double>
-    <sys:Double x:Key="DensityTitleFontSize">12</sys:Double>
+    <sys:Double x:Key="DensityTitleFontSize">15</sys:Double>
     <sys:Double x:Key="DensityRadius">6</sys:Double>
+
+    <!-- Геометрия «современного» слоя: скругления и высоты контролов.
+         Не хекс-токены, поэтому ThemeService их не перезаписывает. -->
+    <CornerRadius x:Key="CornerSm">6</CornerRadius>
+    <CornerRadius x:Key="CornerMd">10</CornerRadius>
+    <CornerRadius x:Key="CornerPill">999</CornerRadius>
+    <sys:Double x:Key="ControlMinHeight">32</sys:Double>
+    <sys:Double x:Key="ScrollBarThickness">12</sys:Double>
+
+    <!-- Мягкая тень всплывающих поверхностей (popup, подсказки, контекстные меню) -->
+    <DropShadowEffect x:Key="PopupShadow" BlurRadius="18" ShadowDepth="4" Direction="270"
+                      Opacity="0.45" Color="#000000" RenderingBias="Performance" />
 </ResourceDictionary>

@@ -268,9 +268,9 @@ public static class ThemeCatalog
 
     public static readonly IReadOnlyDictionary<string, DensityMetrics> DensityPresets = new Dictionary<string, DensityMetrics>(StringComparer.Ordinal)
     {
-        ["compact"] = new DensityMetrics("compact", 26, 6, 10, 8, 3, 12, 10.5, 11, 4),
-        ["normal"] = new DensityMetrics("normal", 30, 10, 14, 12, 5, 13, 11, 12, 6),
-        ["roomy"] = new DensityMetrics("roomy", 36, 14, 18, 16, 7, 14, 12, 13, 8)
+        ["compact"] = new DensityMetrics("compact", 26, 6, 10, 8, 3, 12, 10.5, 13, 4),
+        ["normal"] = new DensityMetrics("normal", 30, 10, 14, 12, 5, 13, 11, 15, 6),
+        ["roomy"] = new DensityMetrics("roomy", 36, 14, 18, 16, 7, 14, 12, 16, 8)
     };
 
     /// <summary>`theme` из настроек → актуальный id (`dark`/`auto` → `steel`, `light` → `arctic`).</summary>

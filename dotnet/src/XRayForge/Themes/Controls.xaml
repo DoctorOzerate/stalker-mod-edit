@@ -15,6 +15,7 @@
         <Setter Property="FontFamily" Value="{DynamicResource UiFontFamily}" />
         <Setter Property="FontSize" Value="{DynamicResource DensityFontSize}" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="UseLayoutRounding" Value="True" />
         <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
     </Style>
 
@@ -36,7 +37,7 @@
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="Tile" Background="{DynamicResource SurfaceSunken}"
                             BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1"
-                            CornerRadius="4" ClipToBounds="True">
+                            CornerRadius="{StaticResource CornerSm}" ClipToBounds="True">
                         <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
                     </Border>
                     <ControlTemplate.Triggers>
@@ -54,26 +55,57 @@
         </Setter>
     </Style>
 
+    <!-- Строка навигации: плитка с акцентной полосой у активной вкладки -->
     <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderBrush" Value="Transparent" />
-        <Setter Property="Padding" Value="10,6" />
-        <Setter Property="FontSize" Value="{DynamicResource DensitySmallFontSize}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="10,7" />
+        <Setter Property="MinHeight" Value="34" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="FontSize" Value="12" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="Chrome" Background="{TemplateBinding Background}" CornerRadius="6"
-                            BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                    <Grid>
+                        <Border x:Name="Chrome" Background="{TemplateBinding Background}"
+                                CornerRadius="{StaticResource CornerSm}" />
+                        <Border x:Name="Hover" Background="{DynamicResource AccentGlow}"
+                                Opacity="0" CornerRadius="{StaticResource CornerSm}"
+                                IsHitTestVisible="False" />
+                        <Border x:Name="Rail" Width="3" HorizontalAlignment="Left" Margin="0,7"
+                                CornerRadius="{StaticResource CornerPill}"
+                                Background="{DynamicResource AccentMain}" Opacity="0" />
                         <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Stretch"
                                           VerticalAlignment="Center" />
-                    </Border>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource SurfaceRaised}" />
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Hover"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0.10" Duration="0:0:0.12" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Hover"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.16" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
+                        <DataTrigger Binding="{Binding IsActive}" Value="True">
+                            <Setter TargetName="Rail" Property="Opacity" Value="1" />
+                        </DataTrigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource SurfaceSunken}" />
+                            <Setter TargetName="Hover" Property="Opacity" Value="0.18" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -82,23 +114,31 @@
         <Style.Triggers>
             <DataTrigger Binding="{Binding IsActive}" Value="True">
                 <Setter Property="Background" Value="{DynamicResource AccentDim}" />
-                <Setter Property="BorderBrush" Value="{DynamicResource AccentMain}" />
             </DataTrigger>
         </Style.Triggers>
     </Style>
 
-    <!-- Мелкая подпись (капс-стайл референсов) -->
+    <!-- Мелкая подпись: тихая строка интерфейсным шрифтом (пути и коды — на MonoText) -->
     <Style x:Key="CaptionText" TargetType="TextBlock">
         <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
-        <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+        <Setter Property="FontFamily" Value="{DynamicResource UiFontFamily}" />
         <Setter Property="FontSize" Value="{DynamicResource DensitySmallFontSize}" />
     </Style>
 
-    <!-- Заголовок панели -->
+    <!-- Заголовок панели/раздела: крупная светлая строка дисплейной гарнитуры -->
     <Style x:Key="TitleText" TargetType="TextBlock">
-        <Setter Property="Foreground" Value="{DynamicResource TextAccent}" />
-        <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+        <Setter Property="FontFamily" Value="{DynamicResource DisplayFontFamily}" />
         <Setter Property="FontSize" Value="{DynamicResource DensityTitleFontSize}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <!-- Заголовок-надпись над блоком (капс-стайл сохраняем для «настроечных» блоков) -->
+    <Style x:Key="OverlineText" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
+        <Setter Property="FontFamily" Value="{DynamicResource UiFontFamily}" />
+        <Setter Property="FontSize" Value="10" />
+        <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
 
     <!-- Моноширинный текст (коды, пути, HEX) -->
@@ -108,18 +148,27 @@
         <Setter Property="FontSize" Value="{DynamicResource DensitySmallFontSize}" />
     </Style>
 
-    <!-- Панель с гравированной рамкой -->
+    <!-- Панель: мягкая карточка со скруглением -->
     <Style x:Key="PanelBorder" TargetType="Border">
         <Setter Property="Background" Value="{DynamicResource SurfacePanel}" />
         <Setter Property="BorderBrush" Value="{DynamicResource BorderBevel}" />
         <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{StaticResource CornerMd}" />
         <Setter Property="Padding" Value="14" />
     </Style>
 
-    <!-- Полоса прокрутки: тонкая, без системного светлого фона -->
+    <!-- «Пилюля»-счётчик: числа у заголовков и в навигации -->
+    <Style x:Key="CountPill" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource SurfaceRaised}" />
+        <Setter Property="CornerRadius" Value="{StaticResource CornerPill}" />
+        <Setter Property="Padding" Value="7,1" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- Полоса прокрутки: тонкая, без системного светлого фона и без «желобов» -->
     <Style TargetType="ScrollBar">
-        <Setter Property="Background" Value="{DynamicResource SurfaceSunken}" />
-        <Setter Property="Width" Value="10" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Width" Value="{DynamicResource ScrollBarThickness}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ScrollBar">
@@ -132,7 +181,21 @@
                                 <Thumb>
                                     <Thumb.Template>
                                         <ControlTemplate TargetType="Thumb">
-                                            <Border Background="{DynamicResource BorderStrong}" Margin="1" />
+                                            <Border x:Name="Grip" Background="{DynamicResource BorderStrong}"
+                                                    CornerRadius="{StaticResource CornerPill}" Opacity="0.7"
+                                                    Margin="3,2" />
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Grip" Property="Opacity" Value="1" />
+                                                    <Setter TargetName="Grip" Property="Background"
+                                                            Value="{DynamicResource AccentDim}" />
+                                                </Trigger>
+                                                <Trigger Property="IsDragging" Value="True">
+                                                    <Setter TargetName="Grip" Property="Opacity" Value="1" />
+                                                    <Setter TargetName="Grip" Property="Background"
+                                                            Value="{DynamicResource AccentMain}" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
                                         </ControlTemplate>
                                     </Thumb.Template>
                                 </Thumb>
@@ -147,6 +210,9 @@
                             <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False" />
                             <Setter TargetName="PART_Track" Property="Orientation" Value="Horizontal" />
                         </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource SurfaceSunken}" />
+                        </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
@@ -154,38 +220,81 @@
         <Style.Triggers>
             <Trigger Property="Orientation" Value="Horizontal">
                 <Setter Property="Width" Value="Auto" />
-                <Setter Property="Height" Value="10" />
+                <Setter Property="Height" Value="{DynamicResource ScrollBarThickness}" />
             </Trigger>
         </Style.Triggers>
     </Style>
-    <!-- Кнопка: приподнятая «железная» плитка с подсветкой при наведении -->
+    <!-- Кнопка: скруглённая плитка с плавной акцентной подсветкой при наведении -->
     <Style TargetType="Button">
         <Setter Property="Background" Value="{DynamicResource SurfaceRaised}" />
         <Setter Property="BorderBrush" Value="{DynamicResource BorderBevel}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
-        <Setter Property="Padding" Value="12,5" />
-        <Setter Property="MinHeight" Value="{DynamicResource DensityRowHeight}" />
+        <Setter Property="Padding" Value="14,6" />
+        <Setter Property="MinHeight" Value="{DynamicResource ControlMinHeight}" />
         <Setter Property="FontFamily" Value="{DynamicResource UiFontFamily}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="Chrome" Background="{TemplateBinding Background}" CornerRadius="4"
-                            BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
-                        <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center"
-                                          VerticalAlignment="Center" RecognizesAccessKey="True" />
-                    </Border>
+                    <Grid>
+                        <Border x:Name="Chrome" Background="{TemplateBinding Background}"
+                                CornerRadius="{StaticResource CornerSm}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" />
+                        <Border x:Name="Hover" Background="{DynamicResource AccentGlow}" Opacity="0"
+                                CornerRadius="{StaticResource CornerSm}" IsHitTestVisible="False" />
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          RecognizesAccessKey="True">
+                            <!-- Неявный стиль TextBlock задаёт цвет темы и перекрыл бы Foreground
+                                 кнопки, поэтому акцентные и опасные кнопки передают его контенту. -->
+                            <ContentPresenter.Resources>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground"
+                                            Value="{Binding Foreground,
+                                                RelativeSource={RelativeSource AncestorType=Button}}" />
+                                </Style>
+                            </ContentPresenter.Resources>
+                        </ContentPresenter>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource AccentDim}" />
-                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource AccentMain}" />
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Hover"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0.10" Duration="0:0:0.12" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Hover"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.16" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource SurfaceSunken}" />
+                            <Setter TargetName="Hover" Property="Opacity" Value="0.05" />
+                            <Setter TargetName="Hover" Property="Background"
+                                    Value="{DynamicResource SurfaceSunken}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Chrome" Property="BorderBrush"
+                                    Value="{DynamicResource AccentMain}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.45" />
+                            <Setter Property="Cursor" Value="Arrow" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -193,29 +302,126 @@
         </Setter>
     </Style>
 
-    <!-- Главное действие (создать/сохранить/сканировать) -->
+    <!-- Главное действие (создать/сохранить/сканировать): акцентная заливка, тёмный текст -->
     <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-        <Setter Property="Background" Value="{DynamicResource AccentDim}" />
+        <Setter Property="Background" Value="{DynamicResource AccentMain}" />
         <Setter Property="BorderBrush" Value="{DynamicResource AccentMain}" />
-        <Setter Property="Foreground" Value="{DynamicResource TextAccent}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextInverted}" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource AccentHover}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource AccentHover}" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
-    <!-- Кнопка панели инструментов: плоская, моноширинная -->
+    <!-- Кнопка панели инструментов: плоская, интерфейсным шрифтом -->
     <Style x:Key="ToolbarButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderBrush" Value="Transparent" />
-        <Setter Property="Padding" Value="9,4" />
-        <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-        <Setter Property="FontSize" Value="{DynamicResource DensitySmallFontSize}" />
+        <Setter Property="Padding" Value="10,5" />
+        <Setter Property="MinHeight" Value="30" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="Normal" />
     </Style>
 
-    <!-- Кнопка окна (− ▢ ✕) -->
+    <!-- Кнопка окна (− ▢ ✕): компактная плитка без рамки -->
     <Style x:Key="IconButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderBrush" Value="Transparent" />
         <Setter Property="Padding" Value="10,3" />
         <Setter Property="MinHeight" Value="0" />
-        <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+        <Setter Property="MinWidth" Value="30" />
+        <Setter Property="FontFamily" Value="{DynamicResource UiFontFamily}" />
+        <Setter Property="FontWeight" Value="Normal" />
+    </Style>
+
+    <!-- Шапка диалогового окна: единый отступ и разделитель с содержимым -->
+    <Style x:Key="DialogHeader" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource SurfaceRaised}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBevel}" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+        <Setter Property="Padding" Value="14,8" />
+    </Style>
+
+    <!-- Пустое состояние панели: глиф, заголовок и подсказка по центру -->
+    <Style x:Key="EmptyStateHost" TargetType="StackPanel">
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="MaxWidth" Value="260" />
+        <Setter Property="Margin" Value="16" />
+    </Style>
+
+    <Style x:Key="EmptyStateGlyph" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
+        <Setter Property="FontSize" Value="20" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
+    </Style>
+
+    <Style x:Key="EmptyStateTitle" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="TextAlignment" Value="Center" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Margin" Value="0,10,0,0" />
+    </Style>
+
+    <Style x:Key="EmptyStateHint" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="TextAlignment" Value="Center" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Margin" Value="0,4,0,0" />
+    </Style>
+
+    <!-- Карточка боковой панели: группы полей, списки и блоки свойств во вкладках -->
+    <Style x:Key="SideCard" TargetType="Border" BasedOn="{StaticResource PanelBorder}">
+        <Setter Property="Padding" Value="12" />
+        <Setter Property="Margin" Value="0,0,0,10" />
+    </Style>
+
+    <!-- Заголовок внутри карточки (`text-xs uppercase tracking-widest font-bold`) -->
+    <Style x:Key="SideCardTitle" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Margin" Value="0,0,0,6" />
+    </Style>
+
+    <!-- Подпись поля формы над вводом (`text-xs`) -->
+    <Style x:Key="FieldLabel" TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Margin" Value="0,0,0,3" />
+    </Style>
+
+    <!-- Компактное поле ввода в боковых панелях и таблицах свойств -->
+    <Style x:Key="CompactInput" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Height" Value="28" />
+        <Setter Property="Padding" Value="5,0" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+
+    <!-- То же для идентификаторов, путей и hex-значений -->
+    <Style x:Key="CompactMonoInput" TargetType="TextBox" BasedOn="{StaticResource CompactInput}">
+        <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}" />
+    </Style>
+
+    <!-- Кнопка закрытия диалога: глиф Segoe MDL2 с красной подсветкой, как в Win11 -->
+    <Style x:Key="DialogCloseButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
+        <Setter Property="Content" Value="&#xE8BB;" />
+        <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="MinWidth" Value="40" />
+        <Setter Property="MinHeight" Value="30" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
+        <Setter Property="HorizontalAlignment" Value="Right" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="#C42B1C" />
+                <Setter Property="Foreground" Value="White" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <!-- Разрушительное действие (удалить проект/копию) -->
@@ -223,9 +429,15 @@
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderBrush" Value="{DynamicResource StateDanger}" />
         <Setter Property="Foreground" Value="{DynamicResource StateDanger}" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource StateDanger}" />
+                <Setter Property="Foreground" Value="{DynamicResource TextInverted}" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
-    <!-- Строка ввода -->
+    <!-- Строка ввода: скруглённое поле с акцентной рамкой в фокусе -->
     <Style TargetType="TextBox">
         <Setter Property="Background" Value="{DynamicResource SurfaceSunken}" />
         <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
@@ -233,19 +445,25 @@
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CaretBrush" Value="{DynamicResource AccentMain}" />
         <Setter Property="SelectionBrush" Value="{DynamicResource AccentDim}" />
-        <Setter Property="Padding" Value="6,4" />
-        <Setter Property="MinHeight" Value="{DynamicResource DensityRowHeight}" />
-        <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+        <Setter Property="Padding" Value="10,5" />
+        <Setter Property="MinHeight" Value="{DynamicResource ControlMinHeight}" />
+        <Setter Property="FontFamily" Value="{DynamicResource UiFontFamily}" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
                     <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}">
-                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="Center" />
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource CornerSm}">
+                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"
+                                      VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsKeyboardFocusWithin" Value="True">
                             <Setter Property="BorderBrush" Value="{DynamicResource AccentMain}" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.5" />
@@ -255,7 +473,127 @@
             </Setter.Value>
         </Setter>
     </Style>
+    <!-- Строка выпадающего списка: тёмный фон и акцентное выделение -->
+    <Style TargetType="ComboBoxItem">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+        <Setter Property="Padding" Value="8,4" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBoxItem">
+                    <Border x:Name="Row" Background="Transparent" CornerRadius="{StaticResource CornerSm}"
+                            Margin="2,1" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="Row" Property="Background"
+                                    Value="{DynamicResource SurfaceRaised}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Row" Property="Background"
+                                    Value="{DynamicResource AccentDim}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+
     <!-- Флажок: квадрат с акцентной «галочкой» -->
+    <!-- Выпадающий список: системный шаблон в тёмной теме рисует светлое поле и popup,
+         поэтому фон, рамка, стрелка и строки списка задаются токенами темы. -->
+    <Style TargetType="ComboBox">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+        <Setter Property="Background" Value="{DynamicResource SurfaceSunken}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="FontSize" Value="{DynamicResource DensitySmallFontSize}" />
+        <Setter Property="MinHeight" Value="{DynamicResource ControlMinHeight}" />
+        <Setter Property="Padding" Value="10,3" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBox">
+                    <Grid>
+                        <Border x:Name="Chrome" CornerRadius="{StaticResource CornerSm}"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ContentPresenter x:Name="ContentSite" Grid.Column="0"
+                                                  Margin="{TemplateBinding Padding}"
+                                                  HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                  Content="{TemplateBinding SelectionBoxItem}"
+                                                  ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                  ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}" />
+                                <TextBox x:Name="PART_EditableTextBox" Grid.Column="0"
+                                         Margin="{TemplateBinding Padding}"
+                                         Background="Transparent" BorderThickness="0"
+                                         Foreground="{DynamicResource TextPrimary}"
+                                         VerticalContentAlignment="Center"
+                                         Visibility="Collapsed"
+                                         IsReadOnly="{TemplateBinding IsReadOnly}" />
+                                <TextBlock x:Name="Arrow" Grid.Column="1" Text="▾" FontSize="10"
+                                           Margin="0,0,8,0" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextMuted}" />
+                                <ToggleButton Grid.Column="0" Grid.ColumnSpan="2"
+                                              Focusable="False" ClickMode="Press"
+                                              IsChecked="{Binding IsDropDownOpen, Mode=TwoWay,
+                                                  RelativeSource={RelativeSource TemplatedParent}}">
+                                    <ToggleButton.Template>
+                                        <ControlTemplate TargetType="ToggleButton">
+                                            <Border Background="Transparent" />
+                                        </ControlTemplate>
+                                    </ToggleButton.Template>
+                                </ToggleButton>
+                            </Grid>
+                        </Border>
+                        <Popup x:Name="PART_Popup" AllowsTransparency="True" Focusable="False"
+                               IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom"
+                               PopupAnimation="Fade">
+                            <Border CornerRadius="{StaticResource CornerSm}" Margin="0,4,0,0"
+                                    Effect="{StaticResource PopupShadow}"
+                                    MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                    MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                    Background="{DynamicResource SurfacePanel}"
+                                    BorderBrush="{DynamicResource BorderStrong}"
+                                    BorderThickness="1" Padding="2">
+                                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                              VerticalScrollBarVisibility="Auto">
+                                    <ItemsPresenter />
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEditable" Value="True">
+                            <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible" />
+                            <Setter TargetName="ContentSite" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Chrome" Property="BorderBrush"
+                                    Value="{DynamicResource BorderBevel}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="Chrome" Property="BorderBrush"
+                                    Value="{DynamicResource AccentMain}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+
     <Style TargetType="CheckBox">
         <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
         <Setter Property="Cursor" Value="Hand" />
@@ -263,10 +601,11 @@
             <Setter.Value>
                 <ControlTemplate TargetType="CheckBox">
                     <StackPanel Orientation="Horizontal" Background="Transparent">
-                        <Border x:Name="Box" Width="14" Height="14" Background="{DynamicResource SurfaceSunken}"
-                                BorderBrush="{DynamicResource BorderStrong}" BorderThickness="1" VerticalAlignment="Center">
-                            <TextBlock x:Name="Mark" Text="✕" FontSize="10" Visibility="Collapsed"
-                                       Foreground="{DynamicResource TextAccent}"
+                        <Border x:Name="Box" Width="16" Height="16" Background="{DynamicResource SurfaceSunken}"
+                                BorderBrush="{DynamicResource BorderStrong}" BorderThickness="1"
+                                CornerRadius="{StaticResource CornerSm}" VerticalAlignment="Center">
+                            <TextBlock x:Name="Mark" Text="✓" FontSize="11" FontWeight="Bold" Visibility="Collapsed"
+                                       Foreground="{DynamicResource AccentMain}"
                                        HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ContentPresenter Margin="8,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True" />
@@ -277,6 +616,7 @@
                             <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource AccentMain}" />
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource AccentMain}" />
                             <Setter TargetName="Box" Property="Background" Value="{DynamicResource SurfaceRaised}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
@@ -304,7 +644,8 @@
                                       IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
                             <ToggleButton.Template>
                                 <ControlTemplate TargetType="ToggleButton">
-                                    <Border x:Name="HeaderChrome" Background="Transparent" Padding="0,3"
+                                    <Border x:Name="HeaderChrome" Background="Transparent" Padding="6,4"
+                                            CornerRadius="{StaticResource CornerSm}"
                                             TextElement.Foreground="{DynamicResource TextPrimary}">
                                         <DockPanel>
                                             <TextBlock x:Name="Chevron" DockPanel.Dock="Right" Text="▸"
@@ -316,9 +657,9 @@
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
                                             <Setter TargetName="HeaderChrome" Property="Background"
-                                                    Value="{DynamicResource SurfaceRaised}" />
+                                                    Value="{DynamicResource AccentDim}" />
                                             <Setter TargetName="Chevron" Property="Foreground"
-                                                    Value="{DynamicResource TextAccent}" />
+                                                    Value="{DynamicResource AccentMain}" />
                                         </Trigger>
                                         <Trigger Property="IsChecked" Value="True">
                                             <Setter TargetName="Chevron" Property="Text" Value="▾" />
@@ -354,12 +695,16 @@
     <Style TargetType="ListBoxItem">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
-        <Setter Property="Padding" Value="8,3" />
+        <Setter Property="Padding" Value="9,3" />
         <Setter Property="MinHeight" Value="{DynamicResource DensityRowHeight}" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ListBoxItem">
-                    <Border x:Name="Chrome" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                    <Border x:Name="Chrome" Background="{TemplateBinding Background}"
+                            BorderBrush="Transparent" BorderThickness="1"
+                            CornerRadius="{StaticResource CornerSm}" Margin="2,1"
+                            Padding="{TemplateBinding Padding}">
                         <ContentPresenter VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
@@ -368,6 +713,7 @@
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource AccentDim}" />
+                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource AccentMain}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -442,14 +788,82 @@
         </Setter>
     </Style>
 
-    <!-- Подсказка -->
+    <!-- Подсказка: компактная карточка с тенью -->
     <Style TargetType="ToolTip">
         <Setter Property="Background" Value="{DynamicResource SurfaceRaised}" />
         <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
         <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="Padding" Value="8,4" />
+        <Setter Property="Padding" Value="10,6" />
         <Setter Property="FontSize" Value="{DynamicResource DensitySmallFontSize}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolTip">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource CornerSm}" Padding="{TemplateBinding Padding}"
+                            Effect="{StaticResource PopupShadow}">
+                        <ContentPresenter />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Слайдер: тонкий трек и круглая акцентная ручка -->
+    <Style TargetType="Slider">
+        <Setter Property="Foreground" Value="{DynamicResource AccentMain}" />
+        <Setter Property="Height" Value="22" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Slider">
+                    <Grid VerticalAlignment="Center">
+                        <Border Height="4" CornerRadius="{StaticResource CornerPill}"
+                                Background="{DynamicResource SurfaceSunken}"
+                                BorderBrush="{DynamicResource BorderBevel}" BorderThickness="1" />
+                        <Track x:Name="PART_Track" Orientation="Horizontal">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="Slider.DecreaseLarge" IsTabStop="False" Opacity="0">
+                                    <RepeatButton.Template>
+                                        <ControlTemplate TargetType="RepeatButton">
+                                            <Border Background="Transparent" Height="4" VerticalAlignment="Center" />
+                                        </ControlTemplate>
+                                    </RepeatButton.Template>
+                                </RepeatButton>
+                            </Track.DecreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb>
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Grid Width="16" Height="16">
+                                                <Ellipse x:Name="Knob" Fill="{DynamicResource AccentMain}"
+                                                         Stroke="{DynamicResource SurfaceBase}" StrokeThickness="2" />
+                                            </Grid>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Knob" Property="Fill"
+                                                            Value="{DynamicResource AccentHover}" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Track.Thumb>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="Slider.IncreaseLarge" IsTabStop="False" Opacity="0">
+                                    <RepeatButton.Template>
+                                        <ControlTemplate TargetType="RepeatButton">
+                                            <Border Background="Transparent" Height="4" VerticalAlignment="Center" />
+                                        </ControlTemplate>
+                                    </RepeatButton.Template>
+                                </RepeatButton>
+                            </Track.IncreaseRepeatButton>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- Разделитель -->
