@@ -234,7 +234,10 @@ public class GamePackageExportTests
 
             using var archive = ZipFile.OpenRead(path);
             var names = archive.Entries.Select(entry => entry.FullName).ToList();
-            Assert.Equal(count, names.Count);
+
+            // count — игровые файлы; в архиве ещё манифест пакета.
+            Assert.Equal(count + 1, names.Count);
+            Assert.Contains("xrayforge-package.json", names);
             Assert.Contains("gamedata/config/gameplay/character_desc_new_dialogue.xml", names);
             Assert.Contains("gamedata/config/misc/items.ltx", names);
         }

@@ -15,7 +15,8 @@ public static class DialogueFiles
         string? cfg,
         string? encoding,
         IReadOnlyList<Language>? languages,
-        string? projectName)
+        string? projectName,
+        IReadOnlyCollection<string>? onlyLocales = null)
     {
         var enc = encoding == "utf-8" ? "UTF-8" : "windows-1251";
         var cfgDir = cfg == "configs" ? "configs" : "config";
@@ -53,6 +54,13 @@ public static class DialogueFiles
 
         foreach (var lang in langs)
         {
+            var locale = lang.Locale.Length > 0 ? lang.Locale : "rus";
+
+            // Набор локалей ограничивает только `string_table`: диалоги и `dialogs.ltx`
+            // от локалей не зависят и попадают в пакет всегда.
+            if (onlyLocales is { Count: > 0 } &&
+                !onlyLocales.Contains(locale, StringComparer.OrdinalIgnoreCase)) continue;
+
             var byId = new Dictionary<string, string>();
             foreach (var e in lang.Entries) byId[e.Id] = e.Text;
 
@@ -69,7 +77,6 @@ public static class DialogueFiles
                     .Append("\"><text>").Append(DialogueExport.Esc(kv.Value)).Append("</text></string>");
             table.Append("</string_table>\n");
 
-            var locale = lang.Locale.Length > 0 ? lang.Locale : "rus";
             data["gamedata/" + cfgDir + "/text/" + locale + "/st_" + safe + ".xml"] = table.ToString();
         }
 

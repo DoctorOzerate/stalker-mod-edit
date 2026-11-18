@@ -1,0 +1,164 @@
+<Window x:Class="XRayForge.Views.GamePackageWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:XRayForge.Localization"
+        Title="{loc:Loc gamePackageTitle}"
+        Width="920" Height="620" MinWidth="720" MinHeight="460"
+        WindowStyle="None" ResizeMode="CanResize" ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner">
+    <Border Background="{DynamicResource SurfacePanel}" BorderBrush="{DynamicResource BorderStrong}" BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Background="{DynamicResource SurfaceRaised}"
+                    BorderBrush="{DynamicResource BorderBevel}" BorderThickness="0,0,0,1"
+                    Padding="12,6" MouseLeftButtonDown="OnHeaderDrag">
+                <Grid>
+                    <TextBlock Text="{loc:Loc gamePackageTitle}" Style="{StaticResource TitleText}"
+                               VerticalAlignment="Center" />
+                    <Button Content="✕" Style="{StaticResource IconButton}"
+                            HorizontalAlignment="Right" IsCancel="True" />
+                </Grid>
+            </Border>
+
+            <TextBlock Grid.Row="1" Text="{loc:Loc gamePackageSub}" Style="{StaticResource CaptionText}"
+                       TextWrapping="Wrap" Margin="16,10,16,4" />
+
+            <Grid Grid.Row="2" Margin="16,4,16,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="320" MinWidth="240" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="*" MinWidth="280" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Имена dialogs_*.xml, локали и манифест -->
+                <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Loc gamePackageDialogueFiles}" Style="{StaticResource CaptionText}" />
+                        <TextBlock Text="{loc:Loc gamePackageFileNameHint}" Style="{StaticResource CaptionText}"
+                                   TextWrapping="Wrap" Margin="0,2,0,4" />
+                        <ItemsControl ItemsSource="{Binding DialogueFiles}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,0,0,8">
+                                        <TextBlock Text="{Binding Dialogues}" Style="{StaticResource MonoText}"
+                                                   FontSize="11" TextTrimming="CharacterEllipsis" />
+                                        <TextBox Text="{Binding FileName, UpdateSourceTrigger=PropertyChanged}"
+                                                 Margin="0,2,0,2" />
+                                        <TextBlock Text="{Binding FileNamePreview}"
+                                                   Style="{StaticResource CaptionText}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Separator Margin="0,4,0,10" />
+
+                        <TextBlock Text="{loc:Loc gamePackageLocales}" Style="{StaticResource CaptionText}" />
+                        <ItemsControl ItemsSource="{Binding Locales}" Margin="0,4,0,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox Content="{Binding Label}" IsChecked="{Binding IsSelected}"
+                                              Margin="0,2" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Separator Margin="0,10,0,10" />
+
+                        <CheckBox Content="{loc:Loc gamePackageManifest}" IsChecked="{Binding IncludeManifest}" />
+                        <TextBlock Text="{loc:Loc gamePackageManifestHint}" Style="{StaticResource CaptionText}"
+                                   TextWrapping="Wrap" Margin="0,2,0,0" />
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Предпросмотр файлов пакета -->
+                <Grid Grid.Column="2">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0">
+                        <TextBlock Text="{loc:Loc gamePackageFiles}" Style="{StaticResource CaptionText}" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <TextBlock Text="{loc:Loc gamePackageEncoding}" Style="{StaticResource CaptionText}" />
+                            <TextBlock Text="{Binding Encoding}" Style="{StaticResource MonoText}" Margin="6,0,0,0" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Border Grid.Row="1" BorderBrush="{DynamicResource StateDanger}" BorderThickness="1"
+                            CornerRadius="6" Padding="8" Margin="0,4,0,6">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasError}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock Text="{Binding Error}" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource StateDanger}" />
+                    </Border>
+
+                    <ListBox Grid.Row="2" ItemsSource="{Binding Entries}" BorderThickness="0" Margin="0,4,0,0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="96" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding Kind}"
+                                               Style="{StaticResource CaptionText}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Path}"
+                                               Style="{StaticResource MonoText}"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Grid.Column="2" Text="{Binding Size}"
+                                               Style="{StaticResource CaptionText}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <TextBlock Grid.Row="2" Text="{loc:Loc gamePackageEmpty}" TextWrapping="Wrap"
+                               Margin="4,8,4,0">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasEntries}" Value="False">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+            </Grid>
+
+            <Border Grid.Row="3" Background="{DynamicResource SurfacePanel}"
+                    BorderBrush="{DynamicResource BorderBevel}" BorderThickness="0,1,0,0"
+                    Padding="16,10">
+                <Grid>
+                    <TextBlock Text="{Binding Summary}" Style="{StaticResource MonoText}"
+                               VerticalAlignment="Center" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="{loc:Loc cancel}" IsCancel="True" Margin="0,0,8,0" />
+                        <Button Content="{loc:Loc gamePackageBuild}" Style="{StaticResource AccentButton}"
+                                IsDefault="True" IsEnabled="{Binding CanBuild}" Click="OnBuild" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

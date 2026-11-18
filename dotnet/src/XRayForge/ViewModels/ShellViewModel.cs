@@ -1034,19 +1034,26 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Игровой ZIP (этап 8): диалоги, string_table, квесты, system.ltx и скрипты
-    /// упаковываются в `gamedata/...` без записи в каталог.
+    /// Игровой ZIP: окно выбора имён `dialogs_*.xml`, локалей и манифеста с предпросмотром
+    /// файлов, затем запись архива (диалоги, персонажи, предметы, квесты, system.ltx, скрипты).
     /// </summary>
     [RelayCommand]
     private void ExportGameZip()
     {
         if (!IsProjectOpen) return;
-        var files = GamePackage.TextFiles(_project);
-        if (files.Count == 0)
+
+        var model = new GamePackageViewModel(_project);
+        if (!model.CanBuild)
         {
-            StatusText = LocalizationSource.Get("gameExportEmpty");
+            StatusText = model.HasError
+                ? LocalizationSource.Get("gameExportFailed")
+                : LocalizationSource.Get("gameExportEmpty");
+            StatusDetail = model.Error;
             return;
         }
+
+        var window = new GamePackageWindow(model) { Owner = ActiveWindow };
+        if (window.ShowDialog() != true) return;
 
         var name = string.Concat((_project.ProjectName ?? "project")
             .Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
@@ -1056,7 +1063,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
 
         try
         {
-            var count = GamePackage.WriteZip(_project, path);
+            var count = GamePackage.WriteZip(model.Plan, path);
             StatusText = LocalizationSource.Get("gameZipExported") + " · " +
                 count.ToString(CultureInfo.CurrentCulture);
             StatusDetail = path;

@@ -667,6 +667,30 @@ public static class LocalizationService
         ["selfCheck"] = "Самопроверка",
         ["selfCheckHint"] = "Проверяются ссылки, граф, LTX, Lua, квесты, локализации, кодировка и игровой пакет.",
 
+        // --- Игровой пакет: предпросмотр, имена файлов, локали, манифест ---
+        ["gamePackageTitle"] = "Игровой пакет gamedata",
+        ["gamePackageSub"] = "Проверьте файлы, имена dialogs_*.xml, локали и манифест перед сборкой ZIP.",
+        ["gamePackageDialogueFiles"] = "Файлы диалогов",
+        ["gamePackageFileNameHint"] = "Латиница, цифры, «_» и «-»; остальные символы заменяются.",
+        ["gamePackageLocales"] = "Локали string_table",
+        ["gamePackageManifest"] = "Манифест пакета",
+        ["gamePackageManifestHint"] = "xrayforge-package.json: список файлов, размеры и кодировка — для проверки установки.",
+        ["gamePackageFiles"] = "Файлы пакета",
+        ["gamePackageEmpty"] = "В пакете нет файлов: добавьте диалоги, персонажей, предметы, квесты или скрипты.",
+        ["gamePackageEncoding"] = "Кодировка",
+        ["gamePackageTotal"] = "Итого",
+        ["gamePackageBytes"] = "Б",
+        ["gamePackageKilobytes"] = "КБ",
+        ["gamePackageBuild"] = "Собрать ZIP",
+        ["gamePackageKindDialogues"] = "Диалоги",
+        ["gamePackageKindLocalization"] = "Локализация",
+        ["gamePackageKindCharacters"] = "Персонажи",
+        ["gamePackageKindItems"] = "Предметы",
+        ["gamePackageKindQuests"] = "Квесты",
+        ["gamePackageKindSystem"] = "system.ltx",
+        ["gamePackageKindScripts"] = "Скрипты",
+        ["gamePackageKindOther"] = "Прочее",
+
     };
 
     private static readonly IReadOnlyDictionary<string, string> En = new Dictionary<string, string>
@@ -1326,6 +1350,30 @@ public static class LocalizationService
         ["gameZipExported"] = "Game ZIP exported",
         ["selfCheck"] = "Self-check",
         ["selfCheckHint"] = "Checks references, graph, LTX, Lua, quests, locales, encoding and the game package.",
+
+        // --- Game package: preview, file names, locales, manifest ---
+        ["gamePackageTitle"] = "Gamedata package",
+        ["gamePackageSub"] = "Review files, dialogs_*.xml names, locales and the manifest before packing the ZIP.",
+        ["gamePackageDialogueFiles"] = "Dialogue files",
+        ["gamePackageFileNameHint"] = "Latin letters, digits, '_' and '-'; other characters are replaced.",
+        ["gamePackageLocales"] = "string_table locales",
+        ["gamePackageManifest"] = "Package manifest",
+        ["gamePackageManifestHint"] = "xrayforge-package.json: file list, sizes and encoding for install checks.",
+        ["gamePackageFiles"] = "Package files",
+        ["gamePackageEmpty"] = "Nothing to pack: add dialogues, characters, items, quests or scripts.",
+        ["gamePackageEncoding"] = "Encoding",
+        ["gamePackageTotal"] = "Total",
+        ["gamePackageBytes"] = "B",
+        ["gamePackageKilobytes"] = "KB",
+        ["gamePackageBuild"] = "Build ZIP",
+        ["gamePackageKindDialogues"] = "Dialogues",
+        ["gamePackageKindLocalization"] = "Localization",
+        ["gamePackageKindCharacters"] = "Characters",
+        ["gamePackageKindItems"] = "Items",
+        ["gamePackageKindQuests"] = "Quests",
+        ["gamePackageKindSystem"] = "system.ltx",
+        ["gamePackageKindScripts"] = "Scripts",
+        ["gamePackageKindOther"] = "Other",
 
     };
 

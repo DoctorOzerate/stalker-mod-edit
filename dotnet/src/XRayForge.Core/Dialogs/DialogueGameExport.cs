@@ -20,8 +20,11 @@ public static class DialogueGameExport
     /// </summary>
     /// <param name="project">Проект редактора.</param>
     /// <param name="fileNames">Необязательные переопределения имён файлов по id диалога.</param>
+    /// <param name="onlyLocales">Необязательный набор локалей `string_table`; пусто — все локали.</param>
     public static Dictionary<string, string> GameFiles(
-        Project? project, IReadOnlyDictionary<string, string>? fileNames = null)
+        Project? project,
+        IReadOnlyDictionary<string, string>? fileNames = null,
+        IReadOnlyCollection<string>? onlyLocales = null)
     {
         var groups = Groups(project, fileNames);
         if (groups.Count == 0) return new Dictionary<string, string>(StringComparer.Ordinal);
@@ -31,7 +34,8 @@ public static class DialogueGameExport
             GameSeriesCatalog.ConfigDirectory(project?.Series),
             project?.Settings.ExportEncoding,
             project?.Languages,
-            project?.ProjectName);
+            project?.ProjectName,
+            onlyLocales);
     }
 
     /// <summary>

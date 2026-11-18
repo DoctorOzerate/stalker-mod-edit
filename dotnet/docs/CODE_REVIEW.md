@@ -192,18 +192,12 @@
 ### 2.3. Dialogs и Export — сборка игровых файлов
 
 Файлы: `Dialogs/DialogueGameExport.cs`, `Dialogs/DialogueFiles.cs`, `Dialogs/TextIdTools.cs`,
-`Export/GamePackage.cs`, `Quests/QuestExport.cs`, `Projects/InternalXml.cs`.
+`Export/GamePackage.cs`, `Export/GamePackageOptions.cs`, `Quests/QuestExport.cs`, `Projects/InternalXml.cs`,
+`ViewModels/GamePackageViewModels.cs`, `Views/GamePackageWindow.xaml`.
 
 **Недоработки**
 
-- **P1 · Игровой пакет неполный.** `GamePackage.TextFiles` (`GamePackage.cs:18-58`) собирает
-  только диалоги, квесты, `system.ltx` и скрипты. Нет `character_desc_*.xml` (персонажи),
-  `items.ltx`, `textures_descr`, торговли, спавна и инклюдов из `project.LtxFiles`.
-  Это совпадает с долгом P0 в `FEATURE_GAP_AMK.md:212-214`, поэтому здесь фиксируется как
-  «экспорт персонажей и предметов» для планирования, а не как новая идея.
-  **Сделать:** добавить экспорт персонажей (`character_desc_<id>.xml`) и `items.ltx`
-  (`ItemsViewModel` уже умеет отдавать текст, `ItemsViewModel.cs:930-940`).
-- **P3 · Смешанный формат квестов теряется.** `GamePackage.cs:29-43`: если в проекте есть
+- **P3 · Смешанный формат квестов теряется.** `GamePackage.TextFiles`: если в проекте есть
   **хотя бы один** `task_manager`, генерируются `task_manager.ltx/xml`, иначе — `game_tasks.xml`.
   Проект с квестами обоих форматов экспортируется частично.
   **Сделать:** группировать по `Format` и собирать оба набора файлов.
@@ -214,17 +208,6 @@
 
 **Улучшения**
 
-- **P2 · Ключи карты не проверяются на выход из каталога.** `GamePackage.NormalizePath`
-  (`GamePackage.cs:91-92`) сохраняет `..`, а `DialogueGameExport.TargetPath`
-  (`DialogueGameExport.cs:115-138`) делает `Path.GetFullPath(Path.Combine(root, relative))`
-  без проверки, что результат остался внутри `root`. Путь вида `gamedata/../../x` (может прийти
-  из `ScriptFile.Path`, `GamePackage.cs:51-54`) запишет файл вне выбранной папки.
-  **Сделать:** после нормализации сравнивать префикс с `root + Path.DirectorySeparatorChar`
-  и отклонять выход (или `Path.GetRelativePath` + проверка на `..`).
-- **P2 · `WriteZip` дублирует расчёт.** `GamePackage.cs:86-88`: `TextFiles(project)` считается
-  в строке 86, а затем ещё раз внутри `Zip(project)` (`GamePackage.cs:67`). Для проекта
-  с сотнями диалогов это двойная сериализация на каждое нажатие «Экспорт ZIP».
-  **Сделать:** считать карту один раз и передавать её в упаковщик.
 - **P2 · Перезапись без резервных копий и без атомарности.**
   `DialogueGameExport.WriteFiles` (`DialogueGameExport.cs:144-161`) и
   `GamePackage.WriteZip` (`GamePackage.cs:80-89`) пишут через `File.WriteAllBytes`.
@@ -240,8 +223,6 @@
 
 - Экспорт «только изменённых» файлов (дифф против снапшота gamedata) — основной сценарий
   мододела; сейчас пакет всегда полный (`GamePackage.Zip`, `GamePackage.cs:61-77`).
-- Манифест пакета (`export.json`: список файлов, кодировки, версия проекта) для проверки
-  установки на чистой gamedata.
 - Отчёт экспорта в файл: сейчас результат живёт только в статусной строке
   (`ShellViewModel.cs:1124-1126`).
 
@@ -739,9 +720,9 @@
 
 ### Этап B — экспорт и валидация (P1/P2)
 
-7. Экспорт персонажей и `items.ltx` в пакет (§2.3).
-8. Проверка выхода за каталог в `TargetPath`; `.bak` при перезаписи (§2.3).
-9. `GamePackage.WriteZip` — один расчёт карты (§2.3).
+7. ✅ Экспорт персонажей и `items.ltx` в пакет (§2.3).
+8. ✅ Проверка выхода за каталог в `TargetPath`; `.bak` при перезаписи (§2.3) — остался `.bak`.
+9. ✅ `GamePackage.Plan` — один расчёт карты, предпросмотр и манифест (§2.3).
 10. `TextIdIssue.Code`/`Severity`, самопроверка по кодам; пустые переводы → предупреждение (§2.9).
 11. Самопроверка в фоне (§2.9).
 12. `GraphValidator` + локализации (§2.8).
